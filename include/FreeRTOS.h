@@ -27,6 +27,12 @@
  */
 
 #ifndef INC_FREERTOS_H
+
+/*
+ * 【中文导读】FreeRTOS.h —— 主头文件（B级导读）
+ * 汇总全部子头文件，并对 FreeRTOSConfig.h 做"默认值+合法性检查"。
+ * 改配置报错先看这里给出的提示，信息非常友好。
+ */
 #define INC_FREERTOS_H
 
 /*

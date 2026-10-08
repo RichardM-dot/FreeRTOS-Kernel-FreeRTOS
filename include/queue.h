@@ -28,6 +28,12 @@
 
 
 #ifndef QUEUE_H
+
+/*
+ * 【中文导读】queue.h —— 队列/信号量 API（B级导读）
+ * 注意信号量宏（xSemaphoreCreateBinary/Mutex/Counting）都是 xQueueCreate
+ * 的马甲——"信号量即队列"在此得到验证。
+ */
 #define QUEUE_H
 
 #ifndef INC_FREERTOS_H

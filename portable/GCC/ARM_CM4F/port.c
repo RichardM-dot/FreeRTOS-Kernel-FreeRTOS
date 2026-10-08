@@ -27,6 +27,20 @@
  */
 
 /*-----------------------------------------------------------
+* 【中文导读】port.c —— FreeRTOS 在 Cortex-M4F 上的移植层（调度内核的"胶水"）
+* ----------------------------------------------------------------------------
+* 读内核 C 代码后必读这里——RTOS 移植的全部秘密集中在几个函数：
+*   1. xPortStartScheduler(): 设 SysTick/PendSV/SVC 优先级（PendSV 必须
+*      设为全局最低！），启动第一个任务
+*   2. prvPortStartFirstTask: 内嵌 SVC 指令触发第一次上下文切换
+*   3. xPortPendSVHandler:    ★上下文切换本体★ 保存 R4-R11 到任务栈、
+*      调 vTaskSwitchContext 选新任务、恢复新任务寄存器。CM4 硬件自动
+*      保存/恢复 R0-R3,R12,LR,PC,xPSR，软件只管 R4-R11（+FPU 时 S16-S31）
+*   4. xPortSysTickHandler:   tick 中断 → xTaskIncrementTick() → 需要时触发 PendSV
+* 读完本文件即可回答"RTOS 上下文切换到底发生了什么"。
+*-----------------------------------------------------------*/
+
+/*-----------------------------------------------------------
 * Implementation of functions defined in portable.h for the ARM CM4F port.
 *----------------------------------------------------------*/
 

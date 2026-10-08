@@ -29,6 +29,11 @@
 
 
 #ifndef INC_TASK_H
+
+/*
+ * 【中文导读】task.h —— 任务 API 声明（B级导读）
+ * 全部任务 API 在此；每个函数前有官方详细英文文档（Usage/参数/返回值），当手册查。
+ */
 #define INC_TASK_H
 
 #ifndef INC_FREERTOS_H
