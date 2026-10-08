@@ -27,6 +27,34 @@
  *
  */
 
+/*
+ * ============================================================================
+ * 【中文导读】tasks.c —— 任务管理与调度器（FreeRTOS 心脏，建议精读）
+ * ----------------------------------------------------------------------------
+ * 官方英文注释已极完善（每个 API 前有 Usage/param/return 说明），本导读
+ * 帮你建立阅读地图。核心概念：
+ *   - TCB（任务控制块）: 每任务一个，存栈顶指针/优先级/状态节点/名字
+ *   - 任务栈: 任务的"私有内存"，上下文切换就是保存/恢复栈里的寄存器
+ *   - 五状态模型: Running/Ready/Blocked/Suspended + Deleted
+ *   - 调度规则: 位图找最高优先级就绪任务（configUSE_PORT_OPTIMISED...时
+ *     用 CLZ 指令 O(1)）；同优先级时间片轮转（tick 中断触发切换）
+ *
+ * 阅读路线（按函数名搜索）：
+ *   1. xTaskCreate / xTaskCreateStatic —— 任务怎么"出生"（分配栈+TCB）
+ *   2. prvInitialiseNewTask            —— TCB 初始化细节
+ *   3. vTaskStartScheduler             —— 调度器启动（会开 SysTick）
+ *   4. xTaskIncrementTick              —— tick 中断里跑（时基与延时到期）
+ *   5. vTaskSwitchContext              —— 选出下一个该跑的任务（PendSV 里调）
+ *   6. prvAddTaskToReadyList / prvResetNextTaskUnblockTime —— 就绪链表操作
+ *   7. eTaskConfirmSleepModeStatus / vTaskSuspendAll 等 —— 挂起调度器的临界区
+ *
+ * 重要机制：
+ *   - uxSchedulerSuspended: 调度器挂起计数（vTaskSuspendAll/xTaskResumeAll）
+ *   - ulTaskSwitchedIn/pxCurrentTCB: "当前正在跑谁"的唯一权威
+ *   - 延时表 pxDelayedTaskList + pxOverflowDelayedTaskList 双链表防回绕
+ * ============================================================================
+ */
+
 /* Standard includes. */
 #include <stdlib.h>
 #include <string.h>
