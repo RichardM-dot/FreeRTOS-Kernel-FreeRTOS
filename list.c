@@ -40,44 +40,48 @@
 
 #include <stdlib.h>
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers.  That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 将全部 API 函数重定义为使用 MPU 包装器的版本。该宏只应在从应用文件包含 task.h 时定义。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 #include "FreeRTOS.h"
 #include "list.h"
 
-/* The MPU ports require MPU_WRAPPERS_INCLUDED_FROM_API_FILE to be
- * defined for the header files above, but not in this file, in order to
- * generate the correct privileged Vs unprivileged linkage and placement. */
+/*
+ * MPU 移植层要求上述头文件定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE，但本文件不能定义它，这样才能生成正确的特权/非特权链接与放置方式。
+ */
 #undef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/*-----------------------------------------------------------
-* PUBLIC LIST API documented in list.h
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 公共链表 API（文档见 list.h）
+ * ----------------------------------------------------------
+ */
 
 void vListInitialise( List_t * const pxList )
 {
     traceENTER_vListInitialise( pxList );
 
-    /* The list structure contains a list item which is used to mark the
-     * end of the list.  To initialise the list the list end is inserted
-     * as the only list entry. */
+    /*
+     * 链表结构中包含一个用于标记链表末尾的链表项。初始化链表时，将链表末尾项作为唯一的链表项插入。
+     */
     pxList->pxIndex = ( ListItem_t * ) &( pxList->xListEnd );
 
     listSET_FIRST_LIST_ITEM_INTEGRITY_CHECK_VALUE( &( pxList->xListEnd ) );
 
-    /* The list end value is the highest possible value in the list to
-     * ensure it remains at the end of the list. */
+    /*
+     * 链表末尾项的值取链表中的最大可能值，以确保它始终位于链表末尾。
+     */
     pxList->xListEnd.xItemValue = portMAX_DELAY;
 
-    /* The list end next and previous pointers point to itself so we know
-     * when the list is empty. */
+    /*
+     * 链表末尾项的前后指针都指向自身，这样就能判断链表是否为空。
+     */
     pxList->xListEnd.pxNext = ( ListItem_t * ) &( pxList->xListEnd );
     pxList->xListEnd.pxPrevious = ( ListItem_t * ) &( pxList->xListEnd );
 
-    /* Initialize the remaining fields of xListEnd when it is a proper ListItem_t */
+    /* 当 xListEnd 是真正的 ListItem_t 时，初始化其剩余字段。 */
     #if ( configUSE_MINI_LIST_ITEM == 0 )
     {
         pxList->xListEnd.pvOwner = NULL;
@@ -88,30 +92,32 @@ void vListInitialise( List_t * const pxList )
 
     pxList->uxNumberOfItems = ( UBaseType_t ) 0U;
 
-    /* Write known values into the list if
-     * configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES is set to 1. */
+    /*
+     * 若 configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES 设为 1，则向链表写入已知校验值。
+     */
     listSET_LIST_INTEGRITY_CHECK_1_VALUE( pxList );
     listSET_LIST_INTEGRITY_CHECK_2_VALUE( pxList );
 
     traceRETURN_vListInitialise();
 }
-/*-----------------------------------------------------------*/
+/* ----------------------------------------------------------- */
 
 void vListInitialiseItem( ListItem_t * const pxItem )
 {
     traceENTER_vListInitialiseItem( pxItem );
 
-    /* Make sure the list item is not recorded as being on a list. */
+    /* 确保该链表项不被记录为已挂在某个链表上。 */
     pxItem->pxContainer = NULL;
 
-    /* Write known values into the list item if
-     * configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES is set to 1. */
+    /*
+     * 若 configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES 设为 1，则向链表项写入已知校验值。
+     */
     listSET_FIRST_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );
     listSET_SECOND_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );
 
     traceRETURN_vListInitialiseItem();
 }
-/*-----------------------------------------------------------*/
+/* ----------------------------------------------------------- */
 
 void vListInsertEnd( List_t * const pxList,
                      ListItem_t * const pxNewListItem )
@@ -120,32 +126,32 @@ void vListInsertEnd( List_t * const pxList,
 
     traceENTER_vListInsertEnd( pxList, pxNewListItem );
 
-    /* Only effective when configASSERT() is also defined, these tests may catch
-     * the list data structures being overwritten in memory.  They will not catch
-     * data errors caused by incorrect configuration or use of FreeRTOS. */
+    /*
+     * 仅在同时定义了 configASSERT() 时生效；这些检查可捕获链表数据结构被内存越界改写的问题，但无法捕获因配置错误或 FreeRTOS 使用不当导致的数据错误。
+     */
     listTEST_LIST_INTEGRITY( pxList );
     listTEST_LIST_ITEM_INTEGRITY( pxNewListItem );
 
-    /* Insert a new list item into pxList, but rather than sort the list,
-     * makes the new list item the last item to be removed by a call to
-     * listGET_OWNER_OF_NEXT_ENTRY(). */
+    /*
+     * 将新链表项插入 pxList，但不进行排序，而是让新项成为 listGET_OWNER_OF_NEXT_ENTRY() 最后取出的项。
+     */
     pxNewListItem->pxNext = pxIndex;
     pxNewListItem->pxPrevious = pxIndex->pxPrevious;
 
-    /* Only used during decision coverage testing. */
+    /* 仅在判定覆盖（decision coverage）测试中使用。 */
     mtCOVERAGE_TEST_DELAY();
 
     pxIndex->pxPrevious->pxNext = pxNewListItem;
     pxIndex->pxPrevious = pxNewListItem;
 
-    /* Remember which list the item is in. */
+    /* 记录该项当前所在的链表。 */
     pxNewListItem->pxContainer = pxList;
 
     ( pxList->uxNumberOfItems ) = ( UBaseType_t ) ( pxList->uxNumberOfItems + 1U );
 
     traceRETURN_vListInsertEnd();
 }
-/*-----------------------------------------------------------*/
+/* ----------------------------------------------------------- */
 
 void vListInsert( List_t * const pxList,
                   ListItem_t * const pxNewListItem )
@@ -155,56 +161,49 @@ void vListInsert( List_t * const pxList,
 
     traceENTER_vListInsert( pxList, pxNewListItem );
 
-    /* Only effective when configASSERT() is also defined, these tests may catch
-     * the list data structures being overwritten in memory.  They will not catch
-     * data errors caused by incorrect configuration or use of FreeRTOS. */
+    /*
+     * 仅在同时定义了 configASSERT() 时生效；这些检查可捕获链表数据结构被内存越界改写的问题，但无法捕获因配置错误或 FreeRTOS 使用不当导致的数据错误。
+     */
     listTEST_LIST_INTEGRITY( pxList );
     listTEST_LIST_ITEM_INTEGRITY( pxNewListItem );
 
-    /* Insert the new list item into the list, sorted in xItemValue order.
+    /*
+     * 将新链表项按 xItemValue 顺序插入链表。
      *
-     * If the list already contains a list item with the same item value then the
-     * new list item should be placed after it.  This ensures that TCBs which are
-     * stored in ready lists (all of which have the same xItemValue value) get a
-     * share of the CPU.  However, if the xItemValue is the same as the back marker
-     * the iteration loop below will not end.  Therefore the value is checked
-     * first, and the algorithm slightly modified if necessary. */
+     * 若链表中已存在相同 item 值的项，则新项应排在其后。这可确保存放在就绪链表中的 TCB（其 xItemValue 值均相同）能够公平分享 CPU。但是，若 xItemValue 与尾部标记项的值相同，下面的遍历循环将无法结束，因此需要先检查该值，必要时对算法稍作调整。
+     */
     if( xValueOfInsertion == portMAX_DELAY )
     {
         pxIterator = pxList->xListEnd.pxPrevious;
     }
     else
     {
-        /* *** NOTE ***********************************************************
-        *  If you find your application is crashing here then likely causes are
-        *  listed below.  In addition see https://www.freertos.org/Why-FreeRTOS/FAQs for
-        *  more tips, and ensure configASSERT() is defined!
-        *  https://www.FreeRTOS.org/a00110.html#configASSERT
-        *
-        *   1) Stack overflow -
-        *      see https://www.FreeRTOS.org/Stacks-and-stack-overflow-checking.html
-        *   2) Incorrect interrupt priority assignment, especially on Cortex-M
-        *      parts where numerically high priority values denote low actual
-        *      interrupt priorities, which can seem counter intuitive.  See
-        *      https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html and the definition
-        *      of configMAX_SYSCALL_INTERRUPT_PRIORITY on
-        *      https://www.FreeRTOS.org/a00110.html
-        *   3) Calling an API function from within a critical section or when
-        *      the scheduler is suspended, or calling an API function that does
-        *      not end in "FromISR" from an interrupt.
-        *   4) Using a queue or semaphore before it has been initialised or
-        *      before the scheduler has been started (are interrupts firing
-        *      before vTaskStartScheduler() has been called?).
-        *   5) If the FreeRTOS port supports interrupt nesting then ensure that
-        *      the priority of the tick interrupt is at or below
-        *      configMAX_SYSCALL_INTERRUPT_PRIORITY.
-        **********************************************************************/
+        /*
+         * *** 注意 ***********************************************************
+         *  若应用程序在此处崩溃，常见原因如下所列。更多提示请参阅
+         *  https://www.freertos.org/Why-FreeRTOS/FAQs ，并确保定义了 configASSERT()！
+         *  https://www.FreeRTOS.org/a00110.html#configASSERT
+         *
+         *   1) 栈溢出 ——
+         *      参见 https://www.FreeRTOS.org/Stacks-and-stack-overflow-checking.html
+         *   2) 中断优先级设置错误，尤其是在 Cortex-M 器件上：数值较大的优先级值
+         *      实际表示较低的中断优先级，这可能与直觉相反。参见
+         *      https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html 以及
+         *      https://www.FreeRTOS.org/a00110.html 中 configMAX_SYSCALL_INTERRUPT_PRIORITY 的定义
+         *   3) 在临界区内或调度器挂起时调用 API 函数，或在中断中调用
+         *      不以 "FromISR" 结尾的 API 函数。
+         *   4) 在队列或信号量尚未初始化、或调度器尚未启动前就使用它们
+         *      （是否在 vTaskStartScheduler() 调用之前就有中断在触发？）。
+         *   5) 若 FreeRTOS 移植层支持中断嵌套，请确保 tick 中断的优先级
+         *      等于或低于 configMAX_SYSCALL_INTERRUPT_PRIORITY。
+         * ********************************************************************
+         */
 
         for( pxIterator = ( ListItem_t * ) &( pxList->xListEnd ); pxIterator->pxNext->xItemValue <= xValueOfInsertion; pxIterator = pxIterator->pxNext )
         {
-            /* There is nothing to do here, just iterating to the wanted
-             * insertion position.
-             * IF YOU FIND YOUR CODE STUCK HERE, SEE THE NOTE JUST ABOVE.
+            /*
+             * 此处无需执行任何操作，仅继续遍历到目标插入位置。
+             * 若代码卡在这里，请参阅上方的注意事项。
              */
         }
     }
@@ -214,21 +213,23 @@ void vListInsert( List_t * const pxList,
     pxNewListItem->pxPrevious = pxIterator;
     pxIterator->pxNext = pxNewListItem;
 
-    /* Remember which list the item is in.  This allows fast removal of the
-     * item later. */
+    /*
+     * 记录该项当前所在的链表，以便之后快速移除该项。
+     */
     pxNewListItem->pxContainer = pxList;
 
     ( pxList->uxNumberOfItems ) = ( UBaseType_t ) ( pxList->uxNumberOfItems + 1U );
 
     traceRETURN_vListInsert();
 }
-/*-----------------------------------------------------------*/
+/* ----------------------------------------------------------- */
 
 
 UBaseType_t uxListRemove( ListItem_t * const pxItemToRemove )
 {
-    /* The list item knows which list it is in.  Obtain the list from the list
-     * item. */
+    /*
+     * 链表项自身知道它属于哪个链表，因此可从链表项反查所属链表。
+     */
     List_t * const pxList = pxItemToRemove->pxContainer;
 
     traceENTER_uxListRemove( pxItemToRemove );
@@ -236,10 +237,10 @@ UBaseType_t uxListRemove( ListItem_t * const pxItemToRemove )
     pxItemToRemove->pxNext->pxPrevious = pxItemToRemove->pxPrevious;
     pxItemToRemove->pxPrevious->pxNext = pxItemToRemove->pxNext;
 
-    /* Only used during decision coverage testing. */
+    /* 仅在判定覆盖测试中使用。 */
     mtCOVERAGE_TEST_DELAY();
 
-    /* Make sure the index is left pointing to a valid item. */
+    /* 确保索引始终指向一个有效项。 */
     if( pxList->pxIndex == pxItemToRemove )
     {
         pxList->pxIndex = pxItemToRemove->pxPrevious;
@@ -256,4 +257,4 @@ UBaseType_t uxListRemove( ListItem_t * const pxItemToRemove )
 
     return pxList->uxNumberOfItems;
 }
-/*-----------------------------------------------------------*/
+/* ----------------------------------------------------------- */
