@@ -26,21 +26,23 @@
  *
  */
 
-/*This file has been prepared for Doxygen automatic documentation generation.*/
+/* 本文件已针对 Doxygen 自动文档生成做好准备。 */
 
-/*! \file *********************************************************************
+/*!
+ * ! \file *********************************************************************
  *
- * \brief FreeRTOS port source for AVR32 UC3.
+ * \brief AVR32 UC3 的 FreeRTOS 移植层源文件。
  *
- * - Compiler:           GNU GCC for AVR32
- * - Supported devices:  All AVR32 devices can be used.
- * - AppNote:
+ * - 编译器：          GNU GCC for AVR32
+ * - 支持的器件：      可使用所有 AVR32 器件。
+ * - 应用笔记：
  *
- * \author               Atmel Corporation (Now Microchip):
+ * \author               Atmel Corporation（现为 Microchip）：
  *                                        https://www.microchip.com \n
- *                       Support and FAQ: https://www.microchip.com/support/
+ *                       支持与常见问题：https://www.microchip.com/support/
  *
- *****************************************************************************/
+ * ***************************************************************************
+ */
 
 /*
  * Copyright (c) 2007, Atmel Corporation All rights reserved.
@@ -70,16 +72,16 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <sys/cpu.h>
 #include <sys/usart.h>
 #include <malloc.h>
 
-/* Scheduler includes. */
+/* 调度器头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* AVR32 UC3 includes. */
+/* AVR32 UC3 头文件包含。 */
 #include <avr32/io.h>
 #include "gpio.h"
 #if ( configTICK_USE_TC == 1 )
@@ -87,11 +89,11 @@
 #endif
 
 
-/* Constants required to setup the task context. */
-#define portINITIAL_SR             ( ( StackType_t ) 0x00400000 ) /* AVR32 : [M2:M0]=001 I1M=0 I0M=0, GM=0 */
+/* 配置任务上下文所需的常量。 */
+#define portINITIAL_SR             ( ( StackType_t ) 0x00400000 ) /* AVR32 模式配置位：[M2:M0]=001 I1M=0 I0M=0，GM=0 */
 #define portINSTRUCTION_SIZE       ( ( StackType_t ) 0 )
 
-/* Each task maintains its own critical nesting variable. */
+/* 每个任务维护各自的临界区嵌套计数变量。 */
 #define portNO_CRITICAL_NESTING    ( ( uint32_t ) 0 )
 volatile uint32_t ulCriticalNesting = 9999UL;
 
@@ -101,22 +103,21 @@ volatile uint32_t ulCriticalNesting = 9999UL;
     static void prvClearTcInt( void );
 #endif
 
-/* Setup the timer to generate the tick interrupts. */
+/* 配置定时器以产生时钟节拍（tick）中断。 */
 static void prvSetupTimerInterrupt( void );
 
 /*-----------------------------------------------------------*/
 
 /*
- * Low-level initialization routine called during startup, before the main
- * function.
- * This version comes in replacement to the default one provided by Newlib.
- * Newlib's _init_startup only calls init_exceptions, but Newlib's exception
- * vectors are not compatible with the SCALL management in the current FreeRTOS
- * port. More low-level initializations are besides added here.
+ * 在 main 函数之前、启动过程中调用的底层初始化例程。
+ * 本版本用于替换 Newlib 提供的默认版本。
+ * Newlib 的 _init_startup 仅调用 init_exceptions，但 Newlib 的异常
+ * 向量与当前 FreeRTOS 移植层中的 SCALL 管理不兼容。此外此处还增加了
+ * 更多底层初始化。
  */
 void _init_startup( void )
 {
-    /* Import the Exception Vector Base Address. */
+    /* 导入异常向量基地址。 */
     extern void _evba;
 
     #if configHEAP_INIT
@@ -125,27 +126,27 @@ void _init_startup( void )
         BaseType_t * pxMem;
     #endif
 
-    /* Load the Exception Vector Base Address in the corresponding system register. */
+    /* 将异常向量基地址装入相应的系统寄存器。 */
     Set_system_register( AVR32_EVBA, ( int ) &_evba );
 
-    /* Enable exceptions. */
+    /* 使能异常。 */
     ENABLE_ALL_EXCEPTIONS();
 
-    /* Initialize interrupt handling. */
+    /* 初始化中断处理。 */
     INTC_init_interrupts();
 
     #if configHEAP_INIT
-        /* Initialize the heap used by malloc. */
+        /* 初始化 malloc 使用的堆。 */
         for( pxMem = &__heap_start__; pxMem < ( BaseType_t * ) &__heap_end__; )
         {
             *pxMem++ = 0xA5A5A5A5;
         }
     #endif
 
-    /* Give the used CPU clock frequency to Newlib, so it can work properly. */
+    /* 将所用 CPU 时钟频率提供给 Newlib，以便其正常工作。 */
     set_cpu_hz( configCPU_CLOCK_HZ );
 
-    /* Code section present if and only if the debug trace is activated. */
+    /* 仅当调试跟踪被激活时才存在此代码段。 */
     #if configDBG
     {
         static const gpio_map_t DBG_USART_GPIO_MAP =
@@ -154,34 +155,32 @@ void _init_startup( void )
             { configDBG_USART_TX_PIN, configDBG_USART_TX_FUNCTION }
         };
 
-        /* Initialize the USART used for the debug trace with the configured parameters. */
+        /* 用配置的参数初始化用于调试跟踪的 USART。 */
         set_usart_base( ( void * ) configDBG_USART );
         gpio_enable_module( DBG_USART_GPIO_MAP,
                             sizeof( DBG_USART_GPIO_MAP ) / sizeof( DBG_USART_GPIO_MAP[ 0 ] ) );
         usart_init( configDBG_USART_BAUDRATE );
     }
-    #endif /* if configDBG */
+    #endif /* 若 configDBG */
 }
 /*-----------------------------------------------------------*/
 
 /*
- * malloc, realloc and free are meant to be called through respectively
- * pvPortMalloc, pvPortRealloc and vPortFree.
- * The latter functions call the former ones from within sections where tasks
- * are suspended, so the latter functions are task-safe. __malloc_lock and
- * __malloc_unlock use the same mechanism to also keep the former functions
- * task-safe as they may be called directly from Newlib's functions.
- * However, all these functions are interrupt-unsafe and SHALL THEREFORE NOT BE
- * CALLED FROM WITHIN AN INTERRUPT, because __malloc_lock and __malloc_unlock do
- * not call portENTER_CRITICAL and portEXIT_CRITICAL in order not to disable
- * interrupts during memory allocation management as this may be a very time-
- * consuming process.
+ * malloc、realloc 和 free 应分别通过 pvPortMalloc、pvPortRealloc 和
+ * vPortFree 调用。
+ * 后一组函数在任务挂起的区内调用前一组函数，因此后一组函数是任务安全的。
+ * __malloc_lock 和 __malloc_unlock 使用相同机制，使前一组函数也保持任务安全，
+ * 因为它们可能被 Newlib 函数直接调用。
+ * 然而，所有这些函数都是中断不安全的，因此不得在中断中调用，因为
+ * __malloc_lock 和 __malloc_unlock 不调用 portENTER_CRITICAL 和
+ * portEXIT_CRITICAL，以免在内存分配管理期间禁止中断，因为这一过程可能
+ * 非常耗时。
  */
 
 /*
- * Lock routine called by Newlib on malloc / realloc / free entry to guarantee a
- * safe section as memory allocation management uses global data.
- * See the aforementioned details.
+ * Newlib 在进入 malloc / realloc / free 时调用的加锁例程，用于保证代码段的
+ * 安全性，因为内存分配管理使用全局数据。
+ * 详见前述说明。
  */
 void __malloc_lock( struct _reent * ptr )
 {
@@ -189,9 +188,9 @@ void __malloc_lock( struct _reent * ptr )
 }
 
 /*
- * Unlock routine called by Newlib on malloc / realloc / free exit to guarantee
- * a safe section as memory allocation management uses global data.
- * See the aforementioned details.
+ * Newlib 在退出 malloc / realloc / free 时调用的解锁例程，用于保证代码段的
+ * 安全性，因为内存分配管理使用全局数据。
+ * 详见前述说明。
  */
 void __malloc_unlock( struct _reent * ptr )
 {
@@ -199,7 +198,7 @@ void __malloc_unlock( struct _reent * ptr )
 }
 /*-----------------------------------------------------------*/
 
-/* Added as there is no such function in FreeRTOS. */
+/* 因 FreeRTOS 中没有此函数而添加。 */
 void * pvPortRealloc( void * pv,
                       size_t xWantedSize )
 {
@@ -215,58 +214,64 @@ void * pvPortRealloc( void * pv,
 }
 /*-----------------------------------------------------------*/
 
-/* The cooperative scheduler requires a normal IRQ service routine to
- * simply increment the system tick. */
+/*
+ * 协作式调度器需要一个普通的 IRQ 服务程序，仅递增系统时钟节拍（tick）。
+ */
 
-/* The preemptive scheduler is defined as "naked" as the full context is saved
- * on entry as part of the context switch. */
+/*
+ * 抢占式调度器定义为 "naked"，因为进入时已作为上下文切换的一部分保存了完整上下文。
+ */
 __attribute__( ( __naked__ ) ) static void vTick( void )
 {
-    /* Save the context of the interrupted task. */
+    /* 保存被中断任务的上下文。 */
     portSAVE_CONTEXT_OS_INT();
 
     #if ( configTICK_USE_TC == 1 )
-        /* Clear the interrupt flag. */
+        /* 清除中断标志。 */
         prvClearTcInt();
     #else
 
-        /* Schedule the COUNT&COMPARE match interrupt in (configCPU_CLOCK_HZ/configTICK_RATE_HZ)
-         * clock cycles from now. */
+        /*
+         * 从当前时刻起，在 (configCPU_CLOCK_HZ/configTICK_RATE_HZ) 个时钟周期后
+         * 调度 COUNT&COMPARE 匹配中断。
+         */
         prvScheduleNextTick();
     #endif
 
-    /* Because FreeRTOS is not supposed to run with nested interrupts, put all OS
-     * calls in a critical section . */
+    /*
+     * 由于 FreeRTOS 不应在嵌套中断下运行，所有 OS 调用都置于临界区中。
+     */
     portENTER_CRITICAL();
     xTaskIncrementTick();
     portEXIT_CRITICAL();
 
-    /* Restore the context of the "elected task". */
+    /* 恢复“被选中任务”的上下文。 */
     portRESTORE_CONTEXT_OS_INT();
 }
 /*-----------------------------------------------------------*/
 
 __attribute__( ( __naked__ ) ) void SCALLYield( void )
 {
-    /* Save the context of the interrupted task. */
+    /* 保存被中断任务的上下文。 */
     portSAVE_CONTEXT_SCALL();
     vTaskSwitchContext();
     portRESTORE_CONTEXT_SCALL();
 }
 /*-----------------------------------------------------------*/
 
-/* The code generated by the GCC compiler uses the stack in different ways at
- * different optimisation levels.  The interrupt flags can therefore not always
- * be saved to the stack.  Instead the critical section nesting level is stored
- * in a variable, which is then saved as part of the stack context. */
+/*
+ * GCC 编译器生成的代码在不同优化级别下对栈的使用方式不同，因此中断标志
+ * 无法总是保存到栈上。改为将临界区嵌套层数存入变量，再作为栈上下文的一部分保存。
+ */
 __attribute__( ( __noinline__ ) ) void vPortEnterCritical( void )
 {
-    /* Disable interrupts */
+    /* 禁止中断 */
     portDISABLE_INTERRUPTS();
 
-    /* Now that interrupts are disabled, ulCriticalNesting can be accessed
-     * directly.  Increment ulCriticalNesting to keep a count of how many times
-     * portENTER_CRITICAL() has been called. */
+    /*
+     * 中断现已禁止，可以直接访问 ulCriticalNesting。递增 ulCriticalNesting，
+     * 以记录 portENTER_CRITICAL() 已被调用的次数。
+     */
     ulCriticalNesting++;
 }
 /*-----------------------------------------------------------*/
@@ -279,7 +284,7 @@ __attribute__( ( __noinline__ ) ) void vPortExitCritical( void )
 
         if( ulCriticalNesting == portNO_CRITICAL_NESTING )
         {
-            /* Enable all interrupt/exception. */
+            /* 使能所有中断/异常。 */
             portENABLE_INTERRUPTS();
         }
     }
@@ -287,37 +292,37 @@ __attribute__( ( __noinline__ ) ) void vPortExitCritical( void )
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the stack of a task to look exactly as if a call to
- * portSAVE_CONTEXT had been called.
+ * 初始化任务栈，使其与调用过 portSAVE_CONTEXT 后的状态完全一致。
  *
- * See header file for description.
+ * 参见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
-    /* Setup the initial stack of the task.  The stack is set exactly as
-     * expected by the portRESTORE_CONTEXT() macro. */
+    /*
+     * 设置任务的初始栈。栈内容按 portRESTORE_CONTEXT() 宏的预期精确设置。
+     */
 
-    /* When the task starts, it will expect to find the function parameter in R12. */
+    /* 任务启动时，将期望在 R12 中找到函数参数。 */
     pxTopOfStack--;
-    *pxTopOfStack-- = ( StackType_t ) 0x08080808;                    /* R8 */
-    *pxTopOfStack-- = ( StackType_t ) 0x09090909;                    /* R9 */
-    *pxTopOfStack-- = ( StackType_t ) 0x0A0A0A0A;                    /* R10 */
-    *pxTopOfStack-- = ( StackType_t ) 0x0B0B0B0B;                    /* R11 */
-    *pxTopOfStack-- = ( StackType_t ) pvParameters;                  /* R12 */
-    *pxTopOfStack-- = ( StackType_t ) 0xDEADBEEF;                    /* R14/LR */
-    *pxTopOfStack-- = ( StackType_t ) pxCode + portINSTRUCTION_SIZE; /* R15/PC */
-    *pxTopOfStack-- = ( StackType_t ) portINITIAL_SR;                /* SR */
-    *pxTopOfStack-- = ( StackType_t ) 0xFF0000FF;                    /* R0 */
-    *pxTopOfStack-- = ( StackType_t ) 0x01010101;                    /* R1 */
-    *pxTopOfStack-- = ( StackType_t ) 0x02020202;                    /* R2 */
-    *pxTopOfStack-- = ( StackType_t ) 0x03030303;                    /* R3 */
-    *pxTopOfStack-- = ( StackType_t ) 0x04040404;                    /* R4 */
-    *pxTopOfStack-- = ( StackType_t ) 0x05050505;                    /* R5 */
-    *pxTopOfStack-- = ( StackType_t ) 0x06060606;                    /* R6 */
-    *pxTopOfStack-- = ( StackType_t ) 0x07070707;                    /* R7 */
-    *pxTopOfStack = ( StackType_t ) portNO_CRITICAL_NESTING;         /* ulCriticalNesting */
+    *pxTopOfStack-- = ( StackType_t ) 0x08080808;                    /* R8 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x09090909;                    /* R9 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x0A0A0A0A;                    /* R10 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x0B0B0B0B;                    /* R11 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) pvParameters;                  /* R12 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0xDEADBEEF;                    /* R14/LR 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) pxCode + portINSTRUCTION_SIZE; /* R15/PC 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) portINITIAL_SR;                /* SR 状态寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0xFF0000FF;                    /* R0 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x01010101;                    /* R1 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x02020202;                    /* R2 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x03030303;                    /* R3 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x04040404;                    /* R4 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x05050505;                    /* R5 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x06060606;                    /* R6 寄存器 */
+    *pxTopOfStack-- = ( StackType_t ) 0x07070707;                    /* R7 寄存器 */
+    *pxTopOfStack = ( StackType_t ) portNO_CRITICAL_NESTING;         /* ulCriticalNesting（临界区嵌套计数） */
 
     return pxTopOfStack;
 }
@@ -325,27 +330,31 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
 BaseType_t xPortStartScheduler( void )
 {
-    /* Start the timer that generates the tick ISR.  Interrupts are disabled
-     * here already. */
+    /*
+     * 启动产生时钟节拍 ISR 的定时器。此处中断已被禁止。
+     */
     prvSetupTimerInterrupt();
 
-    /* Start the first task. */
+    /* 启动第一个任务。 */
     portRESTORE_CONTEXT();
 
-    /* Should not get here! */
+    /* 不应执行到此处！ */
     return 0;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* It is unlikely that the AVR32 port will require this function as there
-     * is nothing to return to.  */
+    /*
+     * AVR32 移植层不太可能需要此函数，因为没有可供返回之处。
+     */
 }
 /*-----------------------------------------------------------*/
 
-/* Schedule the COUNT&COMPARE match interrupt in (configCPU_CLOCK_HZ/configTICK_RATE_HZ)
- * clock cycles from now. */
+/*
+ * 从当前时刻起，在 (configCPU_CLOCK_HZ/configTICK_RATE_HZ) 个时钟周期后
+ * 调度 COUNT&COMPARE 匹配中断。
+ */
 #if ( configTICK_USE_TC == 0 )
     static void prvScheduleFirstTick( void )
     {
@@ -354,8 +363,8 @@ void vPortEndScheduler( void )
         lCycles = Get_system_register( AVR32_COUNT );
         lCycles += ( configCPU_CLOCK_HZ / configTICK_RATE_HZ );
 
-        /* If lCycles ends up to be 0, make it 1 so that the COMPARE and exception */
-        /* generation feature does not get disabled. */
+        /* 如果 lCycles 最终为 0，则将其置为 1，以免 COMPARE 及异常 */
+        /* 生成功能被禁用。 */
         if( 0 == lCycles )
         {
             lCycles++;
@@ -371,8 +380,8 @@ void vPortEndScheduler( void )
         lCycles = Get_system_register( AVR32_COMPARE );
         lCycles += ( configCPU_CLOCK_HZ / configTICK_RATE_HZ );
 
-        /* If lCycles ends up to be 0, make it 1 so that the COMPARE and exception */
-        /* generation feature does not get disabled. */
+        /* 如果 lCycles 最终为 0，则将其置为 1，以免 COMPARE 及异常 */
+        /* 生成功能被禁用。 */
         if( 0 == lCycles )
         {
             lCycles++;
@@ -381,51 +390,51 @@ void vPortEndScheduler( void )
         lCount = Get_system_register( AVR32_COUNT );
 
         if( lCycles < lCount )
-        { /* We missed a tick, recover for the next. */
+        { /* 错过了一个时钟节拍（tick），为下一个节拍做补偿。 */
             lCycles += ( configCPU_CLOCK_HZ / configTICK_RATE_HZ );
         }
 
         Set_system_register( AVR32_COMPARE, lCycles );
     }
-#else /* if ( configTICK_USE_TC == 0 ) */
+#else /* 若 ( configTICK_USE_TC == 0 ) */
     __attribute__( ( __noinline__ ) ) static void prvClearTcInt( void )
     {
         AVR32_TC.channel[ configTICK_TC_CHANNEL ].sr;
     }
-#endif /* if ( configTICK_USE_TC == 0 ) */
+#endif /* 若 ( configTICK_USE_TC == 0 ) */
 /*-----------------------------------------------------------*/
 
-/* Setup the timer to generate the tick interrupts. */
+/* 配置定时器以产生时钟节拍（tick）中断。 */
 static void prvSetupTimerInterrupt( void )
 {
     #if ( configTICK_USE_TC == 1 )
         volatile avr32_tc_t * tc = &AVR32_TC;
 
-        /* Options for waveform generation. */
+        /* 波形生成选项。 */
         tc_waveform_opt_t waveform_opt =
         {
-            .channel = configTICK_TC_CHANNEL,              /* Channel selection. */
+            .channel = configTICK_TC_CHANNEL,              /* 通道选择。 */
 
-            .bswtrg  = TC_EVT_EFFECT_NOOP,                 /* Software trigger effect on TIOB. */
-            .beevt   = TC_EVT_EFFECT_NOOP,                 /* External event effect on TIOB. */
-            .bcpc    = TC_EVT_EFFECT_NOOP,                 /* RC compare effect on TIOB. */
-            .bcpb    = TC_EVT_EFFECT_NOOP,                 /* RB compare effect on TIOB. */
+            .bswtrg  = TC_EVT_EFFECT_NOOP,                 /* 软件触发对 TIOB 的影响。 */
+            .beevt   = TC_EVT_EFFECT_NOOP,                 /* 外部事件对 TIOB 的影响。 */
+            .bcpc    = TC_EVT_EFFECT_NOOP,                 /* RC 比较对 TIOB 的影响。 */
+            .bcpb    = TC_EVT_EFFECT_NOOP,                 /* RB 比较对 TIOB 的影响。 */
 
-            .aswtrg  = TC_EVT_EFFECT_NOOP,                 /* Software trigger effect on TIOA. */
-            .aeevt   = TC_EVT_EFFECT_NOOP,                 /* External event effect on TIOA. */
-            .acpc    = TC_EVT_EFFECT_NOOP,                 /* RC compare effect on TIOA: toggle. */
-            .acpa    = TC_EVT_EFFECT_NOOP,                 /* RA compare effect on TIOA: toggle (other possibilities are none, set and clear). */
+            .aswtrg  = TC_EVT_EFFECT_NOOP,                 /* 软件触发对 TIOA 的影响。 */
+            .aeevt   = TC_EVT_EFFECT_NOOP,                 /* 外部事件对 TIOA 的影响。 */
+            .acpc    = TC_EVT_EFFECT_NOOP,                 /* RC 比较对 TIOA 的影响：翻转。 */
+            .acpa    = TC_EVT_EFFECT_NOOP,                 /* RA 比较对 TIOA 的影响：翻转（其他可选值为无、置位和清零）。 */
 
-            .wavsel  = TC_WAVEFORM_SEL_UP_MODE_RC_TRIGGER, /* Waveform selection: Up mode without automatic trigger on RC compare. */
-            .enetrg  = FALSE,                              /* External event trigger enable. */
-            .eevt    = 0,                                  /* External event selection. */
-            .eevtedg = TC_SEL_NO_EDGE,                     /* External event edge selection. */
-            .cpcdis  = FALSE,                              /* Counter disable when RC compare. */
-            .cpcstop = FALSE,                              /* Counter clock stopped with RC compare. */
+            .wavsel  = TC_WAVEFORM_SEL_UP_MODE_RC_TRIGGER, /* 波形选择：向上模式，RC 比较时不自动触发。 */
+            .enetrg  = FALSE,                              /* 使能外部事件触发。 */
+            .eevt    = 0,                                  /* 外部事件选择。 */
+            .eevtedg = TC_SEL_NO_EDGE,                     /* 外部事件边沿选择。 */
+            .cpcdis  = FALSE,                              /* RC 比较时禁用计数器。 */
+            .cpcstop = FALSE,                              /* RC 比较时停止计数器时钟。 */
 
-            .burst   = FALSE,                              /* Burst signal selection. */
-            .clki    = FALSE,                              /* Clock inversion. */
-            .tcclks  = TC_CLOCK_SOURCE_TC2                 /* Internal source clock 2. */
+            .burst   = FALSE,                              /* 突发信号选择。 */
+            .clki    = FALSE,                              /* 时钟反相。 */
+            .tcclks  = TC_CLOCK_SOURCE_TC2                 /* 内部源时钟 2。 */
         };
 
         tc_interrupt_t tc_interrupt =
@@ -439,35 +448,38 @@ static void prvSetupTimerInterrupt( void )
             .lovrs = 0,
             .covfs = 0,
         };
-    #endif /* if ( configTICK_USE_TC == 1 ) */
+    #endif /* 若 ( configTICK_USE_TC == 1 ) */
 
-    /* Disable all interrupt/exception. */
+    /* 禁止所有中断/异常。 */
     portDISABLE_INTERRUPTS();
 
-    /* Register the compare interrupt handler to the interrupt controller and
-     * enable the compare interrupt. */
+    /*
+     * 向中断控制器注册比较中断处理程序，并使能比较中断。
+     */
 
     #if ( configTICK_USE_TC == 1 )
     {
         INTC_register_interrupt( &vTick, configTICK_TC_IRQ, INT0 );
 
-        /* Initialize the timer/counter. */
+        /* 初始化定时器/计数器。 */
         tc_init_waveform( tc, &waveform_opt );
 
-        /* Set the compare triggers.
-         * Remember TC counter is 16-bits, so counting second is not possible!
-         * That's why we configure it to count ms. */
+        /*
+         * 设置比较触发。
+         * 注意 TC 计数器为 16 位，因此无法按秒计数！
+         * 这就是将其配置为按毫秒计数的原因。
+         */
         tc_write_rc( tc, configTICK_TC_CHANNEL, ( configPBA_CLOCK_HZ / 4 ) / configTICK_RATE_HZ );
 
         tc_configure_interrupts( tc, configTICK_TC_CHANNEL, &tc_interrupt );
 
-        /* Start the timer/counter. */
+        /* 启动定时器/计数器。 */
         tc_start( tc, configTICK_TC_CHANNEL );
     }
-    #else /* if ( configTICK_USE_TC == 1 ) */
+    #else /* 若 ( configTICK_USE_TC == 1 ) */
     {
         INTC_register_interrupt( &vTick, AVR32_CORE_COMPARE_IRQ, INT0 );
         prvScheduleFirstTick();
     }
-    #endif /* if ( configTICK_USE_TC == 1 ) */
+    #endif /* 若 ( configTICK_USE_TC == 1 ) */
 }

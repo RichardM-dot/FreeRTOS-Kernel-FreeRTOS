@@ -27,55 +27,54 @@
  */
 
 /*
- *  Changes from V2.5.2
+ *  自 V2.5.2 起的变更
  *
- + usCriticalNesting now has a volatile qualifier.
+ * + usCriticalNesting 现在具有 volatile 限定符。
  */
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <stdlib.h>
 #include <signal.h>
 
-/* Scheduler includes. */
+/* 调度器头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the MSP430 port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * MSP430 移植层中 portable.h 所定义函数的实现。
+ * ----------------------------------------------------------
+ */
 
-/* Constants required for hardware setup.  The tick ISR runs off the ACLK,
- * not the MCLK. */
+/*
+ * 硬件配置所需的常量。时钟节拍 ISR 由 ACLK 驱动，而不是 MCLK。
+ */
 #define portACLK_FREQUENCY_HZ           ( ( TickType_t ) 32768 )
 #define portINITIAL_CRITICAL_NESTING    ( ( uint16_t ) 10 )
 #define portFLAGS_INT_ENABLED           ( ( StackType_t ) 0x08 )
 
-/* We require the address of the pxCurrentTCB variable, but don't want to know
- * any details of its type. */
+/*
+ * 需要 pxCurrentTCB 变量的地址，但无需了解其类型的任何细节。
+ */
 typedef void TCB_t;
 extern volatile TCB_t * volatile pxCurrentTCB;
 
-/* Most ports implement critical sections by placing the interrupt flags on
- * the stack before disabling interrupts.  Exiting the critical section is then
- * simply a case of popping the flags from the stack.  As mspgcc does not use
- * a frame pointer this cannot be done as modifying the stack will clobber all
- * the stack variables.  Instead each task maintains a count of the critical
- * section nesting depth.  Each time a critical section is entered the count is
- * incremented.  Each time a critical section is left the count is decremented -
- * with interrupts only being re-enabled if the count is zero.
+/*
+ * 大多数移植层通过在禁止中断前将中断标志压栈来实现临界区。退出临界区只需
+ * 从栈中弹出标志。由于 mspgcc 不使用帧指针，无法这样做，因为修改栈会破坏
+ * 所有栈变量。因此每个任务维护临界区嵌套深度的计数。每次进入临界区时计数
+ * 递增，每次离开临界区时计数递减 - 仅当计数为零时才重新使能中断。
  *
- * usCriticalNesting will get set to zero when the scheduler starts, but must
- * not be initialised to zero as this will cause problems during the startup
- * sequence. */
+ * 调度器启动时 usCriticalNesting 会被置零，但不能将其初始化为零，否则会在
+ * 启动序列期间引发问题。
+ */
 volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 /*-----------------------------------------------------------*/
 
 /*
- * Macro to save a task context to the task stack.  This simply pushes all the
- * general purpose msp430 registers onto the stack, followed by the
- * usCriticalNesting value used by the task.  Finally the resultant stack
- * pointer value is saved into the task control block so it can be retrieved
- * the next time the task executes.
+ * 将任务上下文保存到任务栈的宏。它先将所有 msp430 通用寄存器压入栈，然后压入
+ * 该任务使用的 usCriticalNesting 值。最后将所得的栈指针值保存到任务控制块中，
+ * 以便任务下次执行时取回。
  */
 #define portSAVE_CONTEXT()                               \
     asm volatile ( "push   r4                      \n\t" \
@@ -97,14 +96,11 @@ volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
                    );
 
 /*
- * Macro to restore a task context from the task stack.  This is effectively
- * the reverse of portSAVE_CONTEXT().  First the stack pointer value is
- * loaded from the task control block.  Next the value for usCriticalNesting
- * used by the task is retrieved from the stack - followed by the value of all
- * the general purpose msp430 registers.
+ * 从任务栈恢复任务上下文的宏。它实际上是 portSAVE_CONTEXT() 的逆过程。首先
+ * 从任务控制块加载栈指针值。接着从栈中取回该任务使用的 usCriticalNesting 值 -
+ * 然后取回所有 msp430 通用寄存器的值。
  *
- * The bic instruction ensures there are no low power bits set in the status
- * register that is about to be popped from the stack.
+ * bic 指令确保即将从栈中弹出的状态寄存器中没有置位低功耗位。
  */
 #define portRESTORE_CONTEXT()                            \
     asm volatile ( "mov.w  pxCurrentTCB, r12       \n\t" \
@@ -129,25 +125,24 @@ volatile uint16_t usCriticalNesting = portINITIAL_CRITICAL_NESTING;
 /*-----------------------------------------------------------*/
 
 /*
- * Sets up the periodic ISR used for the RTOS tick.  This uses timer 0, but
- * could have alternatively used the watchdog timer or timer 1.
+ * 设置用于 RTOS 时钟节拍（tick）的周期性 ISR。此处使用定时器 0，
+ * 也可以改用看门狗定时器或定时器 1。
  */
 static void prvSetupTimerInterrupt( void );
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the stack of a task to look exactly as if a call to
- * portSAVE_CONTEXT had been called.
+ * 初始化任务栈，使其与调用过 portSAVE_CONTEXT 后的状态完全一致。
  *
- * See the header file portable.h.
+ * 参见头文件 portable.h。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
     /*
-     *  Place a few bytes of known values on the bottom of the stack.
-     *  This is just useful for debugging and can be included if required.
+     *  在栈底放置几个已知值。
+     *  这仅用于调试，需要时可以加入。
      *
      * pxTopOfStack = ( StackType_t ) 0x1111;
      *  pxTopOfStack--;
@@ -157,16 +152,16 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
      *  pxTopOfStack--;
      */
 
-    /* The msp430 automatically pushes the PC then SR onto the stack before
-     * executing an ISR.  We want the stack to look just as if this has happened
-     * so place a pointer to the start of the task on the stack first - followed
-     * by the flags we want the task to use when it starts up. */
+    /*
+     * msp430 在执行 ISR 之前会自动将 PC 和 SR 压入栈。我们希望栈看起来就像发生了
+     * 这一过程，因此先将指向任务起始地址的指针压栈 - 然后压入任务启动时要使用的标志位。
+     */
     *pxTopOfStack = ( StackType_t ) pxCode;
     pxTopOfStack--;
     *pxTopOfStack = portFLAGS_INT_ENABLED;
     pxTopOfStack--;
 
-    /* Next the general purpose registers. */
+    /* 接下来是通用寄存器。 */
     *pxTopOfStack = ( StackType_t ) 0x4444;
     pxTopOfStack--;
     *pxTopOfStack = ( StackType_t ) 0x5555;
@@ -186,7 +181,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 #ifdef __MSPGCC__
     *pxTopOfStack = ( StackType_t ) 0xcccc;
 #else
-    /* The MSP430 EABI expects the function parameter in R12. */
+    /* MSP430 EABI 期望函数参数位于 R12。 */
     *pxTopOfStack = ( StackType_t ) pvParameters;
 #endif
     pxTopOfStack--;
@@ -195,141 +190,143 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     *pxTopOfStack = ( StackType_t ) 0xeeee;
     pxTopOfStack--;
 #ifdef __MSPGCC__
-    /* The mspgcc ABI expects the function parameter in R15. */
+    /* mspgcc ABI 期望函数参数位于 R15。 */
     *pxTopOfStack = ( StackType_t ) pvParameters;
 #else
     *pxTopOfStack = ( StackType_t ) 0xffff;
 #endif
     pxTopOfStack--;
 
-    /* The code generated by the mspgcc compiler does not maintain separate
-     * stack and frame pointers. The portENTER_CRITICAL macro cannot therefore
-     * use the stack as per other ports.  Instead a variable is used to keep
-     * track of the critical section nesting.  This variable has to be stored
-     * as part of the task context and is initially set to zero. */
+    /*
+     * mspgcc 编译器生成的代码不维护独立的栈指针和帧指针。因此 portENTER_CRITICAL
+     * 宏不能像其他移植层那样使用栈。改为使用变量跟踪临界区嵌套。该变量必须作为
+     * 任务上下文的一部分保存，并初始化为零。
+     */
     *pxTopOfStack = ( StackType_t ) portNO_CRITICAL_SECTION_NESTING;
 
-    /* Return a pointer to the top of the stack we have generated so this can
-     * be stored in the task control block for the task. */
+    /*
+     * 返回指向所生成栈顶的指针，以便将其存入该任务的任务控制块中。
+     */
     return pxTopOfStack;
 }
 /*-----------------------------------------------------------*/
 
 BaseType_t xPortStartScheduler( void )
 {
-    /* Setup the hardware to generate the tick.  Interrupts are disabled when
-     * this function is called. */
+    /*
+     * 配置硬件以产生时钟节拍（tick）。调用此函数时中断已被禁止。
+     */
     prvSetupTimerInterrupt();
 
-    /* Restore the context of the first task that is going to run. */
+    /* 恢复将要运行的第一个任务的上下文。 */
     portRESTORE_CONTEXT();
 
-    /* Should not get here as the tasks are now running! */
+    /* 任务已在运行，不应执行到此处！ */
     return pdTRUE;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* It is unlikely that the MSP430 port will get stopped.  If required simply
-     * disable the tick interrupt here. */
+    /*
+     * MSP430 移植层不太可能被停止。如有需要，在此处禁止时钟节拍中断即可。
+     */
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Manual context switch called by portYIELD or taskYIELD.
+ * 由 portYIELD 或 taskYIELD 调用的手动上下文切换。
  *
- * The first thing we do is save the registers so we can use a naked attribute.
+ * 首先要保存寄存器，以便使用 naked 属性。
  */
 void vPortYield( void ) __attribute__( ( naked ) );
 void vPortYield( void )
 {
-    /* We want the stack of the task being saved to look exactly as if the task
-     * was saved during a pre-emptive RTOS tick ISR.  Before calling an ISR the
-     * msp430 places the status register onto the stack.  As this is a function
-     * call and not an ISR we have to do this manually. */
+    /*
+     * 希望被保存任务的栈看起来与在抢占式 RTOS 时钟节拍 ISR 中保存时完全一致。
+     * 在调用 ISR 之前，msp430 会将状态寄存器压入栈。由于这是函数调用而非 ISR，
+     * 必须手动完成此操作。
+     */
     asm volatile ( "push    r2" );
     _DINT();
 
-    /* Save the context of the current task. */
+    /* 保存当前任务的上下文。 */
     portSAVE_CONTEXT();
 
-    /* Switch to the highest priority task that is ready to run. */
+    /* 切换到已就绪的最高优先级任务。 */
     vTaskSwitchContext();
 
-    /* Restore the context of the new task. */
+    /* 恢复新任务的上下文。 */
     portRESTORE_CONTEXT();
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Hardware initialisation to generate the RTOS tick.  This uses timer 0
- * but could alternatively use the watchdog timer or timer 1.
+ * 产生 RTOS 时钟节拍（tick）的硬件初始化。此处使用定时器 0，
+ * 也可以改用看门狗定时器或定时器 1。
  */
 static void prvSetupTimerInterrupt( void )
 {
-    /* Ensure the timer is stopped. */
+    /* 确保定时器停止。 */
     TACTL = 0;
 
-    /* Run the timer of the ACLK. */
+    /* 让定时器由 ACLK 驱动运行。 */
     TACTL = TASSEL_1;
 
-    /* Clear everything to start with. */
+    /* 先清除所有内容。 */
     TACTL |= TACLR;
 
-    /* Set the compare match value according to the tick rate we want. */
+    /* 根据所需的 tick 速率设置比较匹配值。 */
     TACCR0 = portACLK_FREQUENCY_HZ / configTICK_RATE_HZ;
 
-    /* Enable the interrupts. */
+    /* 使能中断。 */
     TACCTL0 = CCIE;
 
-    /* Start up clean. */
+    /* 从干净状态启动。 */
     TACTL |= TACLR;
 
-    /* Up mode. */
+    /* 向上模式。 */
     TACTL |= MC_1;
 }
 /*-----------------------------------------------------------*/
 
 /*
- * The interrupt service routine used depends on whether the pre-emptive
- * scheduler is being used or not.
+ * 所使用的中断服务程序取决于是否使用抢占式调度器。
  */
 
 #if configUSE_PREEMPTION == 1
 
 /*
- * Tick ISR for preemptive scheduler.  We can use a naked attribute as
- * the context is saved at the start of vPortYieldFromTick().  The tick
- * count is incremented after the context is saved.
+ * 抢占式调度器的时钟节拍 ISR。由于上下文在 vPortYieldFromTick() 开头
+ * 已保存，可以使用 naked 属性。上下文保存之后再递增 tick 计数。
  */
     interrupt( TIMERA0_VECTOR ) void prvTickISR( void ) __attribute__( ( naked ) );
     interrupt( TIMERA0_VECTOR ) void prvTickISR( void )
     {
-        /* Save the context of the interrupted task. */
+        /* 保存被中断任务的上下文。 */
         portSAVE_CONTEXT();
 
-        /* Increment the tick count then switch to the highest priority task
-         * that is ready to run. */
+        /*
+         * 递增 tick 计数，然后切换到已就绪的最高优先级任务。
+         */
         if( xTaskIncrementTick() != pdFALSE )
         {
             vTaskSwitchContext();
         }
 
-        /* Restore the context of the new task. */
+        /* 恢复新任务的上下文。 */
         portRESTORE_CONTEXT();
     }
 
-#else /* if configUSE_PREEMPTION == 1 */
+#else /* 若 configUSE_PREEMPTION == 1 */
 
 /*
- * Tick ISR for the cooperative scheduler.  All this does is increment the
- * tick count.  We don't need to switch context, this can only be done by
- * manual calls to taskYIELD();
+ * 协作式调度器的时钟节拍 ISR。仅递增 tick 计数。无需切换上下文，
+ * 上下文切换只能通过手动调用 taskYIELD() 完成。
  */
     interrupt( TIMERA0_VECTOR ) void prvTickISR( void );
     interrupt( TIMERA0_VECTOR ) void prvTickISR( void )
     {
         xTaskIncrementTick();
     }
-#endif /* if configUSE_PREEMPTION == 1 */
+#endif /* 若 configUSE_PREEMPTION == 1 */

@@ -26,33 +26,32 @@
  *
  */
 
-/* Variables used by scheduler */
+/* 调度器使用的变量 */
 .extern _pxCurrentTCB
    .extern _usCriticalNesting
 
 /*
- * portSAVE_CONTEXT MACRO
- * Saves the context of the general purpose registers, CS and ES (only in far
- * memory mode) registers the usCriticalNesting Value and the Stack Pointer
- * of the active Task onto the task stack
+ * portSAVE_CONTEXT 宏
+ * 将通用寄存器、CS 和 ES（仅远存储器模式）寄存器、usCriticalNesting 值
+ * 以及活动任务的栈指针保存到任务栈中
  */
    .macro portSAVE_CONTEXT
 
 SEL RB0
 
-/* Save AX Register to stack. */
+/* 将 AX 寄存器保存到栈。 */
 PUSH AX
 PUSH HL
-/* Save CS register. */
+/* 保存 CS 寄存器。 */
 MOV A, CS
 XCH A, X
-/* Save ES register. */
+/* 保存 ES 寄存器。 */
 MOV A, ES
 PUSH AX
-/* Save the remaining general purpose registers from bank 0. */
+/* 保存寄存器组 0 中其余的通用寄存器。 */
 PUSH DE
 PUSH BC
-/* Save the other register banks - only necessary in the GCC port. */
+/* 保存其他寄存器组 - 仅在 GCC 移植层中需要。 */
 SEL RB1
 PUSH AX
 PUSH BC
@@ -63,42 +62,42 @@ PUSH AX
 PUSH BC
 PUSH DE
 PUSH HL
-/* Registers in bank 3 are for ISR use only so don't need saving. */
+/* 寄存器组 3 中的寄存器仅供 ISR 使用，因此无需保存。 */
 SEL RB0
-/* Save the usCriticalNesting value. */
+/* 保存 usCriticalNesting 值。 */
 MOVW AX, !_usCriticalNesting
 PUSH AX
-/* Save the Stack pointer. */
+/* 保存栈指针。 */
 MOVW AX, !_pxCurrentTCB
 MOVW HL, AX
 MOVW AX, SP
 MOVW[ HL ], AX
-/* Switch stack pointers. */
-movw sp, # _stack /* Set stack pointer */
+/* 切换栈指针。 */
+movw sp, # _stack /* 设置栈指针 */
 
    .endm
 
 
 /*
- * portRESTORE_CONTEXT MACRO
- * Restores the task Stack Pointer then use this to restore usCriticalNesting,
- * general purpose registers and the CS and ES (only in far memory mode)
- * of the selected task from the task stack
+ * portRESTORE_CONTEXT 宏
+ * 恢复任务栈指针，然后使用该指针从任务栈中恢复所选任务的 usCriticalNesting、
+ * 通用寄存器以及 CS 和 ES（仅远存储器模式）
  */
    .macro portRESTORE_CONTEXT MACRO
 SEL RB0
-/* Restore the Stack pointer. */
+/* 恢复栈指针。 */
 MOVW AX, !_pxCurrentTCB
 MOVW HL, AX
 MOVW AX, [ HL ]
 MOVW SP, AX
-/* Restore usCriticalNesting value. */
+/* 恢复 usCriticalNesting 值。 */
 POP AX
 MOVW    !_usCriticalNesting, AX
 
-/* Restore the alternative register banks - only necessary in the GCC
- * port.  Register bank 3 is dedicated for interrupts use so is not saved or
- * restored. */
+/*
+ * 恢复备用寄存器组 - 仅在 GCC 移植层中需要。寄存器组 3 专供中断使用，
+ * 因此不保存也不恢复。
+ */
 SEL RB2
 POP HL
 POP DE
@@ -110,18 +109,18 @@ POP DE
 POP BC
 POP AX
 SEL RB0
-/* Restore the necessary general purpose registers. */
+/* 恢复必要的通用寄存器。 */
 POP BC
 POP DE
-/* Restore the ES register. */
+/* 恢复 ES 寄存器。 */
 POP AX
 MOV ES, A
-/* Restore the CS register. */
+/* 恢复 CS 寄存器。 */
 XCH A, X
 MOV CS, A
-/* Restore general purpose register HL. */
+/* 恢复通用寄存器 HL。 */
 POP HL
-/* Restore AX. */
+/* 恢复 AX。 */
 POP AX
 
    .endm

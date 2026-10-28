@@ -27,80 +27,81 @@
  */
 
 
-/*-----------------------------------------------------------
-* Components that can be compiled to either ARM or THUMB mode are
-* contained in port.c  The ISR routines, which can only be compiled
-* to ARM mode, are contained in this file.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 可编译为 ARM 或 THUMB 模式的组件包含在 port.c 中。
+ * 只能编译为 ARM 模式的 ISR 例程包含在本文件中。
+ * ----------------------------------------------------------
+ */
 
-/* Scheduler includes. */
+/* 调度器头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Constants required to handle interrupts. */
+/* 处理中断所需的常量。 */
 #define portTIMER_MATCH_ISR_BIT    ( ( uint8_t ) 0x01 )
 #define portCLEAR_VIC_INTERRUPT    ( ( uint32_t ) 0 )
 
-/* Constants required to handle critical sections. */
+/* 处理临界区所需的常量。 */
 #define portNO_CRITICAL_NESTING    ( ( uint32_t ) 0 )
 volatile uint32_t ulCriticalNesting = 9999UL;
 
 /*-----------------------------------------------------------*/
 
-/* ISR to handle manual context switches (from a call to taskYIELD()). */
+/* 处理手动上下文切换（来自 taskYIELD() 调用）的 ISR。 */
 void vPortYieldProcessor( void ) __attribute__( ( interrupt( "SWI" ), naked ) );
 
 /*
- * The scheduler can only be started from ARM mode, hence the inclusion of this
- * function here.
+ * 调度器只能从 ARM 模式启动，因此在此处包含该函数。
  */
 void vPortISRStartFirstTask( void );
 /*-----------------------------------------------------------*/
 
 void vPortISRStartFirstTask( void )
 {
-    /* Simply start the scheduler.  This is included here as it can only be
-     * called from ARM mode. */
+    /*
+     * 直接启动调度器。之所以包含在此处，是因为它只能从 ARM 模式调用。
+     */
     portRESTORE_CONTEXT();
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Called by portYIELD() or taskYIELD() to manually force a context switch.
+ * 由 portYIELD() 或 taskYIELD() 调用，用于手动强制上下文切换。
  *
- * When a context switch is performed from the task level the saved task
- * context is made to look as if it occurred from within the tick ISR.  This
- * way the same restore context function can be used when restoring the context
- * saved from the ISR or that saved from a call to vPortYieldProcessor.
+ * 从任务级执行上下文切换时，保存的任务上下文会被构造成
+ * 如同在 tick ISR 中发生切换一样。这样，在恢复从 ISR 保存的上下文
+ * 或从 vPortYieldProcessor 调用保存的上下文时，可以使用同一个恢复上下文函数。
  */
 void vPortYieldProcessor( void )
 {
-    /* Within an IRQ ISR the link register has an offset from the true return
-     * address, but an SWI ISR does not.  Add the offset manually so the same
-     * ISR return code can be used in both cases. */
+    /*
+     * 在 IRQ ISR 中，链接寄存器与真实返回地址之间存在偏移，而 SWI ISR 没有。
+     * 手动加上该偏移，以便两种情况都能使用相同的 ISR 返回代码。
+     */
     __asm volatile ( "ADD       LR, LR, #4" );
 
-    /* Perform the context switch.  First save the context of the current task. */
+    /* 执行上下文切换。首先保存当前任务的上下文。 */
     portSAVE_CONTEXT();
 
-    /* Find the highest priority task that is ready to run. */
+    /* 查找已就绪的最高优先级任务。 */
     __asm volatile ( "bl         vTaskSwitchContext" );
 
-    /* Restore the context of the new task. */
+    /* 恢复新任务的上下文。 */
     portRESTORE_CONTEXT();
 }
 /*-----------------------------------------------------------*/
 
 /*
- * The ISR used for the scheduler tick depends on whether the cooperative or
- * the preemptive scheduler is being used.
+ * 调度器 tick 使用的 ISR 取决于使用协作式还是抢占式调度器。
  */
 
 
 #if configUSE_PREEMPTION == 0
 
-/* The cooperative scheduler requires a normal IRQ service routine to
- * simply increment the system tick. */
+/*
+ * 协作式调度器需要一个常规 IRQ 服务例程来简单地递增系统 tick。
+ */
     void vNonPreemptiveTick( void ) __attribute__( ( interrupt( "IRQ" ) ) );
     void vNonPreemptiveTick( void )
     {
@@ -109,18 +110,20 @@ void vPortYieldProcessor( void )
         VICVectAddr = portCLEAR_VIC_INTERRUPT;
     }
 
-#else /* if configUSE_PREEMPTION == 0 */
+#else /* if configUSE_PREEMPTION == 0（未启用抢占） */
 
-/* The preemptive scheduler is defined as "naked" as the full context is
- * saved on entry as part of the context switch. */
+/*
+ * 抢占式调度器定义为 "naked"（裸函数），因为入口处会作为上下文切换的一部分保存完整上下文。
+ */
     void vPreemptiveTick( void ) __attribute__( ( naked ) );
     void vPreemptiveTick( void )
     {
-        /* Save the context of the interrupted task. */
+        /* 保存被中断任务的上下文。 */
         portSAVE_CONTEXT();
 
-        /* Increment the RTOS tick count, then look for the highest priority
-         * task that is ready to run. */
+        /*
+         * 递增 RTOS tick 计数，然后查找已就绪的最高优先级任务。
+         */
         __asm volatile
         (
             "   bl xTaskIncrementTick   \t\n" \
@@ -130,22 +133,21 @@ void vPortYieldProcessor( void )
             "SkipContextSwitch:         \t\n"
         );
 
-        /* Ready for the next interrupt. */
+        /* 准备下一次中断。 */
         T0IR = 2;
         VICVectAddr = portCLEAR_VIC_INTERRUPT;
 
-        /* Restore the context of the new task. */
+        /* 恢复新任务的上下文。 */
         portRESTORE_CONTEXT();
     }
 
-#endif /* if configUSE_PREEMPTION == 0 */
+#endif /* if configUSE_PREEMPTION == 0（未启用抢占） */
 /*-----------------------------------------------------------*/
 
 /*
- * The interrupt management utilities can only be called from ARM mode.  When
- * THUMB_INTERWORK is defined the utilities are defined as functions here to
- * ensure a switch to ARM mode.  When THUMB_INTERWORK is not defined then
- * the utilities are defined as macros in portmacro.h - as per other ports.
+ * 中断管理工具只能从 ARM 模式调用。定义 THUMB_INTERWORK 时，
+ * 这些工具在此处定义为函数，以确保切换到 ARM 模式；
+ * 未定义 THUMB_INTERWORK 时，这些工具按其他移植层的做法在 portmacro.h 中定义为宏。
  */
 #ifdef THUMB_INTERWORK
 
@@ -155,44 +157,46 @@ void vPortYieldProcessor( void )
     void vPortDisableInterruptsFromThumb( void )
     {
         __asm volatile (
-            "STMDB  SP!, {R0}       \n\t" /* Push R0.                                 */
-            "MRS    R0, CPSR        \n\t" /* Get CPSR.                                */
-            "ORR    R0, R0, #0xC0   \n\t" /* Disable IRQ, FIQ.                        */
-            "MSR    CPSR, R0        \n\t" /* Write back modified value.               */
-            "LDMIA  SP!, {R0}       \n\t" /* Pop R0.                                  */
-            "BX     R14" );               /* Return back to thumb.                    */
+            "STMDB  SP!, {R0}       \n\t" /* 压入 R0。 */
+            "MRS    R0, CPSR        \n\t" /* 获取 CPSR。 */
+            "ORR    R0, R0, #0xC0   \n\t" /* 禁用 IRQ、FIQ。 */
+            "MSR    CPSR, R0        \n\t" /* 回写修改后的值。 */
+            "LDMIA  SP!, {R0}       \n\t" /* 弹出 R0。 */
+            "BX     R14" );               /* 返回 Thumb 模式。 */
     }
 
     void vPortEnableInterruptsFromThumb( void )
     {
         __asm volatile (
-            "STMDB  SP!, {R0}       \n\t" /* Push R0.                                 */
-            "MRS    R0, CPSR        \n\t" /* Get CPSR.                                */
-            "BIC    R0, R0, #0xC0   \n\t" /* Enable IRQ, FIQ.                         */
-            "MSR    CPSR, R0        \n\t" /* Write back modified value.               */
-            "LDMIA  SP!, {R0}       \n\t" /* Pop R0.                                  */
-            "BX     R14" );               /* Return back to thumb.                    */
+            "STMDB  SP!, {R0}       \n\t" /* 压入 R0。 */
+            "MRS    R0, CPSR        \n\t" /* 获取 CPSR。 */
+            "BIC    R0, R0, #0xC0   \n\t" /* 使能 IRQ、FIQ。 */
+            "MSR    CPSR, R0        \n\t" /* 回写修改后的值。 */
+            "LDMIA  SP!, {R0}       \n\t" /* 弹出 R0。 */
+            "BX     R14" );               /* 返回 Thumb 模式。 */
     }
 
-#endif /* THUMB_INTERWORK */
+#endif /* THUMB_INTERWORK（Thumb 与 ARM 互操作） */
 
-/* The code generated by the GCC compiler uses the stack in different ways at
- * different optimisation levels.  The interrupt flags can therefore not always
- * be saved to the stack.  Instead the critical section nesting level is stored
- * in a variable, which is then saved as part of the stack context. */
+/*
+ * GCC 编译器生成的代码在不同优化级别下以不同方式使用栈。
+ * 因此中断标志无法总是保存到栈上。取而代之的是将临界区嵌套层次
+ * 保存到变量中，该变量再作为栈上下文的一部分保存。
+ */
 void vPortEnterCritical( void )
 {
-    /* Disable interrupts as per portDISABLE_INTERRUPTS();                          */
+    /* 按 portDISABLE_INTERRUPTS() 的方式禁用中断。 */
     __asm volatile (
-        "STMDB  SP!, {R0}           \n\t" /* Push R0.                             */
-        "MRS    R0, CPSR            \n\t" /* Get CPSR.                            */
-        "ORR    R0, R0, #0xC0       \n\t" /* Disable IRQ, FIQ.                    */
-        "MSR    CPSR, R0            \n\t" /* Write back modified value.           */
-        "LDMIA  SP!, {R0}" );             /* Pop R0.                              */
+        "STMDB  SP!, {R0}           \n\t" /* 压入 R0。 */
+        "MRS    R0, CPSR            \n\t" /* 获取 CPSR。 */
+        "ORR    R0, R0, #0xC0       \n\t" /* 禁用 IRQ、FIQ。 */
+        "MSR    CPSR, R0            \n\t" /* 回写修改后的值。 */
+        "LDMIA  SP!, {R0}" );             /* 弹出 R0。 */
 
-    /* Now that interrupts are disabled, ulCriticalNesting can be accessed
-     * directly.  Increment ulCriticalNesting to keep a count of how many times
-     * portENTER_CRITICAL() has been called. */
+    /*
+     * 现在中断已禁用，可以直接访问 ulCriticalNesting。
+     * 递增 ulCriticalNesting，以记录 portENTER_CRITICAL() 被调用的次数。
+     */
     ulCriticalNesting++;
 }
 
@@ -200,20 +204,21 @@ void vPortExitCritical( void )
 {
     if( ulCriticalNesting > portNO_CRITICAL_NESTING )
     {
-        /* Decrement the nesting count as we are leaving a critical section. */
+        /* 离开临界区时递减嵌套计数。 */
         ulCriticalNesting--;
 
-        /* If the nesting level has reached zero then interrupts should be
-         * re-enabled. */
+        /*
+         * 若嵌套层次已归零，则应重新使能中断。
+         */
         if( ulCriticalNesting == portNO_CRITICAL_NESTING )
         {
-            /* Enable interrupts as per portEXIT_CRITICAL().                    */
+            /* 按 portEXIT_CRITICAL() 的方式使能中断。 */
             __asm volatile (
-                "STMDB  SP!, {R0}       \n\t" /* Push R0.                     */
-                "MRS    R0, CPSR        \n\t" /* Get CPSR.                    */
-                "BIC    R0, R0, #0xC0   \n\t" /* Enable IRQ, FIQ.             */
-                "MSR    CPSR, R0        \n\t" /* Write back modified value.   */
-                "LDMIA  SP!, {R0}" );         /* Pop R0.                      */
+                "STMDB  SP!, {R0}       \n\t" /* 压入 R0。 */
+                "MRS    R0, CPSR        \n\t" /* 获取 CPSR。 */
+                "BIC    R0, R0, #0xC0   \n\t" /* 使能 IRQ、FIQ。 */
+                "MSR    CPSR, R0        \n\t" /* 回写修改后的值。 */
+                "LDMIA  SP!, {R0}" );         /* 弹出 R0。 */
         }
     }
 }

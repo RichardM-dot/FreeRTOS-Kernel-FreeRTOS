@@ -27,57 +27,56 @@
  */
 
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the ARM7 port.
-*
-* Components that can be compiled to either ARM or THUMB mode are
-* contained in this file.  The ISR routines, which can only be compiled
-* to ARM mode are contained in portISR.c.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * portable.h 中各函数针对 ARM7 移植层的实现。
+ *
+ * 可编译为 ARM 或 THUMB 模式的组件包含在本文件中。
+ * 只能编译为 ARM 模式的 ISR 例程包含在 portISR.c 中。
+ * ----------------------------------------------------------
+ */
 
 
-/* Standard includes. */
+/* 标准头文件。 */
 #include <stdlib.h>
 
-/* Scheduler includes. */
+/* 调度器头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Constants required to setup the task context. */
-#define portINITIAL_SPSR                   ( ( StackType_t ) 0x1f ) /* System mode, ARM mode, interrupts enabled. */
+/* 设置任务上下文所需的常量。 */
+#define portINITIAL_SPSR                   ( ( StackType_t ) 0x1f ) /* 系统模式、ARM 模式、中断使能。 */
 #define portTHUMB_MODE_BIT                 ( ( StackType_t ) 0x20 )
 #define portINSTRUCTION_SIZE               ( ( StackType_t ) 4 )
 #define portNO_CRITICAL_SECTION_NESTING    ( ( StackType_t ) 0 )
 
-/* Constants required to setup the tick ISR. */
+/* 设置 tick ISR 所需的常量。 */
 #define portENABLE_TIMER                   ( ( uint8_t ) 0x01 )
 #define portPRESCALE_VALUE                 0x00
 #define portINTERRUPT_ON_MATCH             ( ( uint32_t ) 0x01 )
 #define portRESET_COUNT_ON_MATCH           ( ( uint32_t ) 0x02 )
 
-/* Constants required to setup the VIC for the tick ISR. */
+/* 为 tick ISR 配置 VIC 所需的常量。 */
 #define portTIMER_VIC_CHANNEL              ( ( uint32_t ) 0x0004 )
 #define portTIMER_VIC_CHANNEL_BIT          ( ( uint32_t ) 0x0010 )
 #define portTIMER_VIC_ENABLE               ( ( uint32_t ) 0x0020 )
 
 /*-----------------------------------------------------------*/
 
-/* Setup the timer to generate the tick interrupts. */
+/* 设置定时器以产生 tick 中断。 */
 static void prvSetupTimerInterrupt( void );
 
 /*
- * The scheduler can only be started from ARM mode, so
- * vPortISRStartFirstSTask() is defined in portISR.c.
+ * 调度器只能从 ARM 模式启动，因此 vPortISRStartFirstSTask() 定义在 portISR.c 中。
  */
 extern void vPortISRStartFirstTask( void );
 
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the stack of a task to look exactly as if a call to
- * portSAVE_CONTEXT had been called.
+ * 初始化任务栈，使其外观与刚调用过 portSAVE_CONTEXT 完全一致。
  *
- * See header file for description.
+ * 参见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
@@ -87,69 +86,74 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
     pxOriginalTOS = pxTopOfStack;
 
-    /* To ensure asserts in tasks.c don't fail, although in this case the assert
-     * is not really required. */
+    /*
+     * 确保 tasks.c 中的断言不会失败，尽管此处实际上并不需要该断言。
+     */
     pxTopOfStack--;
 
-    /* Setup the initial stack of the task.  The stack is set exactly as
-     * expected by the portRESTORE_CONTEXT() macro. */
+    /*
+     * 设置任务的初始栈。栈的布局与 portRESTORE_CONTEXT() 宏的期望完全一致。
+     */
 
-    /* First on the stack is the return address - which in this case is the
-     * start of the task.  The offset is added to make the return address appear
-     * as it would within an IRQ ISR. */
+    /*
+     * 栈中的第一项是返回地址——此处即任务的起始地址。
+     * 加上偏移量后，返回地址看起来就像在 IRQ ISR 中一样。
+     */
     *pxTopOfStack = ( StackType_t ) pxCode + portINSTRUCTION_SIZE;
     pxTopOfStack--;
 
-    *pxTopOfStack = ( StackType_t ) 0x00000000;    /* R14 */
+    *pxTopOfStack = ( StackType_t ) 0x00000000;    /* R14 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) pxOriginalTOS; /* Stack used when task starts goes in R13. */
+    *pxTopOfStack = ( StackType_t ) pxOriginalTOS; /* 任务启动时使用的栈放入 R13。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x12121212;    /* R12 */
+    *pxTopOfStack = ( StackType_t ) 0x12121212;    /* R12 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x11111111;    /* R11 */
+    *pxTopOfStack = ( StackType_t ) 0x11111111;    /* R11 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x10101010;    /* R10 */
+    *pxTopOfStack = ( StackType_t ) 0x10101010;    /* R10 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x09090909;    /* R9 */
+    *pxTopOfStack = ( StackType_t ) 0x09090909;    /* R9 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x08080808;    /* R8 */
+    *pxTopOfStack = ( StackType_t ) 0x08080808;    /* R8 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x07070707;    /* R7 */
+    *pxTopOfStack = ( StackType_t ) 0x07070707;    /* R7 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x06060606;    /* R6 */
+    *pxTopOfStack = ( StackType_t ) 0x06060606;    /* R6 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x05050505;    /* R5 */
+    *pxTopOfStack = ( StackType_t ) 0x05050505;    /* R5 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x04040404;    /* R4 */
+    *pxTopOfStack = ( StackType_t ) 0x04040404;    /* R4 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x03030303;    /* R3 */
+    *pxTopOfStack = ( StackType_t ) 0x03030303;    /* R3 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x02020202;    /* R2 */
+    *pxTopOfStack = ( StackType_t ) 0x02020202;    /* R2 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x01010101;    /* R1 */
-    pxTopOfStack--;
-
-    /* When the task starts is will expect to find the function parameter in
-     * R0. */
-    *pxTopOfStack = ( StackType_t ) pvParameters; /* R0 */
+    *pxTopOfStack = ( StackType_t ) 0x01010101;    /* R1 寄存器 */
     pxTopOfStack--;
 
-    /* The last thing onto the stack is the status register, which is set for
-     * system mode, with interrupts enabled. */
+    /*
+     * 任务启动时会期望在 R0 中找到函数参数。
+     */
+    *pxTopOfStack = ( StackType_t ) pvParameters; /* R0 寄存器 */
+    pxTopOfStack--;
+
+    /*
+     * 最后压入栈的是状态寄存器，其设置为系统模式并使能中断。
+     */
     *pxTopOfStack = ( StackType_t ) portINITIAL_SPSR;
 
     if( ( ( uint32_t ) pxCode & 0x01UL ) != 0x00 )
     {
-        /* We want the task to start in thumb mode. */
+        /* 希望任务以 Thumb 模式启动。 */
         *pxTopOfStack |= portTHUMB_MODE_BIT;
     }
 
     pxTopOfStack--;
 
-    /* Some optimisation levels use the stack differently to others.  This
-     * means the interrupt flags cannot always be stored on the stack and will
-     * instead be stored in a variable, which is then saved as part of the
-     * tasks context. */
+    /*
+     * 某些优化级别下栈的使用方式与其他级别不同。这意味着中断标志
+     * 无法总是保存到栈上，而是保存到变量中，该变量再作为任务上下文的一部分保存。
+     */
     *pxTopOfStack = portNO_CRITICAL_SECTION_NESTING;
 
     return pxTopOfStack;
@@ -158,45 +162,50 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
 BaseType_t xPortStartScheduler( void )
 {
-    /* Start the timer that generates the tick ISR.  Interrupts are disabled
-     * here already. */
+    /*
+     * 启动产生 tick ISR 的定时器。此处中断已禁用。
+     */
     prvSetupTimerInterrupt();
 
-    /* Start the first task. */
+    /* 启动第一个任务。 */
     vPortISRStartFirstTask();
 
-    /* Should not get here! */
+    /* 不应到达此处！ */
     return 0;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* It is unlikely that the ARM port will require this function as there
-     * is nothing to return to.  */
+    /*
+     * ARM 移植层不太可能需要此函数，因为没有可返回之处。
+     */
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Setup the timer 0 to generate the tick interrupts at the required frequency.
+ * 将定时器 0 设置为按所需频率产生 tick 中断。
  */
 static void prvSetupTimerInterrupt( void )
 {
     uint32_t ulCompareMatch;
 
     PCLKSEL0 = ( PCLKSEL0 & ( ~( 0x3 << 2 ) ) ) | ( 0x01 << 2 );
-    T0TCR = 2;  /* Stop and reset the timer */
-    T0CTCR = 0; /* Timer mode               */
+    T0TCR = 2;  /* 停止并复位定时器 */
+    T0CTCR = 0; /* 定时器模式 */
 
-    /* A 1ms tick does not require the use of the timer prescale.  This is
-     * defaulted to zero but can be used if necessary. */
+    /*
+     * 1ms 的 tick 无需使用定时器预分频。预分频默认值为零，
+     * 但如有需要也可以使用。
+     */
     T0PR = portPRESCALE_VALUE;
 
-    /* Calculate the match value required for our wanted tick rate. */
+    /* 计算达到所需 tick 频率所需的匹配值。 */
     ulCompareMatch = configCPU_CLOCK_HZ / configTICK_RATE_HZ;
 
-    /* Protect against divide by zero.  Using an if() statement still results
-     * in a warning - hence the #if. */
+    /*
+     * 防止除零。使用 if() 语句仍会产生警告——因此改用 #if。
+     */
     #if portPRESCALE_VALUE != 0
     {
         ulCompareMatch /= ( portPRESCALE_VALUE + 1 );
@@ -204,14 +213,15 @@ static void prvSetupTimerInterrupt( void )
     #endif
     T0MR1 = ulCompareMatch;
 
-    /* Generate tick with timer 0 compare match. */
-    T0MCR = ( 3 << 3 ); /* Reset timer on match and generate interrupt */
+    /* 通过定时器 0 比较匹配产生 tick。 */
+    T0MCR = ( 3 << 3 ); /* 匹配时复位定时器并产生中断 */
 
-    /* Setup the VIC for the timer. */
+    /* 为定时器配置 VIC。 */
     VICIntEnable = 0x00000010;
 
-    /* The ISR installed depends on whether the preemptive or cooperative
-     * scheduler is being used. */
+    /*
+     * 所安装的 ISR 取决于使用抢占式还是协作式调度器。
+     */
     #if configUSE_PREEMPTION == 1
     {
         extern void( vPreemptiveTick )( void );
@@ -226,8 +236,9 @@ static void prvSetupTimerInterrupt( void )
 
     VICVectCntl4 = 1;
 
-    /* Start the timer - interrupts are disabled when this function is called
-     * so it is okay to do this here. */
+    /*
+     * 启动定时器——调用本函数时中断已禁用，因此可以在此处启动。
+     */
     T0TCR = portENABLE_TIMER;
 }
 /*-----------------------------------------------------------*/

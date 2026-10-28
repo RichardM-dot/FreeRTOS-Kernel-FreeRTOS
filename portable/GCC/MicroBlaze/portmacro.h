@@ -29,23 +29,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -65,22 +65,24 @@ typedef unsigned long    UBaseType_t;
     typedef uint32_t     TickType_t;
     #define portMAX_DELAY              ( TickType_t ) 0xffffffffUL
 
-/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 32 位架构上使用 32 位 tick 类型，因此读取 tick 计数
+ * 无需用临界区保护。
+ */
     #define portTICK_TYPE_IS_ATOMIC    1
 #else
     #error configTICK_TYPE_WIDTH_IN_BITS set to unsupported tick type width.
 #endif
 /*-----------------------------------------------------------*/
 
-/* Interrupt control macros. */
+/* 中断控制宏。 */
 void microblaze_disable_interrupts( void );
 void microblaze_enable_interrupts( void );
 #define portDISABLE_INTERRUPTS()    microblaze_disable_interrupts()
 #define portENABLE_INTERRUPTS()     microblaze_enable_interrupts()
 /*-----------------------------------------------------------*/
 
-/* Critical section macros. */
+/* 临界区宏。 */
 void vPortEnterCritical( void );
 void vPortExitCritical( void );
 #define portENTER_CRITICAL()                  \
@@ -106,7 +108,7 @@ void vPortExitCritical( void );
 
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具。 */
 void vPortYield( void );
 #define portYIELD()             vPortYield()
 
@@ -114,7 +116,7 @@ void vTaskSwitchContext();
 #define portYIELD_FROM_ISR()    vTaskSwitchContext()
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关细节。 */
 #define portBYTE_ALIGNMENT    4
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
@@ -122,14 +124,14 @@ void vTaskSwitchContext();
 #define portMEMORY_BARRIER()    asm volatile ( "" ::: "memory" )
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（移植宏头文件） */

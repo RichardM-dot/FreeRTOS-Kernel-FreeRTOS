@@ -29,23 +29,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -69,7 +69,7 @@ typedef unsigned long    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Architecture specifics. */
+/* 架构相关细节。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    8
@@ -77,13 +77,13 @@ typedef unsigned long    UBaseType_t;
 /*-----------------------------------------------------------*/
 
 
-/* Scheduler utilities. */
+/* 调度器工具。 */
 
 /*
- * portRESTORE_CONTEXT, portRESTORE_CONTEXT, portENTER_SWITCHING_ISR
- * and portEXIT_SWITCHING_ISR can only be called from ARM mode, but
- * are included here for efficiency.  An attempt to call one from
- * THUMB mode code will result in a compile time error.
+ * portRESTORE_CONTEXT、portRESTORE_CONTEXT、portENTER_SWITCHING_ISR
+ * 和 portEXIT_SWITCHING_ISR 只能从 ARM 模式调用，
+ * 但为提高效率而包含在此处。试图从 THUMB 模式代码调用它们
+ * 将导致编译时错误。
  */
 
 #define portRESTORE_CONTEXT()                                                 \
@@ -175,13 +175,12 @@ extern void vTaskSwitchContext( void );
 /*-----------------------------------------------------------*/
 
 
-/* Critical section management. */
+/* 临界区管理。 */
 
 /*
- * The interrupt management utilities can only be called from ARM mode.  When
- * THUMB_INTERWORK is defined the utilities are defined as functions in
- * portISR.c to ensure a switch to ARM mode.  When THUMB_INTERWORK is not
- * defined then the utilities are defined as macros here - as per other ports.
+ * 中断管理工具只能从 ARM 模式调用。定义 THUMB_INTERWORK 时，
+ * 这些工具在 portISR.c 中定义为函数，以确保切换到 ARM 模式；
+ * 未定义 THUMB_INTERWORK 时，这些工具按其他移植层的做法在此处定义为宏。
  */
 
 #ifdef THUMB_INTERWORK
@@ -200,7 +199,7 @@ extern void vTaskSwitchContext( void );
         "MRS    R0, CPSR        \n\t"   /* Get CPSR.                    */ \
         "ORR    R0, R0, #0xC0   \n\t"   /* Disable IRQ, FIQ.            */ \
         "MSR    CPSR, R0        \n\t"   /* Write back modified value.   */ \
-        "LDMIA  SP!, {R0}           " ) /* Pop R0.                      */
+        "LDMIA  SP!, {R0}           " ) /* 弹出 R0。 */
 
     #define portENABLE_INTERRUPTS()                                        \
     __asm volatile (                                                       \
@@ -208,9 +207,9 @@ extern void vTaskSwitchContext( void );
         "MRS    R0, CPSR        \n\t"   /* Get CPSR.                    */ \
         "BIC    R0, R0, #0xC0   \n\t"   /* Enable IRQ, FIQ.             */ \
         "MSR    CPSR, R0        \n\t"   /* Write back modified value.   */ \
-        "LDMIA  SP!, {R0}           " ) /* Pop R0.                      */
+        "LDMIA  SP!, {R0}           " ) /* 弹出 R0。 */
 
-#endif /* THUMB_INTERWORK */
+#endif /* THUMB_INTERWORK（Thumb 与 ARM 互操作） */
 
 extern void vPortEnterCritical( void );
 extern void vPortExitCritical( void );
@@ -219,14 +218,14 @@ extern void vPortExitCritical( void );
 #define portEXIT_CRITICAL()     vPortExitCritical();
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（移植宏头文件） */

@@ -27,32 +27,31 @@
  */
 
 /*
- * Changes from V1.2.3
+ * 自 V1.2.3 起的变更
  *
- + portCPU_CLOCK_HZ definition changed to 8MHz base 10, previously it
- +    base 16.
+ * + portCPU_CLOCK_HZ 定义改为 8MHz 的十进制表示，此前为十六进制表示。
  */
 
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR                 char
 #define portFLOAT                float
 #define portDOUBLE               double
@@ -78,7 +77,7 @@ typedef unsigned char    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Critical section management. */
+/* 临界区管理。 */
 #define portENTER_CRITICAL()                            \
     asm volatile ( "in      __tmp_reg__, __SREG__" ::); \
     asm volatile ( "cli" ::);                           \
@@ -92,26 +91,26 @@ typedef unsigned char    UBaseType_t;
 #define portENABLE_INTERRUPTS()     asm volatile ( "sei" ::);
 /*-----------------------------------------------------------*/
 
-/* Architecture specifics. */
+/* 体系结构相关定义。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    1
 #define portNOP()    asm volatile ( "nop" );
 /*-----------------------------------------------------------*/
 
-/* Kernel utilities. */
+/* 内核工具函数。 */
 extern void vPortYield( void ) __attribute__( ( naked ) );
 #define portYIELD()    vPortYield()
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

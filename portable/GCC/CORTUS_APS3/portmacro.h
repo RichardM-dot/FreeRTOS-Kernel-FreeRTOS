@@ -29,25 +29,25 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
 #include <machine/cpu.h>
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -71,7 +71,7 @@ typedef unsigned long    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Architecture specifics. */
+/* 体系结构相关定义。 */
 #define portSTACK_GROWTH               ( -1 )
 #define portTICK_PERIOD_MS             ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT             4
@@ -80,7 +80,7 @@ typedef unsigned long    UBaseType_t;
 #define portIRQ_TRAP_YIELD             31
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 
 extern void vPortYield( void );
 
@@ -95,7 +95,7 @@ extern void vTaskExitCritical( void );
 #define portEXIT_CRITICAL()     vTaskExitCritical()
 /*---------------------------------------------------------------------------*/
 
-/* Critical section management. */
+/* 临界区管理。 */
 #define portDISABLE_INTERRUPTS()    cpu_int_disable()
 #define portENABLE_INTERRUPTS()     cpu_int_enable()
 
@@ -145,15 +145,15 @@ extern void vTaskExitCritical( void );
 
 /*---------------------------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 /*---------------------------------------------------------------------------*/
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

@@ -26,31 +26,29 @@
  *
  */
 
-/* Kernel includes. */
+/* 内核头文件包含。 */
 #include "FreeRTOS.h"
 
-/* Machine includes */
+/* 机器相关头文件包含。 */
 #include <tc1782.h>
 #include <machine/intrinsics.h>
 #include <machine/cint.h>
 /*---------------------------------------------------------------------------*/
 
 /*
- * This reference is required by the Save/Restore Context Macros.
+ * 保存/恢复上下文宏需要此引用。
  */
 extern volatile uint32_t * pxCurrentTCB;
 /*-----------------------------------------------------------*/
 
 /*
- * This file contains base definitions for all of the possible traps in the system.
- * It is suggested to provide implementations for all of the traps but for
- * the time being they simply trigger a DEBUG instruction so that it is easy
- * to see what caused a particular trap.
+ * 本文件包含系统中所有可能陷阱的基础定义。建议为所有陷阱提供实现，但目前它们
+ * 只是触发 DEBUG 指令，以便容易看出是哪个陷阱被触发。
  *
- * Trap Class 6, the SYSCALL, is used exclusively by the operating system.
+ * 陷阱类 6（SYSCALL）专供操作系统使用。
  */
 
-/* The Trap Classes. */
+/* 陷阱类。 */
 #define portMMU_TRAP                                                      0
 #define portIPT_TRAP                                                      1
 #define portIE_TRAP                                                       2
@@ -59,11 +57,11 @@ extern volatile uint32_t * pxCurrentTCB;
 #define portASSERT_TRAP                                                   5
 #define portNMI_TRAP                                                      7
 
-/* MMU Trap Identifications. */
+/* MMU 陷阱标识。 */
 #define portTIN_MMU_VIRTUAL_ADDRESS_FILL                                  0
 #define portTIN_MMU_VIRTUAL_ADDRESS_PROTECTION                            1
 
-/* Internal Protection Trap Identifications. */
+/* 内部保护陷阱标识。 */
 #define portTIN_IPT_PRIVILEGED_INSTRUCTION                                1
 #define portTIN_IPT_MEMORY_PROTECTION_READ                                2
 #define portTIN_IPT_MEMORY_PROTECTION_WRITE                               3
@@ -72,14 +70,14 @@ extern volatile uint32_t * pxCurrentTCB;
 #define portTIN_IPT_MEMORY_PROTECTION_NULL_ADDRESS                        6
 #define portTIN_IPT_MEMORY_PROTECTION_GLOBAL_REGISTER_WRITE_PROTECTION    7
 
-/* Instruction Error Trap Identifications. */
+/* 指令错误陷阱标识。 */
 #define portTIN_IE_ILLEGAL_OPCODE                                         1
 #define portTIN_IE_UNIMPLEMENTED_OPCODE                                   2
 #define portTIN_IE_INVALID_OPERAND                                        3
 #define portTIN_IE_DATA_ADDRESS_ALIGNMENT                                 4
 #define portTIN_IE_INVALID_LOCAL_MEMORY_ADDRESS                           5
 
-/* Context Management Trap Identifications. */
+/* 上下文管理陷阱标识。 */
 #define portTIN_CM_FREE_CONTEXT_LIST_DEPLETION                            1
 #define portTIN_CM_CALL_DEPTH_OVERFLOW                                    2
 #define portTIN_CM_CALL_DEPTH_UNDEFLOW                                    3
@@ -88,7 +86,7 @@ extern volatile uint32_t * pxCurrentTCB;
 #define portTIN_CM_CONTEXT_TYPE                                           6
 #define portTIN_CM_NESTING_ERROR                                          7
 
-/* System Bus and Peripherals Trap Identifications. */
+/* 系统总线与外设陷阱标识。 */
 #define portTIN_SBP_PROGRAM_FETCH_SYNCHRONOUS_ERROR                       1
 #define portTIN_SBP_DATA_ACCESS_SYNCHRONOUS_ERROR                         2
 #define portTIN_SBP_DATA_ACCESS_ASYNCHRONOUS_ERROR                        3
@@ -96,11 +94,11 @@ extern volatile uint32_t * pxCurrentTCB;
 #define portTIN_SBP_PROGRAM_MEMORY_INTEGRITY_ERROR                        5
 #define portTIN_SBP_DATA_MEMORY_INTEGRITY_ERROR                           6
 
-/* Assertion Trap Identifications. */
+/* 断言陷阱标识。 */
 #define portTIN_ASSERT_ARITHMETIC_OVERFLOW                                1
 #define portTIN_ASSERT_STICKY_ARITHMETIC_OVERFLOW                         2
 
-/* Non-maskable Interrupt Trap Identifications. */
+/* 不可屏蔽中断陷阱标识。 */
 #define portTIN_NMI_NON_MASKABLE_INTERRUPT                                0
 /*---------------------------------------------------------------------------*/
 
@@ -167,29 +165,29 @@ void vMMUTrap( int iTrapIdentification )
 
 void vInternalProtectionTrap( int iTrapIdentification )
 {
-    /* Deliberate fall through to default. */
+    /* 有意落入 default 分支。 */
     switch( iTrapIdentification )
     {
         case portTIN_IPT_PRIVILEGED_INSTRUCTION:
-        /* Instruction is not allowed at current execution level, eg DISABLE at User-0. */
+        /* 当前执行级别不允许该指令，例如在 User-0 级别执行 DISABLE。 */
 
         case portTIN_IPT_MEMORY_PROTECTION_READ:
-        /* Load word using invalid address. */
+        /* 使用无效地址加载字。 */
 
         case portTIN_IPT_MEMORY_PROTECTION_WRITE:
-        /* Store Word using invalid address. */
+        /* 使用无效地址存储字。 */
 
         case portTIN_IPT_MEMORY_PROTECTION_EXECUTION:
-        /* PC jumped to an address outside of the valid range. */
+        /* PC 跳转到有效范围之外的地址。 */
 
         case portTIN_IPT_MEMORY_PROTECTION_PERIPHERAL_ACCESS:
-        /* Access to a peripheral denied at current execution level. */
+        /* 在当前执行级别访问外设被拒绝。 */
 
         case portTIN_IPT_MEMORY_PROTECTION_NULL_ADDRESS:
-        /* NULL Pointer. */
+        /* 空指针。 */
 
         case portTIN_IPT_MEMORY_PROTECTION_GLOBAL_REGISTER_WRITE_PROTECTION:
-        /* Tried to modify a global address pointer register. */
+        /* 试图修改全局地址指针寄存器。 */
 
         default:
 
@@ -202,7 +200,7 @@ void vInternalProtectionTrap( int iTrapIdentification )
 
 void vInstructionErrorTrap( int iTrapIdentification )
 {
-    /* Deliberate fall through to default. */
+    /* 有意落入 default 分支。 */
     switch( iTrapIdentification )
     {
         case portTIN_IE_ILLEGAL_OPCODE:
@@ -219,7 +217,7 @@ void vInstructionErrorTrap( int iTrapIdentification )
 
 void vContextManagementTrap( int iTrapIdentification )
 {
-    /* Deliberate fall through to default. */
+    /* 有意落入 default 分支。 */
     switch( iTrapIdentification )
     {
         case portTIN_CM_FREE_CONTEXT_LIST_DEPLETION:
@@ -238,7 +236,7 @@ void vContextManagementTrap( int iTrapIdentification )
 
 void vSystemBusAndPeripheralsTrap( int iTrapIdentification )
 {
-    /* Deliberate fall through to default. */
+    /* 有意落入 default 分支。 */
     switch( iTrapIdentification )
     {
         case portTIN_SBP_PROGRAM_FETCH_SYNCHRONOUS_ERROR:
@@ -256,7 +254,7 @@ void vSystemBusAndPeripheralsTrap( int iTrapIdentification )
 
 void vAssertionTrap( int iTrapIdentification )
 {
-    /* Deliberate fall through to default. */
+    /* 有意落入 default 分支。 */
     switch( iTrapIdentification )
     {
         case portTIN_ASSERT_ARITHMETIC_OVERFLOW:
@@ -270,7 +268,7 @@ void vAssertionTrap( int iTrapIdentification )
 
 void vNonMaskableInterruptTrap( int iTrapIdentification )
 {
-    /* Deliberate fall through to default. */
+    /* 有意落入 default 分支。 */
     switch( iTrapIdentification )
     {
         case portTIN_NMI_NON_MASKABLE_INTERRUPT:

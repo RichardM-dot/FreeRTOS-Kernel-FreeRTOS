@@ -26,22 +26,24 @@
  *
  */
 
-/* Scheduler includes. */
+/* 调度器头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the H8S port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * H8S 移植层中 portable.h 所定义函数的实现。
+ * ----------------------------------------------------------
+ */
 
 
 /*-----------------------------------------------------------*/
 
-/* When the task starts interrupts should be enabled. */
+/* 任务启动时应使能中断。 */
 #define portINITIAL_CCR                    ( ( StackType_t ) 0x00 )
 
-/* Hardware specific constants used to generate the RTOS tick from the TPU. */
+/* 用于从 TPU 产生 RTOS 时钟节拍（tick）的硬件专用常量。 */
 #define portCLEAR_ON_TGRA_COMPARE_MATCH    ( ( uint8_t ) 0x20 )
 #define portCLOCK_DIV_64                   ( ( uint8_t ) 0x03 )
 #define portCLOCK_DIV                      ( ( uint32_t ) 64 )
@@ -50,19 +52,19 @@
 #define portMSTP13                         ( ( uint16_t ) 0x2000 )
 
 /*
- * Setup TPU channel one for the RTOS tick at the requested frequency.
+ * 按所请求的频率配置 TPU 通道 1 以产生 RTOS 时钟节拍（tick）。
  */
 static void prvSetupTimerInterrupt( void );
 
 /*
- * The ISR used by portYIELD(). This is installed as a trap handler.
+ * portYIELD() 使用的 ISR。它被安装为陷阱处理程序。
  */
 void vPortYield( void ) __attribute__( ( saveall, interrupt_handler ) );
 
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 参见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
@@ -70,7 +72,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 {
     uint32_t ulValue;
 
-    /* This requires an even address. */
+    /* 这要求使用偶地址。 */
     ulValue = ( uint32_t ) pxTopOfStack;
 
     if( ulValue & 1UL )
@@ -78,8 +80,10 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
         pxTopOfStack = pxTopOfStack - 1;
     }
 
-    /* Place a few bytes of known values on the bottom of the stack.
-     * This is just useful for debugging. */
+    /*
+     * 在栈底放置几个已知值。
+     * 这仅用于调试。
+     */
     pxTopOfStack--;
     *pxTopOfStack = 0xaa;
     pxTopOfStack--;
@@ -89,8 +93,9 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = 0xdd;
 
-    /* The initial stack mimics an interrupt stack.  First there is the program
-     * counter (24 bits). */
+    /*
+     * 初始栈模拟中断栈。首先是程序计数器（24 位）。
+     */
     ulValue = ( uint32_t ) pxCode;
 
     pxTopOfStack--;
@@ -102,15 +107,16 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     ulValue >>= 8UL;
     *pxTopOfStack = ( StackType_t ) ( ulValue & 0xff );
 
-    /* Followed by the CCR. */
+    /* 其后是 CCR。 */
     pxTopOfStack--;
     *pxTopOfStack = portINITIAL_CCR;
 
-    /* Next all the general purpose registers - with the parameters being passed
-     * in ER0.  The parameter order must match that used by the compiler when the
-     * "saveall" function attribute is used. */
+    /*
+     * 接着是所有通用寄存器 - 参数通过 ER0 传递。参数顺序必须与编译器
+     * 使用 "saveall" 函数属性时采用的顺序一致。
+     */
 
-    /* ER6 */
+    /* ER6 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = 0x66;
     pxTopOfStack--;
@@ -120,7 +126,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = 0x66;
 
-    /* ER0 */
+    /* ER0 寄存器 */
     ulValue = ( uint32_t ) pvParameters;
 
     pxTopOfStack--;
@@ -135,7 +141,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     ulValue >>= 8UL;
     *pxTopOfStack = ( StackType_t ) ( ulValue & 0xff );
 
-    /* ER1 */
+    /* ER1 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = 0x11;
     pxTopOfStack--;
@@ -145,7 +151,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = 0x11;
 
-    /* ER2 */
+    /* ER2 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = 0x22;
     pxTopOfStack--;
@@ -155,7 +161,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = 0x22;
 
-    /* ER3 */
+    /* ER3 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = 0x33;
     pxTopOfStack--;
@@ -165,7 +171,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = 0x33;
 
-    /* ER4 */
+    /* ER4 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = 0x44;
     pxTopOfStack--;
@@ -175,7 +181,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = 0x44;
 
-    /* ER5 */
+    /* ER5 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = 0x55;
     pxTopOfStack--;
@@ -193,12 +199,13 @@ BaseType_t xPortStartScheduler( void )
 {
     extern void * pxCurrentTCB;
 
-    /* Setup the hardware to generate the tick. */
+    /* 配置硬件以产生时钟节拍（tick）。 */
     prvSetupTimerInterrupt();
 
-    /* Restore the context of the first task that is going to run.  This
-     * mirrors the function epilogue code generated by the compiler when the
-     * "saveall" function attribute is used. */
+    /*
+     * 恢复将要运行的第一个任务的上下文。这与编译器使用 "saveall" 函数属性时
+     * 生成的函数收尾代码相对应。
+     */
     asm volatile (
         "MOV.L      @_pxCurrentTCB, ER6         \n\t"
         "MOV.L      @ER6, ER7                   \n\t"
@@ -210,21 +217,20 @@ BaseType_t xPortStartScheduler( void )
 
     ( void ) pxCurrentTCB;
 
-    /* Should not get here. */
+    /* 不应执行到此处。 */
     return pdTRUE;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* It is unlikely that the h8 port will get stopped. */
+    /* H8 移植层不太可能被停止。 */
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Manual context switch.  This is a trap handler.  The "saveall" function
- * attribute is used so the context is saved by the compiler prologue.  All
- * we have to do is save the stack pointer.
+ * 手动上下文切换。这是一个陷阱处理程序。由于使用 "saveall" 函数属性，
+ * 上下文由编译器序言保存。只需再保存栈指针。
  */
 void vPortYield( void )
 {
@@ -235,15 +241,13 @@ void vPortYield( void )
 /*-----------------------------------------------------------*/
 
 /*
- * The interrupt handler installed for the RTOS tick depends on whether the
- * preemptive or cooperative scheduler is being used.
+ * 为 RTOS 时钟节拍安装的中断处理程序取决于使用的是抢占式还是协作式调度器。
  */
 #if ( configUSE_PREEMPTION == 1 )
 
 /*
- * The preemptive scheduler is used so the ISR calls vTaskSwitchContext().
- * The function prologue saves the context so all we have to do is save
- * the stack pointer.
+ * 使用抢占式调度器，因此 ISR 调用 vTaskSwitchContext()。
+ * 函数序言会保存上下文，因此只需再保存栈指针。
  */
     void vTickISR( void ) __attribute__( ( saveall, interrupt_handler ) );
     void vTickISR( void )
@@ -255,49 +259,49 @@ void vPortYield( void )
             vTaskSwitchContext();
         }
 
-        /* Clear the interrupt. */
+        /* 清除中断。 */
         TSR1 &= ~0x01;
 
         portRESTORE_STACK_POINTER();
     }
 
-#else /* if ( configUSE_PREEMPTION == 1 ) */
+#else /* 若 ( configUSE_PREEMPTION == 1 ) */
 
 /*
- * The cooperative scheduler is being used so all we have to do is
- * periodically increment the tick.  This can just be a normal ISR and
- * the "saveall" attribute is not required.
+ * 使用协作式调度器，因此只需定期递增 tick。这可以是普通的 ISR，
+ * 不需要 "saveall" 属性。
  */
     void vTickISR( void ) __attribute__( ( interrupt_handler ) );
     void vTickISR( void )
     {
         xTaskIncrementTick();
 
-        /* Clear the interrupt. */
+        /* 清除中断。 */
         TSR1 &= ~0x01;
     }
 
-#endif /* if ( configUSE_PREEMPTION == 1 ) */
+#endif /* 若 ( configUSE_PREEMPTION == 1 ) */
 /*-----------------------------------------------------------*/
 
 /*
- * Setup timer 1 compare match to generate a tick interrupt.
+ * 配置定时器 1 的比较匹配以产生时钟节拍（tick）中断。
  */
 static void prvSetupTimerInterrupt( void )
 {
     const uint32_t ulCompareMatch = ( configCPU_CLOCK_HZ / configTICK_RATE_HZ ) / portCLOCK_DIV;
 
-    /* Turn the module on. */
+    /* 开启该模块。 */
     MSTPCR &= ~portMSTP13;
 
-    /* Configure timer 1. */
+    /* 配置定时器 1。 */
     TCR1 = portCLEAR_ON_TGRA_COMPARE_MATCH | portCLOCK_DIV_64;
 
-    /* Configure the compare match value for a tick of configTICK_RATE_HZ. */
+    /* 配置比较匹配值，使 tick 频率为 configTICK_RATE_HZ。 */
     TGR1A = ulCompareMatch;
 
-    /* Start the timer and enable the interrupt - we can do this here as
-     * interrupts are globally disabled when this function is called. */
+    /*
+     * 启动定时器并使能中断 - 可以在此处执行，因为调用此函数时中断已全局禁止。
+     */
     TIER1 |= portTGRA_INTERRUPT_ENABLE;
     TSTR |= portTIMER_CHANNEL;
 }

@@ -26,42 +26,46 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the MicroBlaze port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * portable.h 中各函数针对 MicroBlaze 移植层的实现。
+ * ----------------------------------------------------------
+ */
 
 
-/* Scheduler includes. */
+/* 调度器头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Standard includes. */
+/* 标准头文件。 */
 #include <string.h>
 
-/* Hardware includes. */
+/* 硬件头文件。 */
 #include <xintc_i.h>
 #include <xil_exception.h>
 #include <microblaze_exceptions_g.h>
 #include <microblaze_instructions.h>
 
-/* Tasks are started with a critical section nesting of 0 - however, prior to
- * the scheduler being commenced interrupts should not be enabled, so the critical
- * nesting variable is initialised to a non-zero value. */
+/*
+ * 任务启动时临界区嵌套计数为 0——但在调度器启动之前不应使能中断，
+ * 因此临界嵌套变量初始化为非零值。
+ */
 #define portINITIAL_NESTING_VALUE    ( 0xff )
 
-/* The bit within the MSR register that enabled/disables interrupts and
- * exceptions respectively. */
+/*
+ * MSR 寄存器中分别用于使能/禁用中断和异常的位。
+ */
 #define portMSR_IE                   ( 0x02U )
 #define portMSR_EE                   ( 0x100U )
 
-/* If the floating point unit is included in the MicroBlaze build, then the
- * FSR register is saved as part of the task context.  portINITIAL_FSR is the value
- * given to the FSR register when the initial context is set up for a task being
- * created. */
+/*
+ * 若 MicroBlaze 构建中包含浮点单元，则 FSR 寄存器作为任务上下文的一部分保存。
+ * portINITIAL_FSR 是为新建任务设置初始上下文时赋给 FSR 寄存器的值。
+ */
 #define portINITIAL_FSR              ( 0U )
 /*
- * Global counter used for calculation of run time statistics of tasks.
- * Defined only when the relevant option is turned on
+ * 用于计算任务运行时间统计的全局计数器。
+ * 仅在相应选项打开时定义。
  */
 #if (configGENERATE_RUN_TIME_STATS==1)
     volatile uint32_t ulHighFrequencyTimerTicks;
@@ -70,48 +74,51 @@
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the interrupt controller instance.
+ * 初始化中断控制器实例。
  */
 static int32_t prvInitialiseInterruptController( void );
 
-/* Ensure the interrupt controller instance variable is initialised before it is
- * used, and that the initialisation only happens once.
+/*
+ * 确保中断控制器实例变量在使用前完成初始化，
+ * 并且只初始化一次。
  */
 static int32_t prvEnsureInterruptControllerIsInitialised( void );
 
 /*-----------------------------------------------------------*/
 
-/* Counts the nesting depth of calls to portENTER_CRITICAL().  Each task
- * maintains its own count, so this variable is saved as part of the task
- * context. */
+/*
+ * 记录 portENTER_CRITICAL() 调用嵌套深度的计数器。
+ * 每个任务维护自己的计数，因此该变量作为任务上下文的一部分保存。
+ */
 volatile UBaseType_t uxCriticalNesting = portINITIAL_NESTING_VALUE;
 
-/* This port uses a separate stack for interrupts.  This prevents the stack of
- * every task needing to be large enough to hold an entire interrupt stack on top
- * of the task stack. */
+/*
+ * 本移植层为中断使用独立的栈。这样可以避免每个任务的栈都需要大到
+ * 能在任务栈之上容纳完整的中断栈。
+ */
 uint32_t * pulISRStack;
 
-/* If an interrupt requests a context switch, then ulTaskSwitchRequested will
- * get set to 1.  ulTaskSwitchRequested is inspected just before the main interrupt
- * handler exits.  If, at that time, ulTaskSwitchRequested is set to 1, the kernel
- * will call vTaskSwitchContext() to ensure the task that runs immediately after
- * the interrupt exists is the highest priority task that is able to run.  This is
- * an unusual mechanism, but is used for this port because a single interrupt can
- * cause the servicing of multiple peripherals - and it is inefficient to call
- * vTaskSwitchContext() multiple times as each peripheral is serviced. */
+/*
+ * 若中断请求上下文切换，则 ulTaskSwitchRequested 会被置为 1。
+ * 主中断处理程序退出前会检查 ulTaskSwitchRequested。若此时该值为 1，
+ * 内核将调用 vTaskSwitchContext()，以确保中断结束后立即运行的任务
+ * 是能够运行的最高优先级任务。这是一种不常见的机制，
+ * 但本移植层采用它，因为一次中断可能引发多个外设的服务请求——
+ * 而每服务一个外设就调用一次 vTaskSwitchContext() 效率低下。
+ */
 volatile uint32_t ulTaskSwitchRequested = 0UL;
 
-/* The instance of the interrupt controller used by this port.  This is required
- * by the Xilinx library API functions. */
+/*
+ * 本移植层使用的中断控制器实例。Xilinx 库 API 函数需要它。
+ */
 static XIntc xInterruptControllerInstance;
 
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the stack of a task to look exactly as if a call to
- * portSAVE_CONTEXT had been made.
+ * 初始化任务栈，使其外观与刚调用过 portSAVE_CONTEXT 完全一致。
  *
- * See the portable.h header file.
+ * 参见 portable.h 头文件。
  */
 #if ( portHAS_STACK_OVERFLOW_CHECKING == 1 )
     StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
@@ -131,9 +138,10 @@ static XIntc xInterruptControllerInstance;
 
     extern void _start1( void );
 
-    /* Place a few bytes of known values on the bottom of the stack.
-     * This is essential for the Microblaze port and these lines must
-     * not be omitted. */
+    /*
+     * 在栈底放置几个已知值。
+     * 这对 MicroBlaze 移植层至关重要，这些代码行不得省略。
+     */
     *pxTopOfStack = ( StackType_t ) 0x00000000;
     pxTopOfStack--;
     *pxTopOfStack = ( StackType_t ) 0x00000000;
@@ -142,7 +150,7 @@ static XIntc xInterruptControllerInstance;
     pxTopOfStack--;
 
     #if ( portHAS_STACK_OVERFLOW_CHECKING == 1 )
-        /* Store the stack limits. */
+        /* 保存栈边界。 */
         *pxTopOfStack = ( StackType_t ) ( pxTopOfStack + 3 );
         pxTopOfStack--;
         *pxTopOfStack = ( StackType_t ) pxEndOfStack;
@@ -150,114 +158,117 @@ static XIntc xInterruptControllerInstance;
     #endif
 
     #if ( XPAR_MICROBLAZE_USE_FPU != 0 )
-        /* The FSR value placed in the initial task context is just 0. */
+        /* 放入初始任务上下文的 FSR 值就是 0。 */
         *pxTopOfStack = portINITIAL_FSR;
         pxTopOfStack--;
     #endif
 
-    /* The MSR value placed in the initial task context should have interrupts
-     * disabled.  Each task will enable interrupts automatically when it enters
-     * the running state for the first time. */
+    /*
+     * 放入初始任务上下文的 MSR 值应禁用中断。每个任务首次进入运行态时
+     * 会自动使能中断。
+     */
     *pxTopOfStack = mfmsr() & ~portMSR_IE;
 
     #if ( MICROBLAZE_EXCEPTIONS_ENABLED == 1 )
     {
-        /* Ensure exceptions are enabled for the task. */
+        /* 确保任务已使能异常。 */
         *pxTopOfStack |= portMSR_EE;
     }
     #endif
 
     pxTopOfStack--;
 
-    /* First stack an initial value for the critical section nesting.  This
-     * is initialised to zero. */
+    /*
+     * 首先压入临界区嵌套的初始值，该值初始化为零。
+     */
     *pxTopOfStack = ( StackType_t ) 0x00;
 
-    /* R0 is always zero. */
-    /* R1 is the SP. */
+    /* R0 始终为零。 */
+    /* R1 为栈指针（SP）。 */
 
-    /* Place an initial value for all the general purpose registers. */
+    /* 为所有通用寄存器放置初始值。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) ulR2;         /* R2 - read only small data area. */
+    *pxTopOfStack = ( StackType_t ) ulR2;         /* R2 - 只读小数据区。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x03;         /* R3 - return values and temporaries. */
+    *pxTopOfStack = ( StackType_t ) 0x03;         /* R3 - 返回值和临时寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x04;         /* R4 - return values and temporaries. */
+    *pxTopOfStack = ( StackType_t ) 0x04;         /* R4 - 返回值和临时寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) pvParameters; /* R5 contains the function call parameters. */
+    *pxTopOfStack = ( StackType_t ) pvParameters; /* R5 包含函数调用参数。 */
 
     #ifdef portPRE_LOAD_STACK_FOR_DEBUGGING
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x06;   /* R6 - other parameters and temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x06;   /* R6 - 其他参数和临时寄存器。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x07;   /* R7 - other parameters and temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x07;   /* R7 - 其他参数和临时寄存器。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) NULL;   /* R8 - other parameters and temporaries. */
+        *pxTopOfStack = ( StackType_t ) NULL;   /* R8 - 其他参数和临时寄存器。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x09;   /* R9 - other parameters and temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x09;   /* R9 - 其他参数和临时寄存器。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x0a;   /* R10 - other parameters and temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x0a;   /* R10 - 其他参数和临时寄存器。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x0b;   /* R11 - temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x0b;   /* R11 - 临时寄存器。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x0c;   /* R12 - temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x0c;   /* R12 - 临时寄存器。 */
         pxTopOfStack--;
-    #else /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING */
+    #else /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING（若定义：为调试预装载栈） */
         pxTopOfStack -= 8;
-    #endif /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING */
+    #endif /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING（若定义：为调试预装载栈） */
 
-    *pxTopOfStack = ( StackType_t ) ulR13;   /* R13 - read/write small data area. */
+    *pxTopOfStack = ( StackType_t ) ulR13;   /* R13 - 读/写小数据区。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) pxCode;  /* R14 - return address for interrupt. */
+    *pxTopOfStack = ( StackType_t ) pxCode;  /* R14 - 中断返回地址。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) _start1; /* R15 - return address for subroutine. */
+    *pxTopOfStack = ( StackType_t ) _start1; /* R15 - 子程序返回地址。 */
 
     #ifdef portPRE_LOAD_STACK_FOR_DEBUGGING
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x10;   /* R16 - return address for trap (debugger). */
+        *pxTopOfStack = ( StackType_t ) 0x10;   /* R16 - 陷阱（调试器）返回地址。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x11;   /* R17 - return address for exceptions, if configured. */
+        *pxTopOfStack = ( StackType_t ) 0x11;   /* R17 - 异常返回地址（若已配置）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x12;   /* R18 - reserved for assembler and compiler temporaries. */
+        *pxTopOfStack = ( StackType_t ) 0x12;   /* R18 - 保留给汇编器和编译器的临时寄存器。 */
         pxTopOfStack--;
     #else
         pxTopOfStack -= 4;
     #endif
 
-    *pxTopOfStack = ( StackType_t ) 0x00;   /* R19 - must be saved across function calls. Callee-save.  Seems to be interpreted as the frame pointer. */
+    *pxTopOfStack = ( StackType_t ) 0x00;   /* R19 - 跨函数调用必须保存（被调用者保存）。似乎被解释为帧指针。 */
 
     #ifdef portPRE_LOAD_STACK_FOR_DEBUGGING
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x14;   /* R20 - reserved for storing a pointer to the Global Offset Table (GOT) in Position Independent Code (PIC). Non-volatile in non-PIC code. Must be saved across function calls. Callee-save.  Not used by FreeRTOS. */
+        *pxTopOfStack = ( StackType_t ) 0x14;   /* R20 - 在位置无关代码（PIC）中保留用于存储全局偏移表（GOT）指针。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x15;   /* R21 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x15;   /* R21 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x16;   /* R22 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x16;   /* R22 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x17;   /* R23 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x17;   /* R23 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x18;   /* R24 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x18;   /* R24 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x19;   /* R25 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x19;   /* R25 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x1a;   /* R26 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x1a;   /* R26 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x1b;   /* R27 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x1b;   /* R27 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x1c;   /* R28 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x1c;   /* R28 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x1d;   /* R29 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x1d;   /* R29 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x1e;   /* R30 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x1e;   /* R30 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-        *pxTopOfStack = ( StackType_t ) 0x1f;   /* R31 - must be saved across function calls. Callee-save. */
+        *pxTopOfStack = ( StackType_t ) 0x1f;   /* R31 - 跨函数调用必须保存（被调用者保存）。 */
         pxTopOfStack--;
-    #else /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING */
+    #else /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING（若定义：为调试预装载栈） */
         pxTopOfStack -= 13;
-    #endif /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING */
+    #endif /* ifdef portPRE_LOAD_STACK_FOR_DEBUGGING（若定义：为调试预装载栈） */
 
-    /* Return a pointer to the top of the stack that has been generated so this
-     * can be stored in the task control block for the task. */
+    /*
+     * 返回指向所生成栈顶的指针，以便将其保存到该任务的任务控制块中。
+     */
     return pxTopOfStack;
 }
 /*-----------------------------------------------------------*/
@@ -267,55 +278,61 @@ BaseType_t xPortStartScheduler( void )
     extern void ( vPortStartFirstTask )( void );
     extern UINTPTR _stack[];
 
-    /* Setup the hardware to generate the tick.  Interrupts are disabled when
-     * this function is called.
+    /*
+     * 设置硬件以产生 tick。调用本函数时中断处于禁用状态。
      *
-     * This port uses an application defined callback function to install the tick
-     * interrupt handler because the kernel will run on lots of different
-     * MicroBlaze and FPGA configurations - not all of which will have the same
-     * timer peripherals defined or available.  An example definition of
-     * vApplicationSetupTimerInterrupt() is provided in the official demo
-     * application that accompanies this port. */
+     * 本移植层使用应用定义的回调函数安装 tick 中断处理程序，
+     * 因为内核要运行在多种 MicroBlaze 和 FPGA 配置上——
+     * 并非所有配置都定义或提供相同的定时器外设。
+     * 本移植层附带的官方演示应用中提供了 vApplicationSetupTimerInterrupt() 的示例定义。
+     */
     vApplicationSetupTimerInterrupt();
 
-    /* Reuse the stack from main() as the stack for the interrupts/exceptions. */
+    /* 复用 main() 的栈作为中断/异常使用的栈。 */
     pulISRStack = ( UINTPTR * ) _stack;
 
-    /* Ensure there is enough space for the functions called from the interrupt
-     * service routines to write back into the stack frame of the caller. */
+    /*
+     * 确保有足够空间，供中断服务例程调用的函数
+     * 回写到调用者的栈帧。
+     */
     pulISRStack -= 2;
 
-    /* Restore the context of the first task that is going to run.  From here
-     * on, the created tasks will be executing. */
+    /*
+     * 恢复即将运行的第一个任务的上下文。此后，已创建的任务将开始执行。
+     */
     vPortStartFirstTask();
 
-    /* Should not get here as the tasks are now running! */
+    /* 不应到达此处，因为任务现在已在运行！ */
     return pdFALSE;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented in ports where there is nothing to return to.
-     * Artificially force an assert. */
+    /*
+     * 在没有可返回之处的移植层中不实现。
+     * 人为强制触发断言。
+     */
     configASSERT( uxCriticalNesting == 1000UL );
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Manual context switch called by portYIELD or taskYIELD.
+ * 由 portYIELD 或 taskYIELD 调用的手动上下文切换。
  */
 void vPortYield( void )
 {
     extern void VPortYieldASM( void );
 
-    /* Perform the context switch in a critical section to assure it is
-     * not interrupted by the tick ISR.  It is not a problem to do this as
-     * each task maintains its own interrupt status. */
+    /*
+     * 在临界区中执行上下文切换，以确保不被 tick ISR 打断。
+     * 这样做没有问题，因为每个任务都维护自己的中断状态。
+     */
     portENTER_CRITICAL();
 	  {
-		    /* Jump directly to the yield function to ensure there is no
-		    * compiler generated prologue code. */
+		    /*
+		     * 直接跳转到让出函数，以确保不产生编译器生成的序言代码。
+		     */
         #ifdef __arch64__
             asm volatile (	"brealid r14, VPortYieldASM		\n\t" \
         		         				"or r0, r0, r0					      \n\t" );
@@ -332,15 +349,17 @@ void vPortEnableInterrupt( uint8_t ucInterruptID )
 {
     int32_t lReturn;
 
-    /* An API function is provided to enable an interrupt in the interrupt
-     * controller because the interrupt controller instance variable is private
-     * to this file. */
+    /*
+     * 提供 API 函数用于在中断控制器中使能指定中断，
+     * 因为中断控制器实例变量仅在本文件内可见。
+     */
     lReturn = prvEnsureInterruptControllerIsInitialised();
 
     if( lReturn == pdPASS )
     {
-        /* Critical section protects read/modify/writer operation inside
-         * XIntc_Enable(). */
+        /*
+         * 临界区保护 XIntc_Enable() 内部的读/改/写操作。
+         */
         portENTER_CRITICAL();
         {
             XIntc_Enable( &xInterruptControllerInstance, ucInterruptID );
@@ -356,9 +375,10 @@ void vPortDisableInterrupt( uint8_t ucInterruptID )
 {
     int32_t lReturn;
 
-    /* An API function is provided to disable an interrupt in the interrupt
-     * controller because the interrupt controller instance variable is private
-     * to this file. */
+    /*
+     * 提供 API 函数用于在中断控制器中禁用指定中断，
+     * 因为中断控制器实例变量仅在本文件内可见。
+     */
     lReturn = prvEnsureInterruptControllerIsInitialised();
 
     if( lReturn == pdPASS )
@@ -376,8 +396,10 @@ BaseType_t xPortInstallInterruptHandler( uint8_t ucInterruptID,
 {
     int32_t lReturn;
 
-    /* An API function is provided to install an interrupt handler because the
-     * interrupt controller instance variable is private to this file. */
+    /*
+     * 提供 API 函数用于安装中断处理程序，
+     * 因为中断控制器实例变量仅在本文件内可见。
+     */
 
     lReturn = prvEnsureInterruptControllerIsInitialised();
 
@@ -401,8 +423,10 @@ void vPortRemoveInterruptHandler( uint8_t ucInterruptID )
 {
     int32_t lReturn;
 
-    /* An API function is provided to remove an interrupt handler because the
-     * interrupt controller instance variable is private to this file. */
+    /*
+     * 提供 API 函数用于移除中断处理程序，
+     * 因为中断控制器实例变量仅在本文件内可见。
+     */
 
     lReturn = prvEnsureInterruptControllerIsInitialised();
 
@@ -420,8 +444,10 @@ static int32_t prvEnsureInterruptControllerIsInitialised( void )
     static int32_t lInterruptControllerInitialised = pdFALSE;
     int32_t lReturn;
 
-    /* Ensure the interrupt controller instance variable is initialised before
-     * it is used, and that the initialisation only happens once. */
+    /*
+     * 确保中断控制器实例变量在使用前完成初始化，
+     * 并且只初始化一次。
+     */
     if( lInterruptControllerInitialised != pdTRUE )
     {
         lReturn = prvInitialiseInterruptController();
@@ -441,39 +467,39 @@ static int32_t prvEnsureInterruptControllerIsInitialised( void )
 /*-----------------------------------------------------------*/
 
 /*
- * Handler for the timer interrupt.  This is the handler that the application
- * defined callback function vApplicationSetupTimerInterrupt() should install.
+ * 定时器中断处理程序。应用定义的 vApplicationSetupTimerInterrupt()
+ * 回调函数应安装此处理程序。
  */
 void vPortTickISR( void * pvUnused )
 {
     extern void vApplicationClearTimerInterrupt( void );
 
-	/* Ensure the unused parameter does not generate a compiler warning. */
+	/* 确保未使用的参数不会产生编译器警告。 */
 	( void ) pvUnused;
 
-    /* The Xilinx implementation of generating run time task stats uses the same timer used for generating
-	   * FreeRTOS ticks. In case user decides to generate run time stats the tick handler is called more
-	   * frequently (10 times faster). The timer    ick handler uses logic to handle the same. It handles
-	   * the FreeRTOS tick once per 10 interrupts.
-	   * For handling generation of run time stats, it increments a pre-defined counter every time the
-	   * interrupt handler executes. */
+    /*
+     * Xilinx 实现的运行时间任务统计生成使用与 FreeRTOS tick 相同的定时器。
+     * 若用户决定生成运行时间统计，则 tick 处理程序的调用会更频繁（快 10 倍）。
+     * 定时器 tick 处理程序通过相应逻辑处理这一点：每 10 次中断处理一次 FreeRTOS tick。
+     * 为支持运行时间统计生成，每次执行中断处理程序时都会递增一个预定义计数器。
+     */
 #if (configGENERATE_RUN_TIME_STATS == 1)
     ulHighFrequencyTimerTicks++;
     if (!(ulHighFrequencyTimerTicks % 10))
 #endif
     {
-        /* This port uses an application defined callback function to clear the tick
-         * interrupt because the kernel will run on lots of different MicroBlaze and
-         * FPGA configurations - not all of which will have the same timer peripherals
-         * defined or available.  An example definition of
-         * vApplicationClearTimerInterrupt() is provided in the official demo
-         * application that accompanies this port. */
+        /*
+         * 本移植层使用应用定义的回调函数来清除 tick 中断，
+         * 因为内核要运行在多种 MicroBlaze 和 FPGA 配置上——
+         * 并非所有配置都定义或提供相同的定时器外设。
+         * 本移植层附带的官方演示应用中提供了 vApplicationClearTimerInterrupt() 的示例定义。
+         */
         vApplicationClearTimerInterrupt();
 
-        /* Increment the RTOS tick - this might cause a task to unblock. */
+        /* 递增 RTOS tick 计数——这可能使某个任务解除阻塞。 */
         if( xTaskIncrementTick() != pdFALSE )
         {
-            /* Force vTaskSwitchContext() to be called as the interrupt exits. */
+            /* 在中断退出时强制调用 vTaskSwitchContext()。 */
             ulTaskSwitchRequested = 1;
         }
     }
@@ -488,23 +514,25 @@ static int32_t prvInitialiseInterruptController( void )
 
     if( lStatus == XST_SUCCESS )
     {
-        /* Initialise the exception table. */
+        /* 初始化异常表。 */
         Xil_ExceptionInit();
 
-        /* Service all pending interrupts each time the handler is entered. */
+        /* 每次进入处理程序时服务所有挂起中断。 */
         XIntc_SetIntrSvcOption( xInterruptControllerInstance.BaseAddress, XIN_SVC_ALL_ISRS_OPTION );
 
-        /* Install exception handlers if the MicroBlaze is configured to handle
-         * exceptions, and the application defined constant
-         * configINSTALL_EXCEPTION_HANDLERS is set to 1. */
+        /*
+         * 若 MicroBlaze 配置为处理异常，且应用定义的常量
+         * configINSTALL_EXCEPTION_HANDLERS 设置为 1，则安装异常处理程序。
+         */
         #if ( MICROBLAZE_EXCEPTIONS_ENABLED == 1 ) && ( configINSTALL_EXCEPTION_HANDLERS == 1 )
         {
             vPortExceptionsInstallHandlers();
         }
-        #endif /* MICROBLAZE_EXCEPTIONS_ENABLED */
+        #endif /* MICROBLAZE_EXCEPTIONS_ENABLED（MicroBlaze 异常功能使能） */
 
-        /* Start the interrupt controller.  Interrupts are enabled when the
-         * scheduler starts. */
+        /*
+         * 启动中断控制器。调度器启动时使能中断。
+         */
         lStatus = XIntc_Start( &xInterruptControllerInstance, XIN_REAL_MODE );
 
         if( lStatus == XST_SUCCESS )
@@ -524,18 +552,16 @@ static int32_t prvInitialiseInterruptController( void )
 
 #if( configGENERATE_RUN_TIME_STATS == 1 )
 /*
- * For Xilinx implementation this is a dummy function that does a redundant operation
- * of zeroing out the global counter.
- * It is called by FreeRTOS kernel.
+ * 对于 Xilinx 实现，本函数是一个空操作函数，仅重复地将全局计数器清零。
+ * 它由 FreeRTOS 内核调用。
  */
 void xCONFIGURE_TIMER_FOR_RUN_TIME_STATS (void)
 {
 	ulHighFrequencyTimerTicks = 0;
 }
 /*
- * For Xilinx implementation this function returns the global counter used for
- * run time task stats calculation.
- * It is called by FreeRTOS kernel task handling logic.
+ * 对于 Xilinx 实现，本函数返回用于运行时间统计计算的全局计数器。
+ * 它由 FreeRTOS 内核的任务处理逻辑调用。
  */
 uint32_t xGET_RUN_TIME_COUNTER_VALUE (void)
 {

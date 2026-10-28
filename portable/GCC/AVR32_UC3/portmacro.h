@@ -26,21 +26,23 @@
  *
  */
 
-/*This file has been prepared for Doxygen automatic documentation generation.*/
+/* 本文件已针对 Doxygen 自动文档生成做好准备。 */
 
-/*! \file *********************************************************************
+/*!
+ * ! \file *********************************************************************
  *
- * \brief FreeRTOS port source for AVR32 UC3.
+ * \brief AVR32 UC3 的 FreeRTOS 移植层源文件。
  *
- * - Compiler:           GNU GCC for AVR32
- * - Supported devices:  All AVR32 devices can be used.
- * - AppNote:
+ * - 编译器：          GNU GCC for AVR32
+ * - 支持的器件：      可使用所有 AVR32 器件。
+ * - 应用笔记：
  *
- * \author               Atmel Corporation (Now Microchip):
+ * \author               Atmel Corporation（现为 Microchip）：
  *                                        https://www.microchip.com \n
- *                       Support and FAQ: https://www.microchip.com/support/
+ *                       支持与常见问题：https://www.microchip.com/support/
  *
- *****************************************************************************/
+ * ***************************************************************************
+ */
 
 /*
  * Copyright (c) 2007, Atmel Corporation All rights reserved.
@@ -73,27 +75,27 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 #include <avr32/io.h>
 #include "intc.h"
 #include "compiler.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -123,7 +125,7 @@ typedef unsigned long    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Architecture specifics. */
+/* 体系结构相关定义。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    4
@@ -133,7 +135,7 @@ typedef unsigned long    UBaseType_t;
 
 /*-----------------------------------------------------------*/
 
-/* INTC-specific. */
+/* INTC 专用定义。 */
 #define DISABLE_ALL_EXCEPTIONS()        Disable_global_exception()
 #define ENABLE_ALL_EXCEPTIONS()         Enable_global_exception()
 
@@ -145,17 +147,16 @@ typedef unsigned long    UBaseType_t;
 
 
 /*
- * Debug trace.
- * Activated if and only if configDBG is nonzero.
- * Prints a formatted string to stdout.
- * The current source file name and line number are output with a colon before
- * the formatted string.
- * A carriage return and a linefeed are appended to the output.
- * stdout is redirected to the USART configured by configDBG_USART.
- * The parameters are the same as for the standard printf function.
- * There is no return value.
- * SHALL NOT BE CALLED FROM WITHIN AN INTERRUPT as fputs and printf use malloc,
- * which is interrupt-unsafe with the current __malloc_lock and __malloc_unlock.
+ * 调试跟踪。
+ * 当且仅当 configDBG 非零时激活。
+ * 将格式化字符串输出到 stdout。
+ * 在格式化字符串之前输出当前源文件名和行号，并以冒号分隔。
+ * 输出末尾追加回车和换行。
+ * stdout 重定向到由 configDBG_USART 配置的 USART。
+ * 参数与标准 printf 函数相同。
+ * 无返回值。
+ * 不得在中断中调用，因为 fputs 和 printf 使用 malloc，而在当前的
+ * __malloc_lock 和 __malloc_unlock 下 malloc 是中断不安全的。
  */
 #if configDBG
     #define portDBG_TRACE( ... )                                 \
@@ -169,7 +170,7 @@ typedef unsigned long    UBaseType_t;
 #endif
 
 
-/* Critical section management. */
+/* 临界区管理。 */
 #define portDISABLE_INTERRUPTS()    DISABLE_ALL_INTERRUPTS()
 #define portENABLE_INTERRUPTS()     ENABLE_ALL_INTERRUPTS()
 
@@ -181,7 +182,7 @@ extern void vPortExitCritical( void );
 #define portEXIT_CRITICAL()     vPortExitCritical();
 
 
-/* Added as there is no such function in FreeRTOS. */
+/* 因 FreeRTOS 中没有此函数而添加。 */
 extern void * pvPortRealloc( void * pv,
                              size_t xSize );
 /*-----------------------------------------------------------*/
@@ -190,7 +191,7 @@ extern void * pvPortRealloc( void * pv,
 /*=============================================================================================*/
 
 /*
- * Restore Context for cases other than INTi.
+ * 用于 INTi 以外情况的上下文恢复。
  */
 #define portRESTORE_CONTEXT()                                                                         \
     {                                                                                                 \
@@ -233,41 +234,40 @@ extern void * pvPortRealloc( void * pv,
 
 
 /*
- * portSAVE_CONTEXT_INT() and portRESTORE_CONTEXT_INT(): for INT0..3 exceptions.
- * portSAVE_CONTEXT_SCALL() and portRESTORE_CONTEXT_SCALL(): for the scall exception.
+ * portSAVE_CONTEXT_INT() 和 portRESTORE_CONTEXT_INT()：用于 INT0..3 异常。
+ * portSAVE_CONTEXT_SCALL() 和 portRESTORE_CONTEXT_SCALL()：用于 scall 异常。
  *
- * Had to make different versions because registers saved on the system stack
- * are not the same between INT0..3 exceptions and the scall exception.
+ * 必须提供不同版本，因为 INT0..3 异常与 scall 异常保存在系统栈上的
+ * 寄存器并不相同。
  */
 
-/* Task context stack layout: */
-/* R8  (*) */
-/* R9  (*) */
-/* R10 (*) */
-/* R11 (*) */
-/* R12 (*) */
-/* R14/LR (*) */
-/* R15/PC (*) */
-/* SR (*) */
-/* R0 */
-/* R1 */
-/* R2 */
-/* R3 */
-/* R4 */
-/* R5 */
-/* R6 */
-/* R7 */
-/* ulCriticalNesting */
-/* (*) automatically done for INT0..INT3, but not for SCALL */
+/* 任务上下文栈布局： */
+/* R8（*）寄存器 */
+/* R9（*）寄存器 */
+/* R10（*）寄存器 */
+/* R11（*）寄存器 */
+/* R12（*）寄存器 */
+/* R14/LR（*）寄存器 */
+/* R15/PC（*）寄存器 */
+/* SR（*）状态寄存器 */
+/* R0 寄存器 */
+/* R1 寄存器 */
+/* R2 寄存器 */
+/* R3 寄存器 */
+/* R4 寄存器 */
+/* R5 寄存器 */
+/* R6 寄存器 */
+/* R7 寄存器 */
+/* ulCriticalNesting（临界区嵌套计数） */
+/* (*) 对 INT0..INT3 自动完成，但对 SCALL 不自动完成 */
 
 /*
- * The ISR used for the scheduler tick depends on whether the cooperative or
- * the preemptive scheduler is being used.
+ * 用于调度器时钟节拍的 ISR 取决于使用的是协作式还是抢占式调度器。
  */
 #if configUSE_PREEMPTION == 0
 
 /*
- * portSAVE_CONTEXT_OS_INT() for OS Tick exception.
+ * 用于 OS 时钟节拍（Tick）异常的 portSAVE_CONTEXT_OS_INT()。
  */
     #define portSAVE_CONTEXT_OS_INT()                                                     \
     {                                                                                     \
@@ -279,7 +279,7 @@ extern void * pvPortRealloc( void * pv,
     }
 
 /*
- * portRESTORE_CONTEXT_OS_INT() for Tick exception.
+ * 用于 Tick 异常的 portRESTORE_CONTEXT_OS_INT()。
  */
     #define portRESTORE_CONTEXT_OS_INT()                                                      \
     {                                                                                         \
@@ -293,10 +293,10 @@ extern void * pvPortRealloc( void * pv,
             );                                                                                \
     }
 
-#else /* if configUSE_PREEMPTION == 0 */
+#else /* 若 configUSE_PREEMPTION == 0 */
 
 /*
- * portSAVE_CONTEXT_OS_INT() for OS Tick exception.
+ * 用于 OS 时钟节拍（Tick）异常的 portSAVE_CONTEXT_OS_INT()。
  */
     #define portSAVE_CONTEXT_OS_INT()                                                                             \
     {                                                                                                             \
@@ -348,7 +348,7 @@ extern void * pvPortRealloc( void * pv,
     }
 
 /*
- * portRESTORE_CONTEXT_OS_INT() for Tick exception.
+ * 用于 Tick 异常的 portRESTORE_CONTEXT_OS_INT()。
  */
     #define portRESTORE_CONTEXT_OS_INT()                                                                          \
     {                                                                                                             \
@@ -407,14 +407,13 @@ extern void * pvPortRealloc( void * pv,
             );                                                                                                    \
     }
 
-#endif /* if configUSE_PREEMPTION == 0 */
+#endif /* 若 configUSE_PREEMPTION == 0 */
 
 
 /*
- * portSAVE_CONTEXT_SCALL() for SupervisorCALL exception.
+ * 用于 SupervisorCALL 异常的 portSAVE_CONTEXT_SCALL()。
  *
- * NOTE: taskYIELD()(== SCALL) MUST NOT be called in a mode > supervisor mode.
- *
+ * 注意：taskYIELD()（== SCALL）不得在高于超级用户模式的模式下调用。
  */
 #define portSAVE_CONTEXT_SCALL()                                                                                        \
     {                                                                                                                   \
@@ -466,10 +465,10 @@ extern void * pvPortRealloc( void * pv,
         /* Disable the its which may cause a context switch (i.e. cause a change of */                                  \
         /* pxCurrentTCB). */                                                                                            \
         /* Basically, all accesses to the pxCurrentTCB structure should be put in a */                                  \
-        /* critical section because it is a global structure. */                                                        \
+        /* 临界区，因为它是全局结构。 */                                                        \
         portENTER_CRITICAL();                                                                                           \
                                                                                                                         \
-        /* Store SP in the first member of the structure pointed to by pxCurrentTCB */                                  \
+        /* 将 SP 存入 pxCurrentTCB 所指向结构的第一个成员中 */                                  \
         __asm__ __volatile__ (                                                                                          \
             "mov     r8, LO(%[pxCurrentTCB])                                                        \n\t"               \
             "orh     r8, HI(%[pxCurrentTCB])                                                        \n\t"               \
@@ -481,7 +480,7 @@ extern void * pvPortRealloc( void * pv,
     }
 
 /*
- * portRESTORE_CONTEXT() for SupervisorCALL exception.
+ * 用于 SupervisorCALL 异常的 portRESTORE_CONTEXT()。
  */
 #define portRESTORE_CONTEXT_SCALL()                                                                                     \
     {                                                                                                                   \
@@ -536,14 +535,12 @@ extern void * pvPortRealloc( void * pv,
 
 
 /*
- * The ISR used depends on whether the cooperative or
- * the preemptive scheduler is being used.
+ * 所用 ISR 取决于使用的是协作式还是抢占式调度器。
  */
 #if configUSE_PREEMPTION == 0
 
 /*
- * ISR entry and exit macros.  These are only required if a task switch
- * is required from the ISR.
+ * ISR 进入和退出宏。仅当需要从 ISR 中进行任务切换时才需要。
  */
     #define portENTER_SWITCHING_ISR()                                                     \
     {                                                                                     \
@@ -555,7 +552,7 @@ extern void * pvPortRealloc( void * pv,
     }
 
 /*
- * Input parameter: in R12, boolean. Perform a vTaskSwitchContext() if 1
+ * 输入参数：位于 R12，布尔值。若为 1 则执行 vTaskSwitchContext()
  */
     #define portEXIT_SWITCHING_ISR()                                                                      \
     {                                                                                                     \
@@ -569,11 +566,10 @@ extern void * pvPortRealloc( void * pv,
             );                                                                                            \
     }
 
-#else /* if configUSE_PREEMPTION == 0 */
+#else /* 若 configUSE_PREEMPTION == 0 */
 
 /*
- * ISR entry and exit macros.  These are only required if a task switch
- * is required from the ISR.
+ * ISR 进入和退出宏。仅当需要从 ISR 中进行任务切换时才需要。
  */
     #define portENTER_SWITCHING_ISR()                                                                                                                             \
     {                                                                                                                                                             \
@@ -621,7 +617,7 @@ extern void * pvPortRealloc( void * pv,
     }
 
 /*
- * Input parameter: in R12, boolean. Perform a vTaskSwitchContext() if 1
+ * 输入参数：位于 R12，布尔值。若为 1 则执行 vTaskSwitchContext()
  */
     #define portEXIT_SWITCHING_ISR()                                                                                                                              \
     {                                                                                                                                                             \
@@ -674,10 +670,10 @@ extern void * pvPortRealloc( void * pv,
             "orh     r8, HI(%[ulCriticalNesting])                                                   \n\t"                                                         \
             "st.w    r8[0], r0                                                                      \n\t"                                                         \
                                                                                                                                                                   \
-            /* Restore R0..R7 */                                                                                                                                  \
+            /* 恢复 R0..R7 寄存器 */                                                                                                                                  \
             "ldm     sp++, r0-r7                                                                    \n\t"                                                         \
                                                                                                                                                                   \
-            /* Now, the stack should be R8..R12, LR, PC and SR  */                                                                                                \
+            /* 此时栈内容应为 R8..R12、LR、PC 和 SR */                                                                                                \
             "rete"                                                                                                                                                \
             :                                                                                                                                                     \
             :[ ulCriticalNesting ] "i" ( &ulCriticalNesting ),                                                                                                    \
@@ -686,19 +682,19 @@ extern void * pvPortRealloc( void * pv,
             );                                                                                                                                                    \
     }
 
-#endif /* if configUSE_PREEMPTION == 0 */
+#endif /* 若 configUSE_PREEMPTION == 0 */
 
 
 #define portYIELD()                                           { __asm__ __volatile__ ( "scall" ); }
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

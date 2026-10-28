@@ -29,23 +29,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -63,37 +63,38 @@ typedef uint32_t         TickType_t;
 
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关细节。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    32
 
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具。 */
 
-/* The interrupt priority (for vectors 16 to 255) is determined using vector/16.
- * The quotient is rounded to the nearest integer with 1 being the lowest priority
- * and 15 is the highest.  Therefore the following two interrupts are at the lowest
- * priority.  *NOTE 1* If the yield vector is changed then it must also be changed
- * in the portYIELD_INTERRUPT definition immediately below. */
+/*
+ * 中断优先级（向量 16 到 255）通过 vector/16 确定。
+ * 商四舍五入到最接近的整数，1 为最低优先级，15 为最高优先级。
+ * 因此下面两个中断处于最低优先级。*注意 1* 若更改让出向量，
+ * 还必须更改紧随其后的 portYIELD_INTERRUPT 定义中的对应值。
+ */
 #define portAPIC_TIMER_INT_VECTOR       ( 0x21 )
 #define portAPIC_YIELD_INT_VECTOR       ( 0x20 )
 
-/* Build yield interrupt instruction. */
+/* 构造用于让出 CPU 的中断指令。 */
 #define portYIELD_INTERRUPT             "int $0x20"
 
-/* APIC register addresses. */
+/* APIC 寄存器地址。 */
 #define portAPIC_EOI                    ( *( ( volatile uint32_t * ) 0xFEE000B0UL ) )
 
-/* APIC bit definitions. */
+/* APIC 位定义。 */
 #define portAPIC_ENABLE_BIT             ( 1UL << 8UL )
 #define portAPIC_TIMER_PERIODIC         ( 1UL << 17UL )
 #define portAPIC_DISABLE                ( 1UL << 16UL )
 #define portAPIC_NMI                    ( 4 << 8 )
 #define portAPIC_DIV_16                 ( 0x03 )
 
-/* Define local API register addresses. */
+/* 定义本地 API 寄存器地址。 */
 #define portAPIC_ID_REGISTER            ( *( ( volatile uint32_t * ) ( configAPIC_BASE + 0x20UL ) ) )
 #define portAPIC_SPURIOUS_INT           ( *( ( volatile uint32_t * ) ( configAPIC_BASE + 0xF0UL ) ) )
 #define portAPIC_LVT_TIMER              ( *( ( volatile uint32_t * ) ( configAPIC_BASE + 0x320UL ) ) )
@@ -108,8 +109,10 @@ typedef uint32_t         TickType_t;
 #define portAPIC_LVT_LINT0              ( *( ( volatile uint32_t * ) ( configAPIC_BASE + 0x350UL ) ) )
 #define portAPIC_LVT_LINT1              ( *( ( volatile uint32_t * ) ( configAPIC_BASE + 0x360UL ) ) )
 
-/* Don't yield if inside a critical section - instead hold the yield pending
- * so it is performed when the critical section is exited. */
+/*
+ * 如果处于临界区内则不要让出 CPU，而是将让出请求挂起，
+ * 待退出临界区时再执行。
+ */
 #define portYIELD()                                  \
     {                                                \
         extern volatile uint32_t ulCriticalNesting;  \
@@ -124,8 +127,10 @@ typedef uint32_t         TickType_t;
         }                                            \
     }
 
-/* Called at the end of an ISR that can cause a context switch - pend a yield if
- * xSwitchRequired is not false. */
+/*
+ * 可在中断中引发上下文切换的 ISR 结束处调用；
+ * 若 xSwitchRequired 不为 false，则挂起一次让出 CPU 请求。
+ */
 #define portEND_SWITCHING_ISR( xSwitchRequired )     \
     {                                                \
         extern volatile uint32_t ulPortYieldPending; \
@@ -135,14 +140,16 @@ typedef uint32_t         TickType_t;
         }                                            \
     }
 
-/* Same as portEND_SWITCHING_ISR() - take your pick which name to use. */
+/* 与 portEND_SWITCHING_ISR() 相同——可任选一个名称使用。 */
 #define portYIELD_FROM_ISR( x )    portEND_SWITCHING_ISR( x )
 
-/*-----------------------------------------------------------
-* Critical section control
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 临界区控制
+ * ----------------------------------------------------------
+ */
 
-/* Critical sections for use in interrupts. */
+/* 供中断中使用的临界区。 */
 #define portSET_INTERRUPT_MASK_FROM_ISR()         ulPortSetInterruptMask()
 #define portCLEAR_INTERRUPT_MASK_FROM_ISR( x )    vPortClearInterruptMask( x )
 
@@ -151,8 +158,9 @@ extern void vPortExitCritical( void );
 extern uint32_t ulPortSetInterruptMask( void );
 extern void vPortClearInterruptMask( uint32_t ulNewMaskValue );
 
-/* These macros do not globally disable/enable interrupts.  They do mask off
- * interrupts that have a priority below configMAX_API_CALL_INTERRUPT_PRIORITY. */
+/*
+ * 这些宏不会全局禁用/使能中断。它们屏蔽优先级低于 configMAX_API_CALL_INTERRUPT_PRIORITY 的中断。
+ */
 #define portENTER_CRITICAL()        vPortEnterCritical()
 #define portEXIT_CRITICAL()         vPortExitCritical()
 #define portDISABLE_INTERRUPTS()    __asm volatile ( "cli" )
@@ -160,16 +168,17 @@ extern void vPortClearInterruptMask( uint32_t ulNewMaskValue );
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site.  These are
- * not required for this port but included in case common demo code that uses these
- * macros is used. */
+/*
+ * FreeRTOS.org 网站上所述的任务函数宏。本移植层并不需要这些宏，
+ * 但为兼容使用这些宏的通用演示代码而包含它们。
+ */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* Architecture specific optimisations. */
+/* 架构相关优化。 */
 #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
 
-/* Store/clear the ready priorities in a bit map. */
+/* 用位图保存/清除就绪优先级。 */
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities ) \
     __asm volatile ( "bsr %1, %0\n\t"                                    \
                      : "=r" ( uxTopPriority ) : "rm" ( uxReadyPriorities ) : "cc" )
@@ -177,20 +186,24 @@ extern void vPortClearInterruptMask( uint32_t ulNewMaskValue );
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )    ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )     ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION（使用移植层优化的任务选择） */
 
 #define portNOP()    __asm volatile ( "NOP" )
 
-/*-----------------------------------------------------------
-* Misc
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 杂项
+ * ----------------------------------------------------------
+ */
 
 #define portNUM_VECTORS     256
 #define portMAX_PRIORITY    15
 typedef void ( * ISR_Handler_t ) ( void );
 
-/* Any task that uses the floating point unit MUST call vPortTaskUsesFPU()
- * before any floating point instructions are executed. */
+/*
+ * 任何使用浮点单元的任务都必须先调用 vPortTaskUsesFPU()，
+ * 然后才能执行浮点指令。
+ */
 #ifndef configSUPPORT_FPU
     #define configSUPPORT_FPU    0
 #endif
@@ -200,8 +213,9 @@ typedef void ( * ISR_Handler_t ) ( void );
     #define portTASK_USES_FLOATING_POINT()    vPortTaskUsesFPU()
 #endif
 
-/* See the comments under the configUSE_COMMON_INTERRUPT_ENTRY_POINT definition
- * below. */
+/*
+ * 参见下面 configUSE_COMMON_INTERRUPT_ENTRY_POINT 定义处的注释。
+ */
 BaseType_t xPortRegisterCInterruptHandler( ISR_Handler_t pxHandler,
                                            uint32_t ulVectorNumber );
 BaseType_t xPortInstallInterruptHandler( ISR_Handler_t pxHandler,
@@ -209,70 +223,73 @@ BaseType_t xPortInstallInterruptHandler( ISR_Handler_t pxHandler,
 
 #ifndef configAPIC_BASE
 
-/* configAPIC_BASE_ADDRESS sets the base address of the local APIC.  It can
- * be overridden in FreeRTOSConfig.h should it not be constant. */
+/*
+ * configAPIC_BASE_ADDRESS 设置本地 APIC 的基地址。
+ * 若该地址不是常量，可在 FreeRTOSConfig.h 中覆盖。
+ */
     #define configAPIC_BASE    0xFEE00000UL
 #endif
 
 #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
 
-/* The FreeRTOS scheduling algorithm selects the task that will enter the
- * Running state.  configUSE_PORT_OPTIMISED_TASK_SELECTION is used to set how
- * that is done.
+/*
+ * FreeRTOS 调度算法负责选择进入运行态的任务。
+ * configUSE_PORT_OPTIMISED_TASK_SELECTION 用于设置选择方式。
  *
- * If configUSE_PORT_OPTIMISED_TASK_SELECTION is set to 0 then the task to
- * enter the Running state is selected using a portable algorithm written in
- * C.  This is the slowest method, but the algorithm does not restrict the
- * maximum number of unique RTOS task priorities that are available.
+ * 若 configUSE_PORT_OPTIMISED_TASK_SELECTION 设置为 0，则使用
+ * C 语言编写的通用算法选择进入运行态的任务。这是最慢的方法，
+ * 但该算法不限制可用的 RTOS 任务唯一优先级的最大数量。
  *
- * If configUSE_PORT_OPTIMISED_TASK_SELECTION is set to 1 then the task to
- * enter the Running state is selected using a single assembly instruction.
- * This is the fastest method, but restricts the maximum number of unique RTOS
- * task priorities to 32 (the same task priority can be assigned to any number
- * of RTOS tasks). */
+ * 若 configUSE_PORT_OPTIMISED_TASK_SELECTION 设置为 1，则使用
+ * 单条汇编指令选择进入运行态的任务。这是最快的方法，
+ * 但将 RTOS 任务唯一优先级的最大数量限制为 32
+ * （同一任务优先级可以分配给任意数量的 RTOS 任务）。
+ */
     #warning configUSE_PORT_OPTIMISED_TASK_SELECTION was not defined in FreeRTOSConfig.h and has been defaulted to 1
     #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #endif
 
 #ifndef configUSE_COMMON_INTERRUPT_ENTRY_POINT
 
-/* There are two ways of implementing interrupt handlers:
+/*
+ * 实现中断处理程序有两种方式：
  *
- *  1) As standard C functions -
+ *  1) 作为标准 C 函数——
  *
- *  This method can only be used if configUSE_COMMON_INTERRUPT_ENTRY_POINT
- *  is set to 1.  The C function is installed using
- *  xPortRegisterCInterruptHandler().
+ *  仅当 configUSE_COMMON_INTERRUPT_ENTRY_POINT 设置为 1 时
+ *  才能使用此方法。C 函数通过
+ *  xPortRegisterCInterruptHandler() 安装。
  *
- *  This is the simplest of the two methods but incurs a slightly longer
- *  interrupt entry time.
+ *  这是两种方法中最简单的一种，但中断入口时间略长。
  *
- *  2) By using an assembly stub that wraps the handler in the FreeRTOS
- *     portFREERTOS_INTERRUPT_ENTRY and portFREERTOS_INTERRUPT_EXIT macros.
+ *  2) 使用汇编存根，将处理程序包裹在 FreeRTOS 的
+ *     portFREERTOS_INTERRUPT_ENTRY 和 portFREERTOS_INTERRUPT_EXIT 宏中。
  *
- *  This method can always be used.  It is slightly more complex than
- *  method 1 but benefits from a faster interrupt entry time. */
+ *  此方法始终可用。它比方法 1 稍复杂，
+ *  但中断入口时间更短。
+ */
     #warning configUSE_COMMON_INTERRUPT_ENTRY_POINT was not defined in FreeRTOSConfig.h and has been defaulted to 1.
     #define configUSE_COMMON_INTERRUPT_ENTRY_POINT    1
 #endif
 
 #ifndef configISR_STACK_SIZE
 
-/* Interrupt entry code will switch the stack in use to a dedicated system
- * stack.
+/*
+ * 中断入口代码会将当前使用的栈切换到专用系统栈。
  *
- * configISR_STACK_SIZE defines the number of 32-bit values that can be stored
- * on the system stack, and must be large enough to hold a potentially nested
- * interrupt stack frame. */
+ * configISR_STACK_SIZE 定义系统栈上可存储的 32 位值的数量，
+ * 必须足够大，以容纳可能嵌套的中断栈帧。
+ */
 
     #error configISR_STACK_SIZE was not defined in FreeRTOSConfig.h.
 #endif
 
 #ifndef configMAX_API_CALL_INTERRUPT_PRIORITY
 
-/* Interrupt safe FreeRTOS functions (those that end in "FromISR" must not
- * be called from an interrupt that has a priority above that set by
- * configMAX_API_CALL_INTERRUPT_PRIORITY.  */
+/*
+ * 中断安全的 FreeRTOS 函数（以 "FromISR" 结尾的函数）不得
+ * 从优先级高于 configMAX_API_CALL_INTERRUPT_PRIORITY 所设值的中断中调用。
+ */
     #warning configMAX_API_CALL_INTERRUPT_PRIORITY was not defined in FreeRTOSConfig.h and has been defaulted to 10
     #define configMAX_API_CALL_INTERRUPT_PRIORITY    10
 #endif
@@ -282,21 +299,24 @@ BaseType_t xPortInstallInterruptHandler( ISR_Handler_t pxHandler,
     #define configSUPPORT_FPU    0
 #endif
 
-/* The value written to the task priority register to raise the interrupt mask
- * to the maximum from which FreeRTOS API calls can be made. */
+/*
+ * 写入任务优先级寄存器的值，用于将中断屏蔽提升到可调用 FreeRTOS API 的最高水平。
+ */
 #define portAPIC_PRIORITY_SHIFT        ( 4UL )
 #define portAPIC_MAX_SUB_PRIORITY      ( 0x0fUL )
 #define portMAX_API_CALL_PRIORITY      ( ( configMAX_API_CALL_INTERRUPT_PRIORITY << portAPIC_PRIORITY_SHIFT ) | portAPIC_MAX_SUB_PRIORITY )
 
-/* Asserts if interrupt safe FreeRTOS functions are called from a priority
- * above the max system call interrupt priority. */
+/*
+ * 若从中断优先级高于系统调用最大中断优先级的中断中
+ * 调用中断安全 FreeRTOS 函数，则触发断言。
+ */
 #define portAPIC_PROCESSOR_PRIORITY    ( *( ( volatile uint32_t * ) ( configAPIC_BASE + 0xA0UL ) ) )
 #define portASSERT_IF_INTERRUPT_PRIORITY_INVALID()    configASSERT( ( portAPIC_PROCESSOR_PRIORITY ) <= ( portMAX_API_CALL_PRIORITY ) )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（移植宏头文件） */

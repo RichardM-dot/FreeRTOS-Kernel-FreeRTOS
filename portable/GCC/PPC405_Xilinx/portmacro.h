@@ -31,23 +31,23 @@
 
 #include "xexception_l.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -71,17 +71,18 @@ typedef unsigned long    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* This port uses the critical nesting count from the TCB rather than
- * maintaining a separate value and then saving this value in the task stack. */
+/*
+ * 此移植层使用 TCB 中的临界区嵌套计数，而不是单独维护一个值再将其保存到任务栈中。
+ */
 #define portCRITICAL_NESTING_IN_TCB    1
 
-/* Interrupt control macros. */
+/* 中断控制宏。 */
 #define portDISABLE_INTERRUPTS()    XExc_mDisableExceptions( XEXC_NON_CRITICAL );
 #define portENABLE_INTERRUPTS()     XExc_mEnableExceptions( XEXC_NON_CRITICAL );
 
 /*-----------------------------------------------------------*/
 
-/* Critical section macros. */
+/* 临界区宏。 */
 void vTaskEnterCritical( void );
 void vTaskExitCritical( void );
 #define portENTER_CRITICAL()    vTaskEnterCritical()
@@ -89,38 +90,38 @@ void vTaskExitCritical( void );
 
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 void vPortYield( void );
 #define portYIELD()             asm volatile ( "SC \n\t NOP" )
 #define portYIELD_FROM_ISR()    vTaskSwitchContext()
 
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portBYTE_ALIGNMENT    8
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portNOP()    asm volatile ( "NOP" )
 
-/* There are 32 * 32bit floating point registers, plus the FPSCR to save. */
+/* 共有 32 个 32 位浮点寄存器，另需保存 FPSCR。 */
 #define portNO_FLOP_REGISTERS_TO_SAVE    ( 32 + 1 )
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* Port specific interrupt handling functions. */
+/* 移植层专用中断处理函数。 */
 void vPortSetupInterruptController( void );
 BaseType_t xPortInstallInterruptHandler( uint8_t ucInterruptID,
                                          XInterruptHandler pxHandler,
                                          void * pvCallBackRef );
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

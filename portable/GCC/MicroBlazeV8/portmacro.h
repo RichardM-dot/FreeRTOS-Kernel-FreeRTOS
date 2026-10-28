@@ -29,27 +29,27 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/* BSP includes. */
+/* BSP 头文件。 */
 #include <mb_interface.h>
 #include <xparameters.h>
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -69,22 +69,24 @@ typedef unsigned long    UBaseType_t;
     typedef uint32_t     TickType_t;
     #define portMAX_DELAY              ( TickType_t ) 0xffffffffUL
 
-/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 32 位架构上使用 32 位 tick 类型，因此读取 tick 计数
+ * 无需用临界区保护。
+ */
     #define portTICK_TYPE_IS_ATOMIC    1
 #else
     #error configTICK_TYPE_WIDTH_IN_BITS set to unsupported tick type width.
 #endif
 /*-----------------------------------------------------------*/
 
-/* Interrupt control macros and functions. */
+/* 中断控制宏和函数。 */
 void microblaze_disable_interrupts( void );
 void microblaze_enable_interrupts( void );
 #define portDISABLE_INTERRUPTS()    microblaze_disable_interrupts()
 #define portENABLE_INTERRUPTS()     microblaze_enable_interrupts()
 /*-----------------------------------------------------------*/
 
-/* Critical section macros. */
+/* 临界区宏。 */
 void vPortEnterCritical( void );
 void vPortExitCritical( void );
 #define portENTER_CRITICAL()                           \
@@ -110,16 +112,17 @@ void vPortExitCritical( void );
 
 /*-----------------------------------------------------------*/
 
-/* The yield macro maps directly to the vPortYield() function. */
+/* 让出宏直接映射到 vPortYield() 函数。 */
 void vPortYield( void );
 #define portYIELD()    vPortYield()
 
-/* portYIELD_FROM_ISR() does not directly call vTaskSwitchContext(), but instead
- * sets a flag to say that a yield has been requested.  The interrupt exit code
- * then checks this flag, and calls vTaskSwitchContext() before restoring a task
- * context, if the flag is not false.  This is done to prevent multiple calls to
- * vTaskSwitchContext() being made from a single interrupt, as a single interrupt
- * can result in multiple peripherals being serviced. */
+/*
+ * portYIELD_FROM_ISR() 不直接调用 vTaskSwitchContext()，
+ * 而是设置一个标志以表示已请求让出。中断退出代码随后检查该标志，
+ * 若标志不为 false，则在恢复任务上下文之前调用 vTaskSwitchContext()。
+ * 这样可避免从一次中断中多次调用 vTaskSwitchContext()，
+ * 因为一次中断可能引发多个外设的服务。
+ */
 extern volatile uint32_t ulTaskSwitchRequested;
 #define portYIELD_FROM_ISR( x )                              \
     do { if( ( x ) != pdFALSE ) ulTaskSwitchRequested = 1; } \
@@ -127,7 +130,7 @@ extern volatile uint32_t ulTaskSwitchRequested;
 
 #if ( configUSE_PORT_OPTIMISED_TASK_SELECTION == 1 )
 
-/* Generic helper function. */
+/* 通用辅助函数。 */
     __attribute__( ( always_inline ) ) static inline uint8_t ucPortCountLeadingZeros( uint32_t ulBitmap )
     {
         uint8_t ucReturn;
@@ -137,12 +140,12 @@ extern volatile uint32_t ulTaskSwitchRequested;
         return ucReturn;
     }
 
-/* Check the configuration. */
+/* 检查配置。 */
     #if ( configMAX_PRIORITIES > 32 )
         #error configUSE_PORT_OPTIMISED_TASK_SELECTION can only be set to 1 when configMAX_PRIORITIES is less than or equal to 32.  It is very rare that a system requires more than 10 to 15 difference priorities as tasks that share a priority will time slice.
     #endif
 
-/* Store/clear the ready priorities in a bit map. */
+/* 用位图保存/清除就绪优先级。 */
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )    ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )     ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 
@@ -150,11 +153,11 @@ extern volatile uint32_t ulTaskSwitchRequested;
 
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities )    uxTopPriority = ( 31UL - ( uint32_t ) ucPortCountLeadingZeros( ( uxReadyPriorities ) ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION（使用移植层优化的任务选择） */
 
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关细节。 */
 #define portBYTE_ALIGNMENT    4
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
@@ -162,18 +165,20 @@ extern volatile uint32_t ulTaskSwitchRequested;
 #define portMEMORY_BARRIER()    asm volatile ( "" ::: "memory" )
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 /*-----------------------------------------------------------*/
 
-/* The following structure is used by the FreeRTOS exception handler.  It is
- * filled with the MicroBlaze context as it was at the time the exception occurred.
- * This is done as an aid to debugging exception occurrences. */
+/*
+ * 以下结构体供 FreeRTOS 异常处理程序使用。它填充异常发生时的 MicroBlaze 上下文，
+ * 以便于调试异常。
+ */
 typedef struct PORT_REGISTER_DUMP
 {
-    /* The following structure members hold the values of the MicroBlaze
-     * registers at the time the exception was raised. */
+    /*
+     * 以下结构成员保存异常触发时 MicroBlaze 各寄存器的值。
+     */
     uint32_t ulR1_SP;
     uint32_t ulR2_small_data_area;
     uint32_t ulR3;
@@ -190,7 +195,7 @@ typedef struct PORT_REGISTER_DUMP
     uint32_t ulR14_return_address_from_interrupt;
     uint32_t ulR15_return_address_from_subroutine;
     uint32_t ulR16_return_address_from_trap;
-    uint32_t ulR17_return_address_from_exceptions; /* The exception entry code will copy the BTR into R17 if the exception occurred in the delay slot of a branch instruction. */
+    uint32_t ulR17_return_address_from_exceptions; /* 若异常发生在分支指令的延迟槽中，异常入口代码会将 BTR 复制到 R17。 */
     uint32_t ulR18;
     uint32_t ulR19;
     uint32_t ulR20;
@@ -212,56 +217,53 @@ typedef struct PORT_REGISTER_DUMP
     uint32_t ulFSR;
     uint32_t ulEDR;
 
-    /* A human readable description of the exception cause.  The strings used
-     * are the same as the #define constant names found in the
-     * microblaze_exceptions_i.h header file */
+    /*
+     * 以人类可读的形式描述异常原因。所用字符串与
+     * microblaze_exceptions_i.h 头文件中的 #define 常量名一致。
+     */
     int8_t * pcExceptionCause;
 
-    /* The human readable name of the task that was running at the time the
-     * exception occurred.  This is the name that was given to the task when the
-     * task was created using the FreeRTOS xTaskCreate() API function. */
+    /*
+     * 异常发生时正在运行的任务的人类可读名称。
+     * 该名称是使用 FreeRTOS xTaskCreate() API 函数创建任务时赋予任务的名称。
+     */
     char * pcCurrentTaskName;
 
-    /* The handle of the task that was running a the time the exception
-     * occurred. */
+    /*
+     * 异常发生时正在运行的任务的句柄。
+     */
     void * xCurrentTaskHandle;
 } xPortRegisterDump;
 
 
 /*
- * Installs pxHandler as the interrupt handler for the peripheral specified by
- * the ucInterruptID parameter.
+ * 将 pxHandler 安装为由 ucInterruptID 参数指定的外设的中断处理程序。
  *
- * ucInterruptID:
+ * ucInterruptID：
  *
- * The ID of the peripheral that will have pxHandler assigned as its interrupt
- * handler.  Peripheral IDs are defined in the xparameters.h header file, which
- * is itself part of the BSP project.  For example, in the official demo
- * application for this port, xparameters.h defines the following IDs for the
- * four possible interrupt sources:
+ * 将 pxHandler 指定为其中断处理程序的外设 ID。外设 ID 定义在
+ * xparameters.h 头文件中，该文件本身属于 BSP 工程。例如，
+ * 在本移植层的官方演示应用中，xparameters.h 为四个可能的中断源
+ * 定义了以下 ID：
  *
- * XPAR_INTC_0_UARTLITE_1_VEC_ID  -  for the UARTlite peripheral.
- * XPAR_INTC_0_TMRCTR_0_VEC_ID    -  for the AXI Timer 0 peripheral.
- * XPAR_INTC_0_EMACLITE_0_VEC_ID  -  for the Ethernet lite peripheral.
- * XPAR_INTC_0_GPIO_1_VEC_ID      -  for the button inputs.
+ * XPAR_INTC_0_UARTLITE_1_VEC_ID  -  UARTlite 外设。
+ * XPAR_INTC_0_TMRCTR_0_VEC_ID    -  AXI Timer 0 外设。
+ * XPAR_INTC_0_EMACLITE_0_VEC_ID  -  Ethernet lite 外设。
+ * XPAR_INTC_0_GPIO_1_VEC_ID      -  按键输入。
  *
  *
- * pxHandler:
+ * pxHandler：
  *
- * A pointer to the interrupt handler function itself.  This must be a void
- * function that takes a (void *) parameter.
- *
- *
- * pvCallBackRef:
- *
- * The parameter passed into the handler function.  In many cases this will not
- * be used and can be NULL.  Some times it is used to pass in a reference to
- * the peripheral instance variable, so it can be accessed from inside the
- * handler function.
+ * 指向中断处理函数本身的指针。该函数必须是接受 (void *) 参数的 void 函数。
  *
  *
- * pdPASS is returned if the function executes successfully.  Any other value
- * being returned indicates that the function did not execute correctly.
+ * pvCallBackRef：
+ *
+ * 传入处理函数的参数。多数情况下不使用，可以为 NULL。
+ * 有时用于传入对外设实例变量的引用，以便在处理函数内部访问该外设。
+ *
+ *
+ * 函数成功执行时返回 pdPASS。返回任何其他值都表示函数未正确执行。
  */
 BaseType_t xPortInstallInterruptHandler( uint8_t ucInterruptID,
                                          XInterruptHandler pxHandler,
@@ -269,114 +271,96 @@ BaseType_t xPortInstallInterruptHandler( uint8_t ucInterruptID,
 
 
 /*
- * Enables the interrupt, within the interrupt controller, for the peripheral
- * specified by the ucInterruptID parameter.
+ * 在中断控制器中使能由 ucInterruptID 参数指定的外设中断。
  *
- * ucInterruptID:
+ * ucInterruptID：
  *
- * The ID of the peripheral that will have its interrupt enabled in the
- * interrupt controller.  Peripheral IDs are defined in the xparameters.h header
- * file, which is itself part of the BSP project.  For example, in the official
- * demo application for this port, xparameters.h defines the following IDs for
- * the four possible interrupt sources:
+ * 要在中断控制器中使能其中断的外设 ID。外设 ID 定义在
+ * xparameters.h 头文件中，该文件本身属于 BSP 工程。例如，
+ * 在本移植层的官方演示应用中，xparameters.h 为四个可能的中断源
+ * 定义了以下 ID：
  *
- * XPAR_INTC_0_UARTLITE_1_VEC_ID  -  for the UARTlite peripheral.
- * XPAR_INTC_0_TMRCTR_0_VEC_ID    -  for the AXI Timer 0 peripheral.
- * XPAR_INTC_0_EMACLITE_0_VEC_ID  -  for the Ethernet lite peripheral.
- * XPAR_INTC_0_GPIO_1_VEC_ID      -  for the button inputs.
- *
+ * XPAR_INTC_0_UARTLITE_1_VEC_ID  -  UARTlite 外设。
+ * XPAR_INTC_0_TMRCTR_0_VEC_ID    -  AXI Timer 0 外设。
+ * XPAR_INTC_0_EMACLITE_0_VEC_ID  -  Ethernet lite 外设。
+ * XPAR_INTC_0_GPIO_1_VEC_ID      -  按键输入。
  */
 void vPortEnableInterrupt( uint8_t ucInterruptID );
 
 /*
- * Disables the interrupt, within the interrupt controller, for the peripheral
- * specified by the ucInterruptID parameter.
+ * 在中断控制器中禁用由 ucInterruptID 参数指定的外设中断。
  *
- * ucInterruptID:
+ * ucInterruptID：
  *
- * The ID of the peripheral that will have its interrupt disabled in the
- * interrupt controller.  Peripheral IDs are defined in the xparameters.h header
- * file, which is itself part of the BSP project.  For example, in the official
- * demo application for this port, xparameters.h defines the following IDs for
- * the four possible interrupt sources:
+ * 要在中断控制器中禁用其中断的外设 ID。外设 ID 定义在
+ * xparameters.h 头文件中，该文件本身属于 BSP 工程。例如，
+ * 在本移植层的官方演示应用中，xparameters.h 为四个可能的中断源
+ * 定义了以下 ID：
  *
- * XPAR_INTC_0_UARTLITE_1_VEC_ID  -  for the UARTlite peripheral.
- * XPAR_INTC_0_TMRCTR_0_VEC_ID    -  for the AXI Timer 0 peripheral.
- * XPAR_INTC_0_EMACLITE_0_VEC_ID  -  for the Ethernet lite peripheral.
- * XPAR_INTC_0_GPIO_1_VEC_ID      -  for the button inputs.
- *
+ * XPAR_INTC_0_UARTLITE_1_VEC_ID  -  UARTlite 外设。
+ * XPAR_INTC_0_TMRCTR_0_VEC_ID    -  AXI Timer 0 外设。
+ * XPAR_INTC_0_EMACLITE_0_VEC_ID  -  Ethernet lite 外设。
+ * XPAR_INTC_0_GPIO_1_VEC_ID      -  按键输入。
  */
 void vPortDisableInterrupt( uint8_t ucInterruptID );
 
 /*
- * This is an application defined callback function used to install the tick
- * interrupt handler.  It is provided as an application callback because the
- * kernel will run on lots of different MicroBlaze and FPGA configurations - not
- * all of which will have the same timer peripherals defined or available.  This
- * example uses the AXI Timer 0.  If that is available on your hardware platform
- * then this example callback implementation should not require modification.
- * The name of the interrupt handler that should be installed is vPortTickISR(),
- * which the function below declares as an extern.
+ * 这是应用定义的回调函数，用于安装 tick 中断处理程序。
+ * 之所以作为应用回调提供，是因为内核要运行在多种 MicroBlaze 和 FPGA 配置上——
+ * 并非所有配置都定义或提供相同的定时器外设。本示例使用 AXI Timer 0。
+ * 若硬件平台提供该定时器，则本示例回调实现无需修改。
+ * 应安装的中断处理程序名称为 vPortTickISR()，下面的函数将其声明为 extern。
  */
 void vApplicationSetupTimerInterrupt( void );
 
 /*
- * This is an application defined callback function used to clear whichever
- * interrupt was installed by the vApplicationSetupTimerInterrupt() callback
- * function - in this case the interrupt generated by the AXI timer.  It is
- * provided as an application callback because the kernel will run on lots of
- * different MicroBlaze and FPGA configurations - not all of which will have the
- * same timer peripherals defined or available.  This example uses the AXI Timer 0.
- * If that is available on your hardware platform then this example callback
- * implementation should not require modification provided the example definition
- * of vApplicationSetupTimerInterrupt() is also not modified.
+ * 这是应用定义的回调函数，用于清除由 vApplicationSetupTimerInterrupt()
+ * 回调函数安装的中断——此处即 AXI 定时器产生的中断。
+ * 之所以作为应用回调提供，是因为内核要运行在多种 MicroBlaze 和 FPGA 配置上——
+ * 并非所有配置都定义或提供相同的定时器外设。本示例使用 AXI Timer 0。
+ * 若硬件平台提供该定时器，且 vApplicationSetupTimerInterrupt() 的示例定义
+ * 也未修改，则本示例回调实现无需修改。
  */
 void vApplicationClearTimerInterrupt( void );
 
 /*
- * vPortExceptionsInstallHandlers() is only available when the MicroBlaze
- * is configured to include exception functionality, and
- * configINSTALL_EXCEPTION_HANDLERS is set to 1 in FreeRTOSConfig.h.
+ * 仅当 MicroBlaze 配置为包含异常功能，且 FreeRTOSConfig.h 中
+ * configINSTALL_EXCEPTION_HANDLERS 设置为 1 时，
+ * vPortExceptionsInstallHandlers() 才可用。
  *
- * vPortExceptionsInstallHandlers() installs the FreeRTOS exception handler
- * for every possible exception cause.
+ * vPortExceptionsInstallHandlers() 为所有可能的异常原因安装 FreeRTOS 异常处理程序。
  *
- * vPortExceptionsInstallHandlers() can be called explicitly from application
- * code.  After that is done, the default FreeRTOS exception handler that will
- * have been installed can be replaced for any specific exception cause by using
- * the standard Xilinx library function microblaze_register_exception_handler().
+ * vPortExceptionsInstallHandlers() 可由应用代码显式调用。完成之后，
+ * 对于任何特定异常原因，都可以使用标准 Xilinx 库函数
+ * microblaze_register_exception_handler() 替换已安装的默认 FreeRTOS 异常处理程序。
  *
- * If vPortExceptionsInstallHandlers() is not called explicitly by the
- * application, it will be called automatically by the kernel the first time
- * xPortInstallInterruptHandler() is called.  At that time, any exception
- * handlers that may have already been installed will be replaced.
+ * 若应用未显式调用 vPortExceptionsInstallHandlers()，则内核在首次调用
+ * xPortInstallInterruptHandler() 时会自动调用它。届时，
+ * 任何可能已安装的异常处理程序都将被替换。
  *
- * See the description of vApplicationExceptionRegisterDump() for information
- * on the processing performed by the FreeRTOS exception handler.
+ * 有关 FreeRTOS 异常处理程序所执行处理的说明，请参见
+ * vApplicationExceptionRegisterDump() 的描述。
  */
 void vPortExceptionsInstallHandlers( void );
 
 /*
- * The FreeRTOS exception handler fills an xPortRegisterDump structure (defined
- * in portmacro.h) with the MicroBlaze context, as it was at the time the
- * exception occurred.  The exception handler then calls
- * vApplicationExceptionRegisterDump(), passing in the completed
- * xPortRegisterDump structure as its parameter.
+ * FreeRTOS 异常处理程序用异常发生时的 MicroBlaze 上下文填充
+ * xPortRegisterDump 结构体（定义于 portmacro.h）。随后异常处理程序调用
+ * vApplicationExceptionRegisterDump()，并将填写完毕的
+ * xPortRegisterDump 结构体作为参数传入。
  *
- * The FreeRTOS kernel provides its own implementation of
- * vApplicationExceptionRegisterDump(), but the kernel provided implementation
- * is declared as being 'weak'.  The weak definition allows the application
- * writer to provide their own implementation, should they wish to use the
- * register dump information.  For example, an implementation could be provided
- * that wrote the register dump data to a display, or a UART port.
+ * FreeRTOS 内核提供了自己的 vApplicationExceptionRegisterDump() 实现，
+ * 但内核提供的实现声明为 'weak'（弱符号）。弱定义允许应用编写者
+ * 在需要使用寄存器转储信息时提供自己的实现。例如，可以提供一种实现，
+ * 将寄存器转储数据写入显示器或 UART 端口。
  */
 void vApplicationExceptionRegisterDump( xPortRegisterDump * xRegisterDump );
 
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（移植宏头文件） */

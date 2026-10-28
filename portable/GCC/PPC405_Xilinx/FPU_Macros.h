@@ -26,8 +26,9 @@
  *
  */
 
-/* When switching out a task, if the task tag contains a buffer address then
- * save the flop context into the buffer. */
+/*
+ * 切换出任务时，若任务标签包含缓冲区地址，则将浮点上下文保存到该缓冲区。
+ */
 #define traceTASK_SWITCHED_OUT()                                         \
     if( pxCurrentTCB->pxTaskTag != NULL )                                \
     {                                                                    \
@@ -35,8 +36,9 @@
         vPortSaveFPURegisters( ( void * ) ( pxCurrentTCB->pxTaskTag ) ); \
     }
 
-/* When switching in a task, if the task tag contains a buffer address then
- * load the flop context from the buffer. */
+/*
+ * 切换入任务时，若任务标签包含缓冲区地址，则从该缓冲区加载浮点上下文。
+ */
 #define traceTASK_SWITCHED_IN()                                             \
     if( pxCurrentTCB->pxTaskTag != NULL )                                   \
     {                                                                       \

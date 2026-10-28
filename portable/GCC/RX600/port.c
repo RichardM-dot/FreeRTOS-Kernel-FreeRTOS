@@ -26,82 +26,83 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the SH2A port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * SH2A 移植层中 portable.h 所定义函数的实现。
+ * ----------------------------------------------------------
+ */
 
-/* Scheduler includes. */
+/* 调度器头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Library includes. */
+/* 库头文件包含。 */
 #include "string.h"
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #if ( configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H == 1 )
 
     #include "platform.h"
 
-#else /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#else /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
     #include "iodefine.h"
 
-#endif /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#endif /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
 
 /*-----------------------------------------------------------*/
 
-/* Tasks should start with interrupts enabled and in Supervisor mode, therefore
- * PSW is set with U and I set, and PM and IPL clear. */
+/*
+ * 任务应以中断使能且处于超级用户模式的状态启动，因此 PSW 中 U 和 I 置位，
+ * PM 和 IPL 清零。
+ */
 #define portINITIAL_PSW     ( ( StackType_t ) 0x00030000 )
 #define portINITIAL_FPSW    ( ( StackType_t ) 0x00000100 )
 
-/* These macros allow a critical section to be added around the call to
- * xTaskIncrementTick(), which is only ever called from interrupts at the kernel
- * priority - ie a known priority.  Therefore these local macros are a slight
- * optimisation compared to calling the global SET/CLEAR_INTERRUPT_MASK macros,
- * which would require the old IPL to be read first and stored in a local variable. */
+/*
+ * 这些宏允许在 xTaskIncrementTick() 调用周围添加临界区，该函数仅在中断中以内核
+ * 优先级（即已知优先级）调用。因此相比调用全局 SET/CLEAR_INTERRUPT_MASK 宏，
+ * 这些本地宏是轻微优化，因为全局宏需要先读取旧 IPL 并存入局部变量。
+ */
 #define portDISABLE_INTERRUPTS_FROM_KERNEL_ISR()    __asm volatile ( "MVTIPL    %0" ::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) )
 #define portENABLE_INTERRUPTS_FROM_KERNEL_ISR()     __asm volatile ( "MVTIPL    %0" ::"i" ( configKERNEL_INTERRUPT_PRIORITY ) )
 
 /*-----------------------------------------------------------*/
 
 /*
- * Function to start the first task executing - written in asm code as direct
- * access to registers is required.
+ * 启动第一个任务执行的函数 - 用汇编代码编写，因为需要直接访问寄存器。
  */
 static void prvStartFirstTask( void ) __attribute__( ( naked ) );
 
 /*
- * Software interrupt handler.  Performs the actual context switch (saving and
- * restoring of registers).  Written in asm code as direct register access is
- * required.
+ * 软件中断处理程序。执行实际的上下文切换（保存和恢复寄存器）。用汇编代码编写，
+ * 因为需要直接访问寄存器。
  */
 #if ( configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H == 1 )
 
     R_BSP_PRAGMA_INTERRUPT( vSoftwareInterruptISR, VECT( ICU, SWINT ) )
     R_BSP_ATTRIB_INTERRUPT void vSoftwareInterruptISR( void ) __attribute__( ( naked ) );
 
-#else /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#else /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
     void vSoftwareInterruptISR( void ) __attribute__( ( naked ) );
 
-#endif /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H  */
+#endif /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
 /*
- * The tick ISR handler.  The peripheral used is configured by the application
- * via a hook/callback function.
+ * 时钟节拍 ISR 处理程序。使用的外设由应用程序通过钩子/回调函数配置。
  */
 #if ( configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H == 1 )
 
     R_BSP_PRAGMA_INTERRUPT( vTickISR, _VECT( configTICK_VECTOR ) )
-    R_BSP_ATTRIB_INTERRUPT void vTickISR( void ); /* Do not add __attribute__( ( interrupt ) ). */
+    R_BSP_ATTRIB_INTERRUPT void vTickISR( void ); /* 不要添加 __attribute__( ( interrupt ) )。 */
 
-#else /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#else /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
     void vTickISR( void ) __attribute__( ( interrupt ) );
 
-#endif /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#endif /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
 /*-----------------------------------------------------------*/
 
@@ -110,13 +111,13 @@ extern void * pxCurrentTCB;
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 参见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
-    /* R0 is not included as it is the stack pointer. */
+    /* 未包含 R0，因为它是栈指针。 */
 
     *pxTopOfStack = 0x00;
     pxTopOfStack--;
@@ -124,13 +125,14 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = ( StackType_t ) pxCode;
 
-    /* When debugging it can be useful if every register is set to a known
-     * value.  Otherwise code space can be saved by just setting the registers
-     * that need to be set. */
+    /*
+     * 调试时，将每个寄存器设为已知值会很有帮助。否则，为节省代码空间，可以只设置
+     * 需要设置的寄存器。
+     */
     #ifdef USE_FULL_REGISTER_INITIALISATION
     {
         pxTopOfStack--;
-        *pxTopOfStack = 0xffffffff; /* r15. */
+        *pxTopOfStack = 0xffffffff; /* r15 寄存器。 */
         pxTopOfStack--;
         *pxTopOfStack = 0xeeeeeeee;
         pxTopOfStack--;
@@ -159,19 +161,19 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
         *pxTopOfStack = 0x22222222;
         pxTopOfStack--;
     }
-    #else /* ifdef USE_FULL_REGISTER_INITIALISATION */
+    #else /* 若定义了 USE_FULL_REGISTER_INITIALISATION */
     {
         pxTopOfStack -= 15;
     }
-    #endif /* ifdef USE_FULL_REGISTER_INITIALISATION */
+    #endif /* 若定义了 USE_FULL_REGISTER_INITIALISATION */
 
-    *pxTopOfStack = ( StackType_t ) pvParameters; /* R1 */
+    *pxTopOfStack = ( StackType_t ) pvParameters; /* R1 寄存器 */
     pxTopOfStack--;
     *pxTopOfStack = portINITIAL_FPSW;
     pxTopOfStack--;
-    *pxTopOfStack = 0x12345678; /* Accumulator. */
+    *pxTopOfStack = 0x12345678; /* 累加器。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x87654321; /* Accumulator. */
+    *pxTopOfStack = 0x87654321; /* 累加器。 */
 
     return pxTopOfStack;
 }
@@ -181,36 +183,39 @@ BaseType_t xPortStartScheduler( void )
 {
     extern void vApplicationSetupTimerInterrupt( void );
 
-    /* Use pxCurrentTCB just so it does not get optimised away. */
+    /* 使用 pxCurrentTCB，以免其被优化掉。 */
     if( pxCurrentTCB != NULL )
     {
-        /* Call an application function to set up the timer that will generate the
-         * tick interrupt.  This way the application can decide which peripheral to
-         * use.  A demo application is provided to show a suitable example. */
+        /*
+         * 调用应用程序函数来设置将产生时钟节拍中断的定时器。这样应用程序可以决定使用
+         * 哪个外设。提供了演示应用程序以展示合适的示例。
+         */
         vApplicationSetupTimerInterrupt();
 
-        /* Enable the software interrupt. */
+        /* 使能软件中断。 */
         _IEN( _ICU_SWINT ) = 1;
 
-        /* Ensure the software interrupt is clear. */
+        /* 确保软件中断已清除。 */
         _IR( _ICU_SWINT ) = 0;
 
-        /* Ensure the software interrupt is set to the kernel priority. */
+        /* 确保软件中断被设置为内核优先级。 */
         _IPR( _ICU_SWINT ) = configKERNEL_INTERRUPT_PRIORITY;
 
-        /* Start the first task. */
+        /* 启动第一个任务。 */
         prvStartFirstTask();
     }
 
-    /* Should not get here. */
+    /* 不应执行到此处。 */
     return pdFAIL;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented in ports where there is nothing to return to.
-     * Artificially force an assert. */
+    /*
+     * 在无需返回的移植层中未实现。
+     * 人为强制触发断言。
+     */
     configASSERT( pxCurrentTCB == NULL );
 }
 /*-----------------------------------------------------------*/
@@ -220,38 +225,41 @@ static void prvStartFirstTask( void )
     __asm volatile
     (
 
-        /* When starting the scheduler there is nothing that needs moving to the
-         * interrupt stack because the function is not called from an interrupt.
-         * Just ensure the current stack is the user stack. */
+        /*
+         * 启动调度器时无需将任何内容移到中断栈，因为该函数并非从中断中调用。
+         * 只需确保当前栈为用户栈。
+         */
         "SETPSW     U                       \n" \
 
 
-        /* Obtain the location of the stack associated with which ever task
-         * pxCurrentTCB is currently pointing to. */
+        /*
+         * 获取 pxCurrentTCB 当前所指向任务的相关栈位置。
+         */
         "MOV.L      #_pxCurrentTCB, R15     \n" \
         "MOV.L      [R15], R15              \n" \
         "MOV.L      [R15], R0               \n" \
 
 
-        /* Restore the registers from the stack of the task pointed to by
-         * pxCurrentTCB. */
+        /*
+         * 从 pxCurrentTCB 所指向任务的栈中恢复寄存器。
+         */
         "POP        R15                     \n" \
 
-        /* Accumulator low 32 bits. */
+        /* 累加器低 32 位。 */
         "MVTACLO    R15                     \n" \
         "POP        R15                     \n" \
 
-        /* Accumulator high 32 bits. */
+        /* 累加器高 32 位。 */
         "MVTACHI    R15                     \n" \
         "POP        R15                     \n" \
 
-        /* Floating point status word. */
+        /* 浮点状态字。 */
         "MVTC       R15, FPSW               \n" \
 
-        /* R1 to R15 - R0 is not included as it is the SP. */
+        /* R1 至 R15 - 未包含 R0，因为它是 SP。 */
         "POPM       R1-R15                  \n" \
 
-        /* This pops the remaining registers. */
+        /* 这将弹出其余寄存器。 */
         "RTE                                \n" \
         "NOP                                \n" \
         "NOP                                \n"
@@ -263,76 +271,80 @@ void vSoftwareInterruptISR( void )
 {
     __asm volatile
     (
-        /* Re-enable interrupts. */
+        /* 重新使能中断。 */
         "SETPSW     I                           \n" \
 
 
-        /* Move the data that was automatically pushed onto the interrupt stack when
-         * the interrupt occurred from the interrupt stack to the user stack.
+        /*
+         * 将中断发生时自动压入中断栈的数据从中断栈移到用户栈。
          *
-         * R15 is saved before it is clobbered. */
+         * 保存 R15 后再覆盖它。
+         */
         "PUSH.L     R15                         \n" \
 
-        /* Read the user stack pointer. */
+        /* 读取用户栈指针。 */
         "MVFC       USP, R15                    \n" \
 
-        /* Move the address down to the data being moved. */
+        /* 将地址下移到要移动的数据处。 */
         "SUB        #12, R15                    \n" \
         "MVTC       R15, USP                    \n" \
 
-        /* Copy the data across, R15, then PC, then PSW. */
+        /* 复制数据，依次为 R15、PC、PSW。 */
         "MOV.L      [ R0 ], [ R15 ]             \n" \
         "MOV.L      4[ R0 ], 4[ R15 ]           \n" \
         "MOV.L      8[ R0 ], 8[ R15 ]           \n" \
 
-        /* Move the interrupt stack pointer to its new correct position. */
+        /* 将中断栈指针移到其新的正确位置。 */
         "ADD        #12, R0                     \n" \
 
-        /* All the rest of the registers are saved directly to the user stack. */
+        /* 其余所有寄存器直接保存到用户栈。 */
         "SETPSW     U                           \n" \
 
-        /* Save the rest of the general registers (R15 has been saved already). */
+        /* 保存其余的通用寄存器（R15 已保存）。 */
         "PUSHM      R1-R14                      \n" \
 
-        /* Save the FPSW and accumulator. */
+        /* 保存 FPSW 和累加器。 */
         "MVFC       FPSW, R15                   \n" \
         "PUSH.L     R15                         \n" \
         "MVFACHI    R15                         \n" \
         "PUSH.L     R15                         \n" \
 
-        /* Middle word. */
+        /* 中间字。 */
         "MVFACMI    R15                         \n" \
 
-        /* Shifted left as it is restored to the low order word. */
+        /* 由于要恢复到低序字，因此左移。 */
         "SHLL       #16, R15                    \n" \
         "PUSH.L     R15                         \n" \
 
-        /* Save the stack pointer to the TCB. */
+        /* 将栈指针保存到 TCB。 */
         "MOV.L      #_pxCurrentTCB, R15         \n" \
         "MOV.L      [ R15 ], R15                \n" \
         "MOV.L      R0, [ R15 ]                 \n" \
 
 
-        /* Ensure the interrupt mask is set to the syscall priority while the kernel
-         * structures are being accessed. */
+        /*
+         * 在访问内核结构期间，确保中断屏蔽设置为系统调用优先级。
+         */
         "MVTIPL     %0                          \n" \
 
-        /* Select the next task to run. */
+        /* 选择下一个要运行的任务。 */
         "BSR.A      _vTaskSwitchContext         \n" \
 
-        /* Reset the interrupt mask as no more data structure access is required. */
+        /* 不再需要访问数据结构，重置中断屏蔽。 */
         "MVTIPL     %1                          \n" \
 
 
-        /* Load the stack pointer of the task that is now selected as the Running
-         * state task from its TCB. */
+        /*
+         * 从 TCB 加载现已选为运行态任务的栈指针。
+         */
         "MOV.L      #_pxCurrentTCB,R15          \n" \
         "MOV.L      [ R15 ], R15                \n" \
         "MOV.L      [ R15 ], R0                 \n" \
 
 
-        /* Restore the context of the new task.  The PSW (Program Status Word) and
-         * PC will be popped by the RTE instruction. */
+        /*
+         * 恢复新任务的上下文。PSW（程序状态字）和 PC 将由 RTE 指令弹出。
+         */
         "POP        R15                         \n" \
         "MVTACLO    R15                         \n" \
         "POP        R15                         \n" \
@@ -350,11 +362,12 @@ void vSoftwareInterruptISR( void )
 
 void vTickISR( void )
 {
-    /* Re-enabled interrupts. */
+    /* 重新使能中断。 */
     __asm volatile ( "SETPSW I" );
 
-    /* Increment the tick, and perform any processing the new tick value
-     * necessitates.  Ensure IPL is at the max syscall value first. */
+    /*
+     * 递增 tick，并执行新 tick 值所需的任何处理。首先确保 IPL 处于最大系统调用值。
+     */
     portDISABLE_INTERRUPTS_FROM_KERNEL_ISR();
     {
         if( xTaskIncrementTick() != pdFALSE )
@@ -375,14 +388,14 @@ uint32_t ulPortGetIPL( void )
         "RTS                      "
     );
 
-    /* This will never get executed, but keeps the compiler from complaining. */
+    /* 这永远不会执行，但可避免编译器报怨。 */
     return 0;
 }
 /*-----------------------------------------------------------*/
 
 void vPortSetIPL( uint32_t ulNewIPL )
 {
-    /* Avoid compiler warning about unreferenced parameter. */
+    /* 避免编译器报告未引用参数的警告。 */
     ( void ) ulNewIPL;
 
     __asm volatile

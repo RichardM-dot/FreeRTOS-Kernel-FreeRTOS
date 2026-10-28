@@ -30,23 +30,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -70,7 +70,7 @@ typedef unsigned long    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    8
@@ -78,13 +78,12 @@ typedef unsigned long    UBaseType_t;
 #define portNOP()      asm volatile ( "NOP" )
 /*-----------------------------------------------------------*/
 
-/* Critical section handling. */
+/* 临界区处理。 */
 
 /*
- * The interrupt management utilities can only be called from ARM mode.  When
- * THUMB_INTERWORK is defined the utilities are defined as functions in
- * portISR.c to ensure a switch to ARM mode.  When THUMB_INTERWORK is not
- * defined then the utilities are defined as macros here - as per other ports.
+ * 中断管理工具只能从 ARM 模式调用。定义 THUMB_INTERWORK 时，这些工具在
+ * portISR.c 中定义为函数，以确保切换到 ARM 模式。未定义 THUMB_INTERWORK 时，
+ * 这些工具与其他移植层一样在此处定义为宏。
  */
 
 #ifdef THUMB_INTERWORK
@@ -103,7 +102,7 @@ typedef unsigned long    UBaseType_t;
         "MRS    R0, CPSR        \n\t"   /* Get CPSR.                    */ \
         "ORR    R0, R0, #0xC0   \n\t"   /* Disable IRQ, FIQ.            */ \
         "MSR    CPSR, R0        \n\t"   /* Write back modified value.   */ \
-        "LDMIA  SP!, {R0}           " ) /* Pop R0.                      */
+        "LDMIA  SP!, {R0}           " ) /* 弹出 R0。 */
 
     #define portENABLE_INTERRUPTS()                                        \
     asm volatile (                                                         \
@@ -111,9 +110,9 @@ typedef unsigned long    UBaseType_t;
         "MRS    R0, CPSR        \n\t"   /* Get CPSR.                    */ \
         "BIC    R0, R0, #0xC0   \n\t"   /* Enable IRQ, FIQ.             */ \
         "MSR    CPSR, R0        \n\t"   /* Write back modified value.   */ \
-        "LDMIA  SP!, {R0}           " ) /* Pop R0.                      */
+        "LDMIA  SP!, {R0}           " ) /* 弹出 R0。 */
 
-#endif /* THUMB_INTERWORK */
+#endif /* THUMB_INTERWORK（宏） */
 
 extern void vPortEnterCritical( void );
 extern void vPortExitCritical( void );
@@ -122,7 +121,7 @@ extern void vPortExitCritical( void );
 #define portEXIT_CRITICAL()     vPortExitCritical();
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 #define portEND_SWITCHING_ISR( xSwitchRequired ) \
     {                                            \
         extern void vTaskSwitchContext( void );  \
@@ -139,14 +138,14 @@ extern void vPortExitCritical( void );
     }
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

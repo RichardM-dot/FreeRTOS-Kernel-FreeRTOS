@@ -30,23 +30,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -70,7 +70,7 @@ typedef unsigned char    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portBYTE_ALIGNMENT    2
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
@@ -78,25 +78,25 @@ typedef unsigned char    UBaseType_t;
 #define portNOP()      asm volatile ( "NOP" )
 /*-----------------------------------------------------------*/
 
-/* Critical section handling. */
+/* 临界区处理。 */
 #define portENABLE_INTERRUPTS()     asm volatile ( "ANDC #0x7F, CCR" );
 #define portDISABLE_INTERRUPTS()    asm volatile ( "ORC  #0x80, CCR" );
 
-/* Push the CCR then disable interrupts. */
+/* 压入 CCR，然后禁止中断。 */
 #define portENTER_CRITICAL()            \
     asm volatile ( "STC  CCR, @-ER7" ); \
     portDISABLE_INTERRUPTS();
 
-/* Pop the CCR to set the interrupt masking back to its previous state. */
+/* 弹出 CCR，将中断屏蔽恢复为先前状态。 */
 #define  portEXIT_CRITICAL()    asm volatile ( "LDC  @ER7+, CCR" );
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 
-/* Context switch macros.  These macros are very simple as the context
- * is saved simply by selecting the saveall attribute of the context switch
- * interrupt service routines.  These macros save and restore the stack
- * pointer to the TCB. */
+/*
+ * 上下文切换宏。这些宏非常简单，因为只需选择上下文切换中断服务程序的
+ * saveall 属性即可保存上下文。这些宏负责将栈指针保存到 TCB 及从 TCB 恢复。
+ */
 
 #define portSAVE_STACK_POINTER()                  \
     extern void * pxCurrentTCB;                   \
@@ -119,7 +119,7 @@ typedef unsigned char    UBaseType_t;
 
 /*-----------------------------------------------------------*/
 
-/* Macros to allow a context switch from within an application ISR. */
+/* 允许在应用程序 ISR 中执行上下文切换的宏。 */
 
 #define portENTER_SWITCHING_ISR()    portSAVE_STACK_POINTER(); {
 #define portEXIT_SWITCHING_ISR( x )             \
@@ -132,14 +132,14 @@ typedef unsigned char    UBaseType_t;
     portRESTORE_STACK_POINTER();
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

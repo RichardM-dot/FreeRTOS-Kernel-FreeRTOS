@@ -26,23 +26,25 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the PPC440 port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * PPC440 移植层中 portable.h 所定义函数的实现。
+ * ----------------------------------------------------------
+ */
 
 
-/* Scheduler includes. */
+/* 调度器头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Library includes. */
+/* 库头文件包含。 */
 #include "xtime_l.h"
 #include "xintc.h"
 #include "xintc_i.h"
 
 /*-----------------------------------------------------------*/
 
-/* Definitions to set the initial MSR of each task. */
+/* 用于设置每个任务初始 MSR 的定义。 */
 #define portCRITICAL_INTERRUPT_ENABLE    ( 1UL << 17UL )
 #define portEXTERNAL_INTERRUPT_ENABLE    ( 1UL << 15UL )
 #define portMACHINE_CHECK_ENABLE         ( 1UL << 12UL )
@@ -64,83 +66,81 @@ extern const unsigned _SDA2_BASE_;
 /*-----------------------------------------------------------*/
 
 /*
- * Setup the system timer to generate the tick interrupt.
+ * 配置系统定时器以产生时钟节拍（tick）中断。
  */
 static void prvSetupTimerInterrupt( void );
 
 /*
- * The handler for the tick interrupt - defined in portasm.s.
+ * 时钟节拍中断的处理程序 - 在 portasm.s 中定义。
  */
 extern void vPortTickISR( void );
 
 /*
- * The handler for the yield function - defined in portasm.s.
+ * 让出（yield）函数的处理程序 - 在 portasm.s 中定义。
  */
 extern void vPortYield( void );
 
 /*
- * Function to start the scheduler running by starting the highest
- * priority task that has thus far been created.
+ * 通过启动迄今已创建的最高优先级任务来启动调度器运行的函数。
  */
 extern void vPortStartFirstTask( void );
 
 /*-----------------------------------------------------------*/
 
-/* Structure used to hold the state of the interrupt controller. */
+/* 用于保存中断控制器状态的结构体。 */
 static XIntc xInterruptController;
 
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the stack of a task to look exactly as if the task had been
- * interrupted.
+ * 初始化任务栈，使其与任务被中断后的状态完全一致。
  *
- * See the header file portable.h.
+ * 参见头文件 portable.h。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
-    /* Place a known value at the bottom of the stack for debugging. */
+    /* 在栈底放置已知值以便调试。 */
     *pxTopOfStack = 0xDEADBEEF;
     pxTopOfStack--;
 
-    /* EABI stack frame. */
-    pxTopOfStack -= 20; /* Previous backchain and LR, R31 to R4 inclusive. */
+    /* EABI 栈帧。 */
+    pxTopOfStack -= 20; /* 前一回溯链与 LR、R31 至 R4（含）。 */
 
-    /* Parameters in R13. */
-    *pxTopOfStack = ( StackType_t ) &_SDA_BASE_; /* address of the first small data area */
+    /* 参数位于 R13。 */
+    *pxTopOfStack = ( StackType_t ) &_SDA_BASE_; /* 第一个小数据区的地址 */
     pxTopOfStack -= 10;
 
-    /* Parameters in R3. */
+    /* 参数位于 R3。 */
     *pxTopOfStack = ( StackType_t ) pvParameters;
     pxTopOfStack--;
 
-    /* Parameters in R2. */
-    *pxTopOfStack = ( StackType_t ) &_SDA2_BASE_; /* address of the second small data area */
+    /* 参数位于 R2。 */
+    *pxTopOfStack = ( StackType_t ) &_SDA2_BASE_; /* 第二个小数据区的地址 */
     pxTopOfStack--;
 
-    /* R1 is the stack pointer so is omitted. */
+    /* R1 为栈指针，因此省略。 */
 
-    *pxTopOfStack = 0x10000001UL;                      /* R0. */
+    *pxTopOfStack = 0x10000001UL;                      /* R0 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x00000000UL;                      /* USPRG0. */
+    *pxTopOfStack = 0x00000000UL;                      /* USPRG0 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x00000000UL;                      /* CR. */
+    *pxTopOfStack = 0x00000000UL;                      /* CR 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x00000000UL;                      /* XER. */
+    *pxTopOfStack = 0x00000000UL;                      /* XER 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x00000000UL;                      /* CTR. */
+    *pxTopOfStack = 0x00000000UL;                      /* CTR 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) vPortEndScheduler; /* LR. */
+    *pxTopOfStack = ( StackType_t ) vPortEndScheduler; /* LR 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) pxCode;            /* SRR0. */
+    *pxTopOfStack = ( StackType_t ) pxCode;            /* SRR0 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = portINITIAL_MSR;                   /* SRR1. */
+    *pxTopOfStack = portINITIAL_MSR;                   /* SRR1 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) vPortEndScheduler; /* Next LR. */
+    *pxTopOfStack = ( StackType_t ) vPortEndScheduler; /* 随后的 LR。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x00000000UL;                      /* Backchain. */
+    *pxTopOfStack = 0x00000000UL;                      /* 回溯链。 */
 
     return pxTopOfStack;
 }
@@ -152,14 +152,14 @@ BaseType_t xPortStartScheduler( void )
     XExc_RegisterHandler( XEXC_ID_SYSTEM_CALL, ( XExceptionHandler ) vPortYield, ( void * ) 0 );
     vPortStartFirstTask();
 
-    /* Should not get here as the tasks are now running! */
+    /* 任务已在运行，不应执行到此处！ */
     return pdFALSE;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented. */
+    /* 未实现。 */
     for( ; ; )
     {
     }
@@ -167,7 +167,7 @@ void vPortEndScheduler( void )
 /*-----------------------------------------------------------*/
 
 /*
- * Hardware initialisation to generate the RTOS tick.
+ * 产生 RTOS 时钟节拍（tick）的硬件初始化。
  */
 static void prvSetupTimerInterrupt( void )
 {
@@ -194,33 +194,34 @@ void vPortISRHandler( void * pvNullDoNotUse )
     XIntc_Config * pxInterruptController;
     XIntc_VectorTableEntry * pxTable;
 
-    /* Just to remove compiler warning. */
+    /* 仅为消除编译器警告。 */
     ( void ) pvNullDoNotUse;
 
-    /* Get the configuration by using the device ID - in this case it is
-     * assumed that only one interrupt controller is being used. */
+    /*
+     * 通过器件 ID 获取配置 - 此处的假设是只使用一个中断控制器。
+     */
     pxInterruptController = &XIntc_ConfigTable[ XPAR_XPS_INTC_0_DEVICE_ID ];
 
-    /* Which interrupts are pending? */
+    /* 哪些中断处于挂起状态？ */
     ulInterruptStatus = XIntc_mGetIntrStatus( pxInterruptController->BaseAddress );
 
     for( xInterruptNumber = 0; xInterruptNumber < XPAR_INTC_MAX_NUM_INTR_INPUTS; xInterruptNumber++ )
     {
         if( ulInterruptStatus & 0x01UL )
         {
-            /* Clear the pending interrupt. */
+            /* 清除挂起的中断。 */
             XIntc_mAckIntr( pxInterruptController->BaseAddress, ulInterruptMask );
 
-            /* Call the registered handler. */
+            /* 调用已注册的处理程序。 */
             pxTable = &( pxInterruptController->HandlerTable[ xInterruptNumber ] );
             pxTable->Handler( pxTable->CallBackRef );
         }
 
-        /* Check the next interrupt. */
+        /* 检查下一个中断。 */
         ulInterruptMask <<= 0x01UL;
         ulInterruptStatus >>= 0x01UL;
 
-        /* Have we serviced all interrupts? */
+        /* 是否已处理完所有中断？ */
         if( ulInterruptStatus == 0UL )
         {
             break;
@@ -233,15 +234,17 @@ void vPortSetupInterruptController( void )
 {
     extern void vPortISRWrapper( void );
 
-    /* Perform all library calls necessary to initialise the exception table
-     * and interrupt controller.  This assumes only one interrupt controller is in
-     * use. */
+    /*
+     * 执行初始化异常表和中断控制器所需的所有库调用。此代码假定只使用一个
+     * 中断控制器。
+     */
     XExc_mDisableExceptions( XEXC_NON_CRITICAL );
     XExc_Init();
 
-    /* The library functions save the context - we then jump to a wrapper to
-     * save the stack into the TCB.  The wrapper then calls the handler defined
-     * above. */
+    /*
+     * 库函数负责保存上下文 - 然后跳转到包装函数，将栈保存到 TCB 中。
+     * 包装函数随后调用上面定义的处理程序。
+     */
     XExc_RegisterHandler( XEXC_ID_NON_CRITICAL_INT, ( XExceptionHandler ) vPortISRWrapper, NULL );
     XIntc_Initialize( &xInterruptController, XPAR_XPS_INTC_0_DEVICE_ID );
     XIntc_Start( &xInterruptController, XIN_REAL_MODE );
@@ -254,8 +257,9 @@ BaseType_t xPortInstallInterruptHandler( uint8_t ucInterruptID,
 {
     BaseType_t xReturn = pdFAIL;
 
-    /* This function is defined here so the scope of xInterruptController can
-     * remain within this file. */
+    /*
+     * 在此定义此函数，以便 xInterruptController 的作用域保持在本文件内。
+     */
 
     if( XST_SUCCESS == XIntc_Connect( &xInterruptController, ucInterruptID, pxHandler, pvCallBackRef ) )
     {

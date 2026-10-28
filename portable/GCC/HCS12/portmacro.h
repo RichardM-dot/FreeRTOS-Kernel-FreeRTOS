@@ -30,23 +30,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -71,22 +71,20 @@ typedef unsigned char    UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portBYTE_ALIGNMENT    1
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portYIELD()    __asm( "swi" );
 /*-----------------------------------------------------------*/
 
-/* Critical section handling. */
+/* 临界区处理。 */
 #define portENABLE_INTERRUPTS()     __asm( "cli" )
 #define portDISABLE_INTERRUPTS()    __asm( "sei" )
 
 /*
- * Disable interrupts before incrementing the count of critical section nesting.
- * The nesting count is maintained so we know when interrupts should be
- * re-enabled.  Once interrupts are disabled the nesting count can be accessed
- * directly.  Each task maintains its own nesting count.
+ * 在递增临界区嵌套计数之前禁止中断。维护嵌套计数是为了知道何时应重新
+ * 使能中断。中断一旦禁止，就可以直接访问嵌套计数。每个任务维护各自的嵌套计数。
  */
 #define portENTER_CRITICAL()                           \
     {                                                  \
@@ -97,9 +95,8 @@ typedef unsigned char    UBaseType_t;
     }
 
 /*
- * Interrupts are disabled so we can access the nesting count directly.  If the
- * nesting is found to be 0 (no nesting) then we are leaving the critical
- * section and interrupts can be re-enabled.
+ * 中断已禁止，可以直接访问嵌套计数。若发现嵌套计数为 0（无嵌套），
+ * 则表示正在离开临界区，可以重新使能中断。
  */
 #define  portEXIT_CRITICAL()                           \
     {                                                  \
@@ -113,24 +110,20 @@ typedef unsigned char    UBaseType_t;
     }
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 
 /*
- * These macros are very simple as the processor automatically saves and
- * restores its registers as interrupts are entered and exited.  In
- * addition to the (automatically stacked) registers we also stack the
- * critical nesting count.  Each task maintains its own critical nesting
- * count as it is legitimate for a task to yield from within a critical
- * section.  If the banked memory model is being used then the PPAGE
- * register is also stored as part of the tasks context.
+ * 这些宏非常简单，因为处理器在进入和退出中断时会自动保存和恢复其寄存器。
+ * 除（自动压栈的）寄存器外，还将临界区嵌套计数压栈。每个任务维护各自的临界区
+ * 嵌套计数，因为任务在临界区内让出 CPU 是合法的。若使用分 bank 存储模型，
+ * PPAGE 寄存器也会作为任务上下文的一部分保存。
  */
 
 #ifdef BANKED_MODEL
 
 /*
- * Load the stack pointer for the task, then pull the critical nesting
- * count and PPAGE register from the stack.  The remains of the
- * context are restored by the RTI instruction.
+ * 加载任务的栈指针，然后从栈中弹出临界区嵌套计数和 PPAGE 寄存器。
+ * 其余上下文由 RTI 指令恢复。
  */
     #define portRESTORE_CONTEXT() \
     {                             \
@@ -147,9 +140,8 @@ typedef unsigned char    UBaseType_t;
     }
 
 /*
- * By the time this macro is called the processor has already stacked the
- * registers.  Simply stack the nesting count and PPAGE value, then save
- * the task stack pointer.
+ * 调用此宏时处理器已压栈保存寄存器。只需将嵌套计数和 PPAGE 值压栈，
+ * 然后保存任务栈指针。
  */
     #define portSAVE_CONTEXT() \
     {                          \
@@ -164,11 +156,10 @@ typedef unsigned char    UBaseType_t;
         sts  0,x                ; Stack             \n\
         " );                   \
     }
-#else /* ifdef BANKED_MODEL */
+#else /* 若定义了 BANKED_MODEL */
 
 /*
- * These macros are as per the BANKED versions above, but without saving
- * and restoring the PPAGE register.
+ * 这些宏与上述 BANKED 版本相同，但不保存和恢复 PPAGE 寄存器。
  */
 
     #define portRESTORE_CONTEXT() \
@@ -196,11 +187,11 @@ typedef unsigned char    UBaseType_t;
         sts  0,x                ; Stack             \n\
         " );                   \
     }
-#endif /* ifdef BANKED_MODEL */
+#endif /* 若定义了 BANKED_MODEL */
 
 /*
- * Utility macros to save/restore correct software registers for GCC. This is
- * useful when GCC does not generate appropriate ISR head/tail code.
+ * 用于为 GCC 保存/恢复正确软件寄存器的工具宏。当 GCC 未生成适当的 ISR
+ * 头/尾代码时很有用。
  */
 #define portISR_HEAD() \
     {                  \
@@ -228,10 +219,9 @@ typedef unsigned char    UBaseType_t;
     }
 
 /*
- * Utility macro to call macros above in correct order in order to perform a
- * task switch from within a standard ISR.  This macro can only be used if
- * the ISR does not use any local (stack) variables.  If the ISR uses stack
- * variables portYIELD() should be used in it's place.
+ * 用于按正确顺序调用上述宏、以便在标准 ISR 中执行任务切换的工具宏。
+ * 仅当 ISR 不使用任何局部（栈）变量时才能使用此宏。若 ISR 使用栈变量，
+ * 应改用 portYIELD()。
  */
 
 #define portTASK_SWITCH_FROM_ISR() \
@@ -240,14 +230,14 @@ typedef unsigned char    UBaseType_t;
     portRESTORE_CONTEXT();
 
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

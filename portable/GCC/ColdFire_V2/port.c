@@ -26,17 +26,19 @@
  *
  */
 
-/* Kernel includes. */
+/* 内核头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
 #define portINITIAL_FORMAT_VECTOR      ( ( StackType_t ) 0x4000 )
 
-/* Supervisor mode set. */
+/* 已设置为超级用户模式。 */
 #define portINITIAL_STATUS_REGISTER    ( ( StackType_t ) 0x2000 )
 
-/* Used to keep track of the number of nested calls to taskENTER_CRITICAL().  This
- * will be set to 0 prior to the first task being started. */
+/*
+ * 用于记录 taskENTER_CRITICAL() 的嵌套调用次数。
+ * 在第一个任务启动之前将其置为 0。
+ */
 static uint32_t ulCriticalNesting = 0x9999UL;
 
 /*-----------------------------------------------------------*/
@@ -51,15 +53,15 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     *pxTopOfStack = ( StackType_t ) 0xDEADBEEF;
     pxTopOfStack--;
 
-    /* Exception stack frame starts with the return address. */
+    /* 异常栈帧以返回地址开始。 */
     *pxTopOfStack = ( StackType_t ) pxCode;
     pxTopOfStack--;
 
     *pxTopOfStack = ( portINITIAL_FORMAT_VECTOR << 16UL ) | ( portINITIAL_STATUS_REGISTER );
     pxTopOfStack--;
 
-    *pxTopOfStack = ( StackType_t ) 0x0; /*FP*/
-    pxTopOfStack -= 14;                  /* A5 to D0. */
+    *pxTopOfStack = ( StackType_t ) 0x0; /* FP 寄存器 */
+    pxTopOfStack -= 14;                  /* A5 到 D0 寄存器。 */
 
     return pxTopOfStack;
 }
@@ -71,10 +73,10 @@ BaseType_t xPortStartScheduler( void )
 
     ulCriticalNesting = 0UL;
 
-    /* Configure the interrupts used by this port. */
+    /* 配置此移植层使用的中断。 */
     vApplicationSetupInterrupts();
 
-    /* Start the first task executing. */
+    /* 启动第一个任务执行。 */
     vPortStartFirstTask();
 
     return pdFALSE;
@@ -83,7 +85,7 @@ BaseType_t xPortStartScheduler( void )
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented as there is nothing to return to. */
+    /* 未实现，因为没有可供返回之处。 */
 }
 /*-----------------------------------------------------------*/
 
@@ -91,8 +93,9 @@ void vPortEnterCritical( void )
 {
     if( ulCriticalNesting == 0UL )
     {
-        /* Guard against context switches being pended simultaneously with a
-         * critical section being entered. */
+        /*
+         * 防止在进入临界区的同时挂起上下文切换。
+         */
         do
         {
             portDISABLE_INTERRUPTS();
@@ -126,7 +129,7 @@ void vPortYieldHandler( void )
     uint32_t ulSavedInterruptMask;
 
     ulSavedInterruptMask = portSET_INTERRUPT_MASK_FROM_ISR();
-    /* Note this will clear all forced interrupts - this is done for speed. */
+    /* 注意这会清除所有强制中断 - 这样做是为了提高速度。 */
     MCF_INTC0_INTFRCL = 0;
     vTaskSwitchContext();
     portCLEAR_INTERRUPT_MASK_FROM_ISR( ulSavedInterruptMask );

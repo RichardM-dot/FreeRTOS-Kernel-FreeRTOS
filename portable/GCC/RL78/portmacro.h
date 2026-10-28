@@ -29,17 +29,17 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 
 #define portCHAR                 char
 #define portFLOAT                float
@@ -65,12 +65,12 @@ typedef unsigned short   UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Interrupt control macros. */
+/* 中断控制宏。 */
 #define portDISABLE_INTERRUPTS()    __asm volatile ( "DI" )
 #define portENABLE_INTERRUPTS()     __asm volatile ( "EI" )
 /*-----------------------------------------------------------*/
 
-/* Critical section control macros. */
+/* 临界区控制宏。 */
 #define portNO_CRITICAL_SECTION_NESTING    ( ( unsigned short ) 0 )
 
 #define portENTER_CRITICAL()                                                      \
@@ -104,31 +104,35 @@ typedef unsigned short   UBaseType_t;
     }
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 #define portYIELD()                                       __asm volatile ( "BRK" )
 #ifndef configREQUIRE_ASM_ISR_WRAPPER
     #define configREQUIRE_ASM_ISR_WRAPPER    1
 #endif
 #if( configREQUIRE_ASM_ISR_WRAPPER == 1 )
-    /* You must implement an assembly ISR wrapper (see the below for details) if you need an ISR to cause a context switch.
-     * https://www.freertos.org/Documentation/02-Kernel/03-Supported-devices/04-Demos/Renesas/RTOS_RL78_IAR_Demos#writing-interrupt-service-routines */
+    /*
+     * 若需要 ISR 触发上下文切换，必须实现汇编 ISR 包装函数（详见下文）。
+     * https://www.freertos.org/Documentation/02-Kernel/03-Supported-devices/04-Demos/Renesas/RTOS_RL78_IAR_Demos#writing-interrupt-service-routines
+     */
     #define portYIELD_FROM_ISR( xHigherPriorityTaskWoken )    do { if( xHigherPriorityTaskWoken != pdFALSE ) vTaskSwitchContext(); } while( 0 )
 #else
-    /* You must not implement an assembly ISR wrapper even if you need an ISR to cause a context switch.
-     * The portYIELD, which is similar to role of an assembly ISR wrapper, runs only when a context switch is required. */
+    /*
+     * 即使需要 ISR 触发上下文切换，也不得实现汇编 ISR 包装函数。
+     * portYIELD 的作用类似于汇编 ISR 包装函数，仅在需要上下文切换时运行。
+     */
     #define portYIELD_FROM_ISR( xHigherPriorityTaskWoken )    do { if( xHigherPriorityTaskWoken != pdFALSE ) portYIELD(); } while( 0 )
 #endif
 #define portNOP()                                         __asm volatile ( "NOP" )
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portBYTE_ALIGNMENT    2
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

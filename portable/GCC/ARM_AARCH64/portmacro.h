@@ -29,23 +29,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -61,13 +61,15 @@ typedef uint64_t         UBaseType_t;
 typedef uint64_t         TickType_t;
 #define portMAX_DELAY              ( ( TickType_t ) 0xffffffffffffffff )
 
-/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 32 位架构上使用 32 位 tick 类型，因此读取 tick 计数
+ * 无需用临界区保护。
+ */
 #define portTICK_TYPE_IS_ATOMIC    1
 
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关细节。 */
 #define portSTACK_GROWTH         ( -1 )
 #define portTICK_PERIOD_MS       ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT       16
@@ -75,9 +77,9 @@ typedef uint64_t         TickType_t;
 
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具。 */
 
-/* Called at the end of an ISR that can cause a context switch. */
+/* 可在中断中引发上下文切换的 ISR 结束处调用。 */
 #define portEND_SWITCHING_ISR( xSwitchRequired ) \
     {                                            \
         extern uint64_t ullPortYieldRequired;    \
@@ -95,9 +97,11 @@ typedef uint64_t         TickType_t;
     #define portYIELD()            __asm volatile ( "SMC 0" ::: "memory" )
 #endif
 
-/*-----------------------------------------------------------
-* Critical section control
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 临界区控制
+ * ----------------------------------------------------------
+ */
 
 extern void vPortEnterCritical( void );
 extern void vPortExitCritical( void );
@@ -116,8 +120,9 @@ extern void vPortInstallFreeRTOSVectorTable( void );
     __asm volatile ( "ISB SY" );
 
 
-/* These macros do not globally disable/enable interrupts.  They do mask off
- * interrupts that have a priority below configMAX_API_CALL_INTERRUPT_PRIORITY. */
+/*
+ * 这些宏不会全局禁用/使能中断。它们屏蔽优先级低于 configMAX_API_CALL_INTERRUPT_PRIORITY 的中断。
+ */
 #define portENTER_CRITICAL()                      vPortEnterCritical();
 #define portEXIT_CRITICAL()                       vPortExitCritical();
 #define portSET_INTERRUPT_MASK_FROM_ISR()         uxPortSetInterruptMask()
@@ -125,26 +130,31 @@ extern void vPortInstallFreeRTOSVectorTable( void );
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site.  These are
- * not required for this port but included in case common demo code that uses these
- * macros is used. */
+/*
+ * FreeRTOS.org 网站上所述的任务函数宏。本移植层并不需要这些宏，
+ * 但为兼容使用这些宏的通用演示代码而包含它们。
+ */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* Prototype of the FreeRTOS tick handler.  This must be installed as the
- * handler for whichever peripheral is used to generate the RTOS tick. */
+/*
+ * FreeRTOS tick 处理程序的原型。它必须安装为产生 RTOS tick 所用外设的处理程序。
+ */
 void FreeRTOS_Tick_Handler( void );
 
-/* If configUSE_TASK_FPU_SUPPORT is set to 1 (or left undefined) then tasks are
- * created without an FPU context and must call vPortTaskUsesFPU() to give
- * themselves an FPU context before using any FPU instructions.  If
- * configUSE_TASK_FPU_SUPPORT is set to 2 then all tasks will have an FPU context
- * by default. */
+/*
+ * 若 configUSE_TASK_FPU_SUPPORT 设置为 1（或未定义），则任务创建时
+ * 没有 FPU 上下文，必须调用 vPortTaskUsesFPU() 为其自身分配 FPU 上下文，
+ * 然后才能使用任何 FPU 指令。若 configUSE_TASK_FPU_SUPPORT 设置为 2，
+ * 则所有任务默认都拥有 FPU 上下文。
+ */
 #if ( configUSE_TASK_FPU_SUPPORT != 2 )
     void vPortTaskUsesFPU( void );
 #else
-    /* Each task has an FPU context already, so define this function away to
-     * nothing to prevent it from being called accidentally. */
+    /*
+     * 每个任务已拥有 FPU 上下文，因此将该函数定义为空，
+     * 以防止意外调用该函数。
+     */
     #define vPortTaskUsesFPU()
 #endif
 #define portTASK_USES_FLOATING_POINT()    vPortTaskUsesFPU()
@@ -152,14 +162,14 @@ void FreeRTOS_Tick_Handler( void );
 #define portLOWEST_INTERRUPT_PRIORITY           ( ( ( uint32_t ) configUNIQUE_INTERRUPT_PRIORITIES ) - 1UL )
 #define portLOWEST_USABLE_INTERRUPT_PRIORITY    ( portLOWEST_INTERRUPT_PRIORITY - 1UL )
 
-/* Architecture specific optimisations. */
+/* 架构相关优化。 */
 #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
     #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #endif
 
 #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
 
-/* Store/clear the ready priorities in a bit map. */
+/* 用位图保存/清除就绪优先级。 */
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )    ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )     ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 
@@ -167,18 +177,19 @@ void FreeRTOS_Tick_Handler( void );
 
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities )    uxTopPriority = ( 31 - __builtin_clz( uxReadyPriorities ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION（使用移植层优化的任务选择） */
 
 #if ( configASSERT_DEFINED == 1 )
     void vPortValidateInterruptPriority( void );
     #define portASSERT_IF_INTERRUPT_PRIORITY_INVALID()    vPortValidateInterruptPriority()
-#endif /* configASSERT */
+#endif /* configASSERT（断言宏） */
 
 #define portNOP()                                         __asm volatile ( "NOP" )
 #define portINLINE    __inline
 
-/* The number of bits to shift for an interrupt priority is dependent on the
- * number of bits implemented by the interrupt controller. */
+/*
+ * 中断优先级需要移位的位数取决于中断控制器实现的位数。
+ */
 #if configUNIQUE_INTERRUPT_PRIORITIES == 16
     #define portPRIORITY_SHIFT            4
     #define portMAX_BINARY_POINT_VALUE    3
@@ -194,11 +205,11 @@ void FreeRTOS_Tick_Handler( void );
 #elif configUNIQUE_INTERRUPT_PRIORITIES == 256
     #define portPRIORITY_SHIFT            0
     #define portMAX_BINARY_POINT_VALUE    0
-#else /* if configUNIQUE_INTERRUPT_PRIORITIES == 16 */
+#else /* if configUNIQUE_INTERRUPT_PRIORITIES == 16（唯一中断优先级数为 16） */
     #error Invalid configUNIQUE_INTERRUPT_PRIORITIES setting.  configUNIQUE_INTERRUPT_PRIORITIES must be set to the number of unique priorities implemented by the target hardware
-#endif /* if configUNIQUE_INTERRUPT_PRIORITIES == 16 */
+#endif /* if configUNIQUE_INTERRUPT_PRIORITIES == 16（唯一中断优先级数为 16） */
 
-/* Interrupt controller access addresses. */
+/* 中断控制器访问地址。 */
 #define portICCPMR_PRIORITY_MASK_OFFSET                      ( 0x04 )
 #define portICCIAR_INTERRUPT_ACKNOWLEDGE_OFFSET              ( 0x0C )
 #define portICCEOIR_END_OF_INTERRUPT_OFFSET                  ( 0x10 )
@@ -215,10 +226,10 @@ void FreeRTOS_Tick_Handler( void );
 
 #define portMEMORY_BARRIER()    __asm volatile ( "" ::: "memory" )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（移植宏头文件） */

@@ -26,19 +26,21 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the MicroBlaze port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * portable.h 中各函数针对 MicroBlaze 移植层的实现。
+ * ----------------------------------------------------------
+ */
 
 
-/* Scheduler includes. */
+/* 调度器头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Standard includes. */
+/* 标准头文件。 */
 #include <string.h>
 
-/* Hardware includes. */
+/* 硬件头文件。 */
 #include <xintc.h>
 #include <xintc_i.h>
 #include <xtmrctr.h>
@@ -47,44 +49,47 @@
     #error configSUPPORT_DYNAMIC_ALLOCATION must be set to 1 to use this port.
 #endif
 
-/* Tasks are started with interrupts enabled. */
+/* 任务启动时中断处于使能状态。 */
 #define portINITIAL_MSR_STATE        ( ( StackType_t ) 0x02 )
 
-/* Tasks are started with a critical section nesting of 0 - however prior
- * to the scheduler being commenced we don't want the critical nesting level
- * to reach zero, so it is initialised to a high value. */
+/*
+ * 任务启动时临界区嵌套计数为 0——但在调度器启动之前，
+ * 不希望临界嵌套层次降到零，因此将其初始化为一个较大的值。
+ */
 #define portINITIAL_NESTING_VALUE    ( 0xff )
 
-/* Our hardware setup only uses one counter. */
+/* 我们的硬件配置仅使用一个计数器。 */
 #define portCOUNTER_0                0
 
-/* The stack used by the ISR is filled with a known value to assist in
- * debugging. */
+/*
+ * ISR 使用的栈填充了已知值，以辅助调试。
+ */
 #define portISR_STACK_FILL_VALUE     0x55555555
 
-/* Counts the nesting depth of calls to portENTER_CRITICAL().  Each task
- * maintains its own count, so this variable is saved as part of the task
- * context. */
+/*
+ * 记录 portENTER_CRITICAL() 调用嵌套深度的计数器。
+ * 每个任务维护自己的计数，因此该变量作为任务上下文的一部分保存。
+ */
 volatile UBaseType_t uxCriticalNesting = portINITIAL_NESTING_VALUE;
 
-/* To limit the amount of stack required by each task, this port uses a
- * separate stack for interrupts. */
+/*
+ * 为限制每个任务所需的栈量，本移植层为中断使用独立的栈。
+ */
 uint32_t * pulISRStack;
 
 /*-----------------------------------------------------------*/
 
 /*
- * Sets up the periodic ISR used for the RTOS tick.  This uses timer 0, but
- * could have alternatively used the watchdog timer or timer 1.
+ * 设置用于 RTOS tick 的周期性 ISR。此处使用定时器 0，
+ * 也可以改用看门狗定时器或定时器 1。
  */
 static void prvSetupTimerInterrupt( void );
 /*-----------------------------------------------------------*/
 
 /*
- * Initialise the stack of a task to look exactly as if a call to
- * portSAVE_CONTEXT had been made.
+ * 初始化任务栈，使其外观与刚调用过 portSAVE_CONTEXT 完全一致。
  *
- * See the header file portable.h.
+ * 参见 portable.h 头文件。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
@@ -95,10 +100,11 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     const uint32_t ulR2 = ( uint32_t ) &_SDA2_BASE_;
     const uint32_t ulR13 = ( uint32_t ) &_SDA_BASE_;
 
-    /* Place a few bytes of known values on the bottom of the stack.
-     * This is essential for the Microblaze port and these lines must
-     * not be omitted.  The parameter value will overwrite the
-     * 0x22222222 value during the function prologue. */
+    /*
+     * 在栈底放置几个已知值。
+     * 这对 MicroBlaze 移植层至关重要，这些代码行不得省略。
+     * 函数序言期间，参数值将覆盖 0x22222222。
+     */
     *pxTopOfStack = ( StackType_t ) 0x11111111;
     pxTopOfStack--;
     *pxTopOfStack = ( StackType_t ) 0x22222222;
@@ -106,80 +112,83 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     *pxTopOfStack = ( StackType_t ) 0x33333333;
     pxTopOfStack--;
 
-    /* First stack an initial value for the critical section nesting.  This
-     *  is initialised to zero as tasks are started with interrupts enabled. */
-    *pxTopOfStack = ( StackType_t ) 0x00; /* R0. */
+    /*
+     * 首先压入临界区嵌套的初始值。由于任务启动时中断已使能，
+     * 该值初始化为零。
+     */
+    *pxTopOfStack = ( StackType_t ) 0x00; /* R0 寄存器。 */
 
-    /* Place an initial value for all the general purpose registers. */
+    /* 为所有通用寄存器放置初始值。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) ulR2;         /* R2 - small data area. */
+    *pxTopOfStack = ( StackType_t ) ulR2;         /* R2 - 小数据区。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x03;         /* R3. */
+    *pxTopOfStack = ( StackType_t ) 0x03;         /* R3 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x04;         /* R4. */
+    *pxTopOfStack = ( StackType_t ) 0x04;         /* R4 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) pvParameters; /* R5 contains the function call parameters. */
+    *pxTopOfStack = ( StackType_t ) pvParameters; /* R5 包含函数调用参数。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x06;         /* R6. */
+    *pxTopOfStack = ( StackType_t ) 0x06;         /* R6 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x07;         /* R7. */
+    *pxTopOfStack = ( StackType_t ) 0x07;         /* R7 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x08;         /* R8. */
+    *pxTopOfStack = ( StackType_t ) 0x08;         /* R8 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x09;         /* R9. */
+    *pxTopOfStack = ( StackType_t ) 0x09;         /* R9 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x0a;         /* R10. */
+    *pxTopOfStack = ( StackType_t ) 0x0a;         /* R10 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x0b;         /* R11. */
+    *pxTopOfStack = ( StackType_t ) 0x0b;         /* R11 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x0c;         /* R12. */
+    *pxTopOfStack = ( StackType_t ) 0x0c;         /* R12 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) ulR13;        /* R13 - small data read write area. */
+    *pxTopOfStack = ( StackType_t ) ulR13;        /* R13 - 小数据读写区。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) pxCode;       /* R14. */
+    *pxTopOfStack = ( StackType_t ) pxCode;       /* R14 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x0f;         /* R15. */
+    *pxTopOfStack = ( StackType_t ) 0x0f;         /* R15 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x10;         /* R16. */
+    *pxTopOfStack = ( StackType_t ) 0x10;         /* R16 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x11;         /* R17. */
+    *pxTopOfStack = ( StackType_t ) 0x11;         /* R17 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x12;         /* R18. */
+    *pxTopOfStack = ( StackType_t ) 0x12;         /* R18 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x13;         /* R19. */
+    *pxTopOfStack = ( StackType_t ) 0x13;         /* R19 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x14;         /* R20. */
+    *pxTopOfStack = ( StackType_t ) 0x14;         /* R20 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x15;         /* R21. */
+    *pxTopOfStack = ( StackType_t ) 0x15;         /* R21 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x16;         /* R22. */
+    *pxTopOfStack = ( StackType_t ) 0x16;         /* R22 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x17;         /* R23. */
+    *pxTopOfStack = ( StackType_t ) 0x17;         /* R23 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x18;         /* R24. */
+    *pxTopOfStack = ( StackType_t ) 0x18;         /* R24 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x19;         /* R25. */
+    *pxTopOfStack = ( StackType_t ) 0x19;         /* R25 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x1a;         /* R26. */
+    *pxTopOfStack = ( StackType_t ) 0x1a;         /* R26 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x1b;         /* R27. */
+    *pxTopOfStack = ( StackType_t ) 0x1b;         /* R27 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x1c;         /* R28. */
+    *pxTopOfStack = ( StackType_t ) 0x1c;         /* R28 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x1d;         /* R29. */
+    *pxTopOfStack = ( StackType_t ) 0x1d;         /* R29 寄存器。 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) 0x1e;         /* R30. */
+    *pxTopOfStack = ( StackType_t ) 0x1e;         /* R30 寄存器。 */
     pxTopOfStack--;
 
-    /* The MSR is stacked between R30 and R31. */
+    /* MSR 压在 R30 和 R31 之间。 */
     *pxTopOfStack = portINITIAL_MSR_STATE;
     pxTopOfStack--;
 
-    *pxTopOfStack = ( StackType_t ) 0x1f; /* R31. */
+    *pxTopOfStack = ( StackType_t ) 0x1f; /* R31 寄存器。 */
     pxTopOfStack--;
 
-    /* Return a pointer to the top of the stack we have generated so this can
-     * be stored in the task control block for the task. */
+    /*
+     * 返回指向所生成栈顶的指针，以便将其保存到该任务的任务控制块中。
+     */
     return pxTopOfStack;
 }
 /*-----------------------------------------------------------*/
@@ -190,56 +199,59 @@ BaseType_t xPortStartScheduler( void )
     extern void( vStartFirstTask )( void );
 
 
-    /* Setup the FreeRTOS interrupt handler.  Code copied from crt0.s. */
+    /* 设置 FreeRTOS 中断处理程序。代码复制自 crt0.s。 */
     asm volatile ( "la r6, r0, __FreeRTOS_interrupt_handler        \n\t" \
                    "sw r6, r1, r0                                  \n\t" \
                    "lhu r7, r1, r0                                 \n\t" \
                    "shi r7, r0, 0x12                               \n\t" \
                    "shi r6, r0, 0x16 " );
 
-    /* Setup the hardware to generate the tick.  Interrupts are disabled when
-     * this function is called. */
+    /*
+     * 设置硬件以产生 tick。调用本函数时中断处于禁用状态。
+     */
     prvSetupTimerInterrupt();
 
-    /* Allocate the stack to be used by the interrupt handler. */
+    /* 分配供中断处理程序使用的栈。 */
     pulISRStack = ( uint32_t * ) pvPortMalloc( configMINIMAL_STACK_SIZE * sizeof( StackType_t ) );
 
-    /* Restore the context of the first task that is going to run. */
+    /* 恢复即将运行的第一个任务的上下文。 */
     if( pulISRStack != NULL )
     {
-        /* Fill the ISR stack with a known value to facilitate debugging. */
+        /* 用已知值填充 ISR 栈，便于调试。 */
         memset( pulISRStack, portISR_STACK_FILL_VALUE, configMINIMAL_STACK_SIZE * sizeof( StackType_t ) );
         pulISRStack += ( configMINIMAL_STACK_SIZE - 1 );
 
-        /* Kick off the first task. */
+        /* 启动第一个任务。 */
         vStartFirstTask();
     }
 
-    /* Should not get here as the tasks are now running! */
+    /* 不应到达此处，因为任务现在已在运行！ */
     return pdFALSE;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented. */
+    /* 未实现。 */
 }
 /*-----------------------------------------------------------*/
 
 /*
- * Manual context switch called by portYIELD or taskYIELD.
+ * 由 portYIELD 或 taskYIELD 调用的手动上下文切换。
  */
 void vPortYield( void )
 {
     extern void VPortYieldASM( void );
 
-    /* Perform the context switch in a critical section to assure it is
-     * not interrupted by the tick ISR.  It is not a problem to do this as
-     * each task maintains its own interrupt status. */
+    /*
+     * 在临界区中执行上下文切换，以确保不被 tick ISR 打断。
+     * 这样做没有问题，因为每个任务都维护自己的中断状态。
+     */
     portENTER_CRITICAL();
 
-    /* Jump directly to the yield function to ensure there is no
-     * compiler generated prologue code. */
+    /*
+     * 直接跳转到让出函数，以确保不产生编译器生成的序言代码。
+     */
     asm volatile ( "bralid r14, VPortYieldASM      \n\t" \
                    "or r0, r0, r0                  \n\t" );
     portEXIT_CRITICAL();
@@ -247,7 +259,7 @@ void vPortYield( void )
 /*-----------------------------------------------------------*/
 
 /*
- * Hardware initialisation to generate the RTOS tick.
+ * 用于产生 RTOS tick 的硬件初始化。
  */
 static void prvSetupTimerInterrupt( void )
 {
@@ -255,15 +267,17 @@ static void prvSetupTimerInterrupt( void )
     const uint32_t ulCounterValue = configCPU_CLOCK_HZ / configTICK_RATE_HZ;
     UBaseType_t uxMask;
 
-    /* The OPB timer1 is used to generate the tick.  Use the provided library
-     * functions to enable the timer and set the tick frequency. */
+    /*
+     * 使用 OPB 定时器 1 产生 tick。使用提供的库函数使能定时器并设置 tick 频率。
+     */
     XTmrCtr_mDisable( XPAR_OPB_TIMER_1_BASEADDR, XPAR_OPB_TIMER_1_DEVICE_ID );
     XTmrCtr_Initialize( &xTimer, XPAR_OPB_TIMER_1_DEVICE_ID );
     XTmrCtr_mSetLoadReg( XPAR_OPB_TIMER_1_BASEADDR, portCOUNTER_0, ulCounterValue );
     XTmrCtr_mSetControlStatusReg( XPAR_OPB_TIMER_1_BASEADDR, portCOUNTER_0, XTC_CSR_LOAD_MASK | XTC_CSR_INT_occurred_MASK );
 
-    /* Set the timer interrupt enable bit while maintaining the other bit
-     * states. */
+    /*
+     * 在保持其他位状态不变的情况下，设置定时器中断使能位。
+     */
     uxMask = XIntc_In32( ( XPAR_OPB_INTC_0_BASEADDR + XIN_IER_OFFSET ) );
     uxMask |= XPAR_OPB_TIMER_1_INTERRUPT_MASK;
     XIntc_Out32( ( XPAR_OPB_INTC_0_BASEADDR + XIN_IER_OFFSET ), ( uxMask ) );
@@ -275,16 +289,14 @@ static void prvSetupTimerInterrupt( void )
 /*-----------------------------------------------------------*/
 
 /*
- * The interrupt handler placed in the interrupt vector when the scheduler is
- * started.  The task context has already been saved when this is called.
- * This handler determines the interrupt source and calls the relevant
- * peripheral handler.
+ * 调度器启动时放入中断向量的中断处理程序。调用它时任务上下文已保存。
+ * 该处理程序确定中断源并调用相应的外设处理程序。
  */
 void vTaskISRHandler( void )
 {
     static uint32_t ulPending;
 
-    /* Which interrupts are pending? */
+    /* 哪些中断处于挂起状态？ */
     ulPending = XIntc_In32( ( XPAR_INTC_SINGLE_BASEADDR + XIN_IVR_OFFSET ) );
 
     if( ulPending < XPAR_INTC_MAX_NUM_INTR_INPUTS )
@@ -295,7 +307,7 @@ void vTaskISRHandler( void )
 
         ulInterruptMask = ( uint32_t ) 1 << ulPending;
 
-        /* Get the configuration data using the device ID */
+        /* 使用设备 ID 获取配置数据。 */
         pxConfig = &XIntc_ConfigTable[ ( uint32_t ) XPAR_INTC_SINGLE_DEVICE_ID ];
 
         pxTablePtr = &( pxConfig->HandlerTable[ ulPending ] );
@@ -315,19 +327,19 @@ void vTaskISRHandler( void )
 /*-----------------------------------------------------------*/
 
 /*
- * Handler for the timer interrupt.
+ * 定时器中断处理程序。
  */
 void vTickISR( void * pvBaseAddress )
 {
     uint32_t ulCSR;
 
-    /* Increment the RTOS tick - this might cause a task to unblock. */
+    /* 递增 RTOS tick 计数——这可能使某个任务解除阻塞。 */
     if( xTaskIncrementTick() != pdFALSE )
     {
         vTaskSwitchContext();
     }
 
-    /* Clear the timer interrupt */
+    /* 清除定时器中断。 */
     ulCSR = XTmrCtr_mGetControlStatusReg( XPAR_OPB_TIMER_1_BASEADDR, 0 );
     XTmrCtr_mSetControlStatusReg( XPAR_OPB_TIMER_1_BASEADDR, portCOUNTER_0, ulCSR );
 }

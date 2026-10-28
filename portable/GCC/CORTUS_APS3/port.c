@@ -26,25 +26,25 @@
  *
  */
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <stdlib.h>
 
-/* Kernel includes. */
+/* 内核头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Machine includes */
+/* 机器相关头文件包含。 */
 #include <machine/counter.h>
 #include <machine/ic.h>
 /*-----------------------------------------------------------*/
 
-/* The initial PSR has the Previous Interrupt Enabled (PIEN) flag set. */
+/* 初始 PSR 中已设置先前中断使能（PIEN）标志。 */
 #define portINITIAL_PSR    ( 0x00020000 )
 
 /*-----------------------------------------------------------*/
 
 /*
- * Perform any hardware configuration necessary to generate the tick interrupt.
+ * 执行产生时钟节拍（tick）中断所需的硬件配置。
  */
 static void prvSetupTimerInterrupt( void );
 /*-----------------------------------------------------------*/
@@ -53,16 +53,17 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
-    /* Make space on the stack for the context - this leaves a couple of spaces
-     * empty.  */
+    /*
+     * 在栈上为上下文腾出空间 - 这会留下几个空闲位置。
+     */
     pxTopOfStack -= 20;
 
-    /* Fill the registers with known values to assist debugging. */
+    /* 用已知值填充寄存器以辅助调试。 */
     pxTopOfStack[ 16 ] = 0;
     pxTopOfStack[ 15 ] = portINITIAL_PSR;
     pxTopOfStack[ 14 ] = ( uint32_t ) pxCode;
-    pxTopOfStack[ 13 ] = 0x00000000UL; /* R15. */
-    pxTopOfStack[ 12 ] = 0x00000000UL; /* R14. */
+    pxTopOfStack[ 13 ] = 0x00000000UL; /* R15 寄存器。 */
+    pxTopOfStack[ 12 ] = 0x00000000UL; /* R14 寄存器。 */
     pxTopOfStack[ 11 ] = 0x0d0d0d0dUL;
     pxTopOfStack[ 10 ] = 0x0c0c0c0cUL;
     pxTopOfStack[ 9 ] = 0x0b0b0b0bUL;
@@ -82,33 +83,33 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
 BaseType_t xPortStartScheduler( void )
 {
-    /* Set-up the timer interrupt. */
+    /* 设置定时器中断。 */
     prvSetupTimerInterrupt();
 
-    /* Integrated Interrupt Controller: Enable all interrupts. */
+    /* 集成中断控制器：使能所有中断。 */
     ic->ien = 1;
 
-    /* Restore callee saved registers. */
+    /* 恢复被调用者保存寄存器。 */
     portRESTORE_CONTEXT();
 
-    /* Should not get here. */
+    /* 不应执行到此处。 */
     return 0;
 }
 /*-----------------------------------------------------------*/
 
 static void prvSetupTimerInterrupt( void )
 {
-    /* Enable timer interrupts */
+    /* 使能定时器中断 */
     counter1->reload = ( configCPU_CLOCK_HZ / configTICK_RATE_HZ ) - 1;
     counter1->value = counter1->reload;
     counter1->mask = 1;
 
-    /* Set the IRQ Handler priority and enable it. */
+    /* 设置 IRQ 处理程序的优先级并使能它。 */
     irq[ IRQ_COUNTER1 ].ien = 1;
 }
 /*-----------------------------------------------------------*/
 
-/* Trap 31 handler. */
+/* 陷阱 31 处理程序。 */
 void interrupt31_handler( void ) __attribute__( ( naked ) );
 void interrupt31_handler( void )
 {
@@ -126,12 +127,12 @@ static void prvProcessTick( void )
         vTaskSwitchContext();
     }
 
-    /* Clear the Tick Interrupt. */
+    /* 清除时钟节拍中断。 */
     counter1->expired = 0;
 }
 /*-----------------------------------------------------------*/
 
-/* Timer 1 interrupt handler, used for tick interrupt. */
+/* 定时器 1 中断处理程序，用于时钟节拍中断。 */
 void interrupt7_handler( void ) __attribute__( ( naked ) );
 void interrupt7_handler( void )
 {
@@ -143,6 +144,6 @@ void interrupt7_handler( void )
 
 void vPortEndScheduler( void )
 {
-    /* Nothing to do. Unlikely to want to end. */
+    /* 无需执行任何操作。不太可能希望结束。 */
 }
 /*-----------------------------------------------------------*/

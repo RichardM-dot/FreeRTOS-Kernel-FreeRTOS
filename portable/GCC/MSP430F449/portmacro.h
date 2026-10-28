@@ -29,23 +29,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定的硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 这些设置不应被修改。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -70,12 +70,12 @@ typedef unsigned short   UBaseType_t;
 #endif
 /*-----------------------------------------------------------*/
 
-/* Interrupt control macros. */
+/* 中断控制宏。 */
 #define portDISABLE_INTERRUPTS()    asm volatile ( "DINT" ); asm volatile ( "NOP" )
 #define portENABLE_INTERRUPTS()     asm volatile ( "EINT" ); asm volatile ( "NOP" )
 /*-----------------------------------------------------------*/
 
-/* Critical section control macros. */
+/* 临界区控制宏。 */
 #define portNO_CRITICAL_SECTION_NESTING    ( ( uint16_t ) 0 )
 
 #define portENTER_CRITICAL()                                                      \
@@ -109,31 +109,31 @@ typedef unsigned short   UBaseType_t;
     }
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务工具函数。 */
 extern void vPortYield( void ) __attribute__( ( naked ) );
 #define portYIELD()    vPortYield()
 #define portNOP()      asm volatile ( "NOP" )
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portBYTE_ALIGNMENT    2
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 
-/* GCC used to define these but doesn't any more */
+/* GCC 过去会定义这些内容，现在则不再定义 */
 #define interrupt(vector) __attribute__((__interrupt__(vector)))
 #define wakeup __attribute__((__wakeup__))
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site. */
+/* FreeRTOS.org 网站上所述的任务函数宏。 */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

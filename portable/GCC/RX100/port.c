@@ -26,40 +26,45 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the SH2A port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * SH2A 移植层中 portable.h 所定义函数的实现。
+ * ----------------------------------------------------------
+ */
 
-/* Standard C includes. */
+/* 标准 C 头文件包含。 */
 #include "limits.h"
 
-/* Scheduler includes. */
+/* 调度器头文件包含。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Library includes. */
+/* 库头文件包含。 */
 #include "string.h"
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #if ( configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H == 1 )
 
     #include "platform.h"
 
-#else /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#else /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
     #include "iodefine.h"
 
-#endif /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#endif /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 /*-----------------------------------------------------------*/
 
-/* Tasks should start with interrupts enabled and in Supervisor mode, therefore
- * PSW is set with U and I set, and PM and IPL clear. */
+/*
+ * 任务应以中断使能且处于超级用户模式的状态启动，因此 PSW 中 U 和 I 置位，
+ * PM 和 IPL 清零。
+ */
 #define portINITIAL_PSW    ( ( StackType_t ) 0x00030000 )
 
-/* The peripheral clock is divided by this value before being supplying the
- * CMT. */
+/*
+ * 外设时钟在提供给 CMT 之前先被此值分频。
+ */
 #if ( configUSE_TICKLESS_IDLE == 0 )
-    /* If tickless idle is not used then the divisor can be fixed. */
+    /* 若未使用 tickless 空闲模式，则分频系数可以固定。 */
     #define portCLOCK_DIVISOR    8UL
 #elif ( configPERIPHERAL_CLOCK_HZ >= 12000000 )
     #define portCLOCK_DIVISOR    512UL
@@ -71,125 +76,123 @@
     #define portCLOCK_DIVISOR    8UL
 #endif
 
-/* These macros allow a critical section to be added around the call to
- * xTaskIncrementTick(), which is only ever called from interrupts at the kernel
- * priority - ie a known priority.  Therefore these local macros are a slight
- * optimisation compared to calling the global SET/CLEAR_INTERRUPT_MASK macros,
- * which would require the old IPL to be read first and stored in a local variable. */
+/*
+ * 这些宏允许在 xTaskIncrementTick() 调用周围添加临界区，该函数仅在中断中以内核
+ * 优先级（即已知优先级）调用。因此相比调用全局 SET/CLEAR_INTERRUPT_MASK 宏，
+ * 这些本地宏是轻微优化，因为全局宏需要先读取旧 IPL 并存入局部变量。
+ */
 #define portDISABLE_INTERRUPTS_FROM_KERNEL_ISR()    __asm volatile ( "MVTIPL    %0" ::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) )
 #define portENABLE_INTERRUPTS_FROM_KERNEL_ISR()     __asm volatile ( "MVTIPL    %0" ::"i" ( configKERNEL_INTERRUPT_PRIORITY ) )
 
-/* Keys required to lock and unlock access to certain system registers
- * respectively. */
+/*
+ * 分别用于加锁和解锁对某些系统寄存器访问的密钥。
+ */
 #define portUNLOCK_KEY    0xA50B
 #define portLOCK_KEY      0xA500
 
 /*-----------------------------------------------------------*/
 
 /*
- * Function to start the first task executing - written in asm code as direct
- * access to registers is required.
+ * 启动第一个任务执行的函数 - 用汇编代码编写，因为需要直接访问寄存器。
  */
 static void prvStartFirstTask( void ) __attribute__( ( naked ) );
 
 /*
- * Software interrupt handler.  Performs the actual context switch (saving and
- * restoring of registers).  Written in asm code as direct register access is
- * required.
+ * 软件中断处理程序。执行实际的上下文切换（保存和恢复寄存器）。用汇编代码编写，
+ * 因为需要直接访问寄存器。
  */
 #if ( configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H == 1 )
 
     R_BSP_PRAGMA_INTERRUPT( vPortSoftwareInterruptISR, VECT( ICU, SWINT ) )
     R_BSP_ATTRIB_INTERRUPT void vPortSoftwareInterruptISR( void ) __attribute__( ( naked ) );
 
-#else /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#else /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
     void vPortSoftwareInterruptISR( void ) __attribute__( ( naked ) );
 
-#endif /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H  */
+#endif /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
 /*
- * The tick ISR handler.  The peripheral used is configured by the application
- * via a hook/callback function.
+ * 时钟节拍 ISR 处理程序。使用的外设由应用程序通过钩子/回调函数配置。
  */
 #if ( configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H == 1 )
 
     R_BSP_PRAGMA_INTERRUPT( vPortTickISR, _VECT( configTICK_VECTOR ) )
-    R_BSP_ATTRIB_INTERRUPT void vPortTickISR( void ); /* Do not add __attribute__( ( interrupt ) ). */
+    R_BSP_ATTRIB_INTERRUPT void vPortTickISR( void ); /* 不要添加 __attribute__( ( interrupt ) )。 */
 
-#else /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#else /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
     void vPortTickISR( void ) __attribute__( ( interrupt ) );
 
-#endif /* configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
+#endif /* 若定义了 configINCLUDE_PLATFORM_H_INSTEAD_OF_IODEFINE_H */
 
 /*
- * Sets up the periodic ISR used for the RTOS tick using the CMT.
- * The application writer can define configSETUP_TICK_INTERRUPT() (in
- * FreeRTOSConfig.h) such that their own tick interrupt configuration is used
- * in place of prvSetupTimerInterrupt().
+ * 使用 CMT 设置用于 RTOS 时钟节拍（tick）的周期性 ISR。
+ * 应用程序编写者可以定义 configSETUP_TICK_INTERRUPT()（在 FreeRTOSConfig.h 中），
+ * 以便用自己的时钟节拍中断配置替代 prvSetupTimerInterrupt()。
  */
 static void prvSetupTimerInterrupt( void );
 #ifndef configSETUP_TICK_INTERRUPT
 
-/* The user has not provided their own tick interrupt configuration so use
- * the definition in this file (which uses the interval timer). */
+/*
+ * 用户未提供自己的时钟节拍中断配置，因此使用本文件中的定义（使用间隔定时器）。
+ */
     #define configSETUP_TICK_INTERRUPT()    prvSetupTimerInterrupt()
-#endif /* configSETUP_TICK_INTERRUPT */
+#endif /* configSETUP_TICK_INTERRUPT（宏） */
 
 /*
- * Called after the sleep mode registers have been configured, prvSleep()
- * executes the pre and post sleep macros, and actually calls the wait
- * instruction.
+ * 在睡眠模式寄存器配置完成后调用，prvSleep() 执行睡眠前和睡眠后宏，并实际调用
+ * wait 指令。
  */
 #if configUSE_TICKLESS_IDLE == 1
     static void prvSleep( TickType_t xExpectedIdleTime );
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE（宏） */
 
 /*-----------------------------------------------------------*/
 
-/* Used in the context save and restore code. */
+/* 用于上下文保存和恢复代码。 */
 extern void * pxCurrentTCB;
 
-/* Calculate how many clock increments make up a single tick period. */
+/* 计算一个 tick 周期由多少个时钟增量组成。 */
 static const uint32_t ulMatchValueForOneTick = ( ( configPERIPHERAL_CLOCK_HZ / portCLOCK_DIVISOR ) / configTICK_RATE_HZ );
 
 #if configUSE_TICKLESS_IDLE == 1
 
-/* Holds the maximum number of ticks that can be suppressed - which is
- * basically how far into the future an interrupt can be generated. Set
- * during initialisation.  This is the maximum possible value that the
- * compare match register can hold divided by ulMatchValueForOneTick. */
+/*
+ * 保存可被抑制的最大 tick 数 - 基本上就是可以向未来产生中断的最远距离。
+ * 初始化时设置。该值为比较匹配寄存器可保存的最大可能值除以 ulMatchValueForOneTick。
+ */
     static const TickType_t xMaximumPossibleSuppressedTicks = USHRT_MAX / ( ( configPERIPHERAL_CLOCK_HZ / portCLOCK_DIVISOR ) / configTICK_RATE_HZ );
 
-/* Flag set from the tick interrupt to allow the sleep processing to know if
- * sleep mode was exited because of a tick interrupt, or an interrupt
- * generated by something else. */
+/*
+ * 由时钟节拍中断设置的标志，使睡眠处理能够知道退出睡眠模式是由于 tick 中断
+ * 还是其他原因产生的中断。
+ */
     static volatile uint32_t ulTickFlag = pdFALSE;
 
-/* The CMT counter is stopped temporarily each time it is re-programmed.
- * The following constant offsets the CMT counter match value by the number of
- * CMT counts that would typically be missed while the counter was stopped to
- * compensate for the lost time.  The large difference between the divided CMT
- * clock and the CPU clock means it is likely ulStoppedTimerCompensation will
- * equal zero - and be optimised away. */
+/*
+ * 每次重新编程时 CMT 计数器都会暂时停止。以下常量按计数器停止期间通常会丢失的
+ * CMT 计数值对 CMT 计数器匹配值进行偏移，以补偿损失的时间。分频后的 CMT 时钟
+ * 与 CPU 时钟之间的巨大差异意味着 ulStoppedTimerCompensation 很可能等于零 -
+ * 并被优化掉。
+ */
     static const uint32_t ulStoppedTimerCompensation = 100UL / ( configCPU_CLOCK_HZ / ( configPERIPHERAL_CLOCK_HZ / portCLOCK_DIVISOR ) );
 
-#endif /* if configUSE_TICKLESS_IDLE == 1 */
+#endif /* 若 configUSE_TICKLESS_IDLE == 1 */
 
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 参见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
-    /* Offset to end up on 8 byte boundary. */
+    /* 偏移以落在 8 字节边界上。 */
     pxTopOfStack--;
 
-    /* R0 is not included as it is the stack pointer. */
+    /* 未包含 R0，因为它是栈指针。 */
     *pxTopOfStack = 0x00;
     pxTopOfStack--;
     *pxTopOfStack = 0x00;
@@ -198,13 +201,14 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
     pxTopOfStack--;
     *pxTopOfStack = ( StackType_t ) pxCode;
 
-    /* When debugging it can be useful if every register is set to a known
-     * value.  Otherwise code space can be saved by just setting the registers
-     * that need to be set. */
+    /*
+     * 调试时，将每个寄存器设为已知值会很有帮助。否则，为节省代码空间，可以只设置
+     * 需要设置的寄存器。
+     */
     #ifdef USE_FULL_REGISTER_INITIALISATION
     {
         pxTopOfStack--;
-        *pxTopOfStack = 0x12345678; /* r15. */
+        *pxTopOfStack = 0x12345678; /* r15 寄存器。 */
         pxTopOfStack--;
         *pxTopOfStack = 0xaaaabbbb;
         pxTopOfStack--;
@@ -233,19 +237,20 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
         *pxTopOfStack = 0x22222222;
         pxTopOfStack--;
     }
-    #else /* ifdef USE_FULL_REGISTER_INITIALISATION */
+    #else /* 若定义了 USE_FULL_REGISTER_INITIALISATION */
     {
-        /* Leave space for the registers that will get popped from the stack
-         * when the task first starts executing. */
+        /*
+         * 为任务首次开始执行时将从栈中弹出的寄存器留出空间。
+         */
         pxTopOfStack -= 15;
     }
-    #endif /* ifdef USE_FULL_REGISTER_INITIALISATION */
+    #endif /* 若定义了 USE_FULL_REGISTER_INITIALISATION */
 
-    *pxTopOfStack = ( StackType_t ) pvParameters; /* R1 */
+    *pxTopOfStack = ( StackType_t ) pvParameters; /* R1 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x12345678;                   /* Accumulator. */
+    *pxTopOfStack = 0x12345678;                   /* 累加器。 */
     pxTopOfStack--;
-    *pxTopOfStack = 0x87654321;                   /* Accumulator. */
+    *pxTopOfStack = 0x87654321;                   /* 累加器。 */
 
     return pxTopOfStack;
 }
@@ -253,46 +258,47 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
 BaseType_t xPortStartScheduler( void )
 {
-    /* Use pxCurrentTCB just so it does not get optimised away. */
+    /* 使用 pxCurrentTCB，以免其被优化掉。 */
     if( pxCurrentTCB != NULL )
     {
-        /* Call an application function to set up the timer that will generate
-         * the tick interrupt.  This way the application can decide which
-         * peripheral to use.  If tickless mode is used then the default
-         * implementation defined in this file (which uses CMT0) should not be
-         * overridden. */
+        /*
+         * 调用应用程序函数来设置将产生时钟节拍中断的定时器。这样应用程序可以决定使用
+         * 哪个外设。若使用 tickless 模式，则不应覆盖本文件中定义的默认实现（使用 CMT0）。
+         */
         configSETUP_TICK_INTERRUPT();
 
-        /* Enable the software interrupt. */
+        /* 使能软件中断。 */
         _IEN( _ICU_SWINT ) = 1;
 
-        /* Ensure the software interrupt is clear. */
+        /* 确保软件中断已清除。 */
         _IR( _ICU_SWINT ) = 0;
 
-        /* Ensure the software interrupt is set to the kernel priority. */
+        /* 确保软件中断被设置为内核优先级。 */
         _IPR( _ICU_SWINT ) = configKERNEL_INTERRUPT_PRIORITY;
 
-        /* Start the first task. */
+        /* 启动第一个任务。 */
         prvStartFirstTask();
     }
 
-    /* Execution should not reach here as the tasks are now running!
-     * prvSetupTimerInterrupt() is called here to prevent the compiler outputting
-     * a warning about a statically declared function not being referenced in the
-     * case that the application writer has provided their own tick interrupt
-     * configuration routine (and defined configSETUP_TICK_INTERRUPT() such that
-     * their own routine will be called in place of prvSetupTimerInterrupt()). */
+    /*
+     * 任务已在运行，执行不应到达此处！
+     * 此处调用 prvSetupTimerInterrupt() 是为了防止在应用程序编写者提供了自己的时钟节拍
+     * 中断配置例程（并定义了 configSETUP_TICK_INTERRUPT() 以便用自己的例程替代
+     * prvSetupTimerInterrupt()）的情况下，编译器输出关于静态声明函数未被引用的警告。
+     */
     prvSetupTimerInterrupt();
 
-    /* Should not get here. */
+    /* 不应执行到此处。 */
     return pdFAIL;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented in ports where there is nothing to return to.
-     * Artificially force an assert. */
+    /*
+     * 在无需返回的移植层中未实现。
+     * 人为强制触发断言。
+     */
     configASSERT( pxCurrentTCB == NULL );
 }
 /*-----------------------------------------------------------*/
@@ -302,34 +308,37 @@ static void prvStartFirstTask( void )
     __asm volatile
     (
 
-        /* When starting the scheduler there is nothing that needs moving to the
-         * interrupt stack because the function is not called from an interrupt.
-         * Just ensure the current stack is the user stack. */
+        /*
+         * 启动调度器时无需将任何内容移到中断栈，因为该函数并非从中断中调用。
+         * 只需确保当前栈为用户栈。
+         */
         "SETPSW     U                       \n" \
 
 
-        /* Obtain the location of the stack associated with which ever task
-         * pxCurrentTCB is currently pointing to. */
+        /*
+         * 获取 pxCurrentTCB 当前所指向任务的相关栈位置。
+         */
         "MOV.L      #_pxCurrentTCB, R15     \n" \
         "MOV.L      [R15], R15              \n" \
         "MOV.L      [R15], R0               \n" \
 
 
-        /* Restore the registers from the stack of the task pointed to by
-         * pxCurrentTCB. */
+        /*
+         * 从 pxCurrentTCB 所指向任务的栈中恢复寄存器。
+         */
         "POP        R15                     \n" \
 
-        /* Accumulator low 32 bits. */
+        /* 累加器低 32 位。 */
         "MVTACLO    R15                     \n" \
         "POP        R15                     \n" \
 
-        /* Accumulator high 32 bits. */
+        /* 累加器高 32 位。 */
         "MVTACHI    R15                     \n" \
 
-        /* R1 to R15 - R0 is not included as it is the SP. */
+        /* R1 至 R15 - 未包含 R0，因为它是 SP。 */
         "POPM       R1-R15                  \n" \
 
-        /* This pops the remaining registers. */
+        /* 这将弹出其余寄存器。 */
         "RTE                                \n" \
         "NOP                                \n" \
         "NOP                                \n"
@@ -341,74 +350,78 @@ void vPortSoftwareInterruptISR( void )
 {
     __asm volatile
     (
-        /* Re-enable interrupts. */
+        /* 重新使能中断。 */
         "SETPSW     I                           \n" \
 
 
-        /* Move the data that was automatically pushed onto the interrupt stack when
-         * the interrupt occurred from the interrupt stack to the user stack.
+        /*
+         * 将中断发生时自动压入中断栈的数据从中断栈移到用户栈。
          *
-         * R15 is saved before it is clobbered. */
+         * 保存 R15 后再覆盖它。
+         */
         "PUSH.L     R15                         \n" \
 
-        /* Read the user stack pointer. */
+        /* 读取用户栈指针。 */
         "MVFC       USP, R15                    \n" \
 
-        /* Move the address down to the data being moved. */
+        /* 将地址下移到要移动的数据处。 */
         "SUB        #12, R15                    \n" \
         "MVTC       R15, USP                    \n" \
 
-        /* Copy the data across, R15, then PC, then PSW. */
+        /* 复制数据，依次为 R15、PC、PSW。 */
         "MOV.L      [ R0 ], [ R15 ]             \n" \
         "MOV.L      4[ R0 ], 4[ R15 ]           \n" \
         "MOV.L      8[ R0 ], 8[ R15 ]           \n" \
 
-        /* Move the interrupt stack pointer to its new correct position. */
+        /* 将中断栈指针移到其新的正确位置。 */
         "ADD        #12, R0                     \n" \
 
-        /* All the rest of the registers are saved directly to the user stack. */
+        /* 其余所有寄存器直接保存到用户栈。 */
         "SETPSW     U                           \n" \
 
-        /* Save the rest of the general registers (R15 has been saved already). */
+        /* 保存其余的通用寄存器（R15 已保存）。 */
         "PUSHM      R1-R14                      \n" \
 
-        /* Save the accumulator. */
+        /* 保存累加器。 */
         "MVFACHI    R15                         \n" \
         "PUSH.L     R15                         \n" \
 
-        /* Middle word. */
+        /* 中间字。 */
         "MVFACMI    R15                         \n" \
 
-        /* Shifted left as it is restored to the low order word. */
+        /* 由于要恢复到低序字，因此左移。 */
         "SHLL       #16, R15                    \n" \
         "PUSH.L     R15                         \n" \
 
-        /* Save the stack pointer to the TCB. */
+        /* 将栈指针保存到 TCB。 */
         "MOV.L      #_pxCurrentTCB, R15         \n" \
         "MOV.L      [ R15 ], R15                \n" \
         "MOV.L      R0, [ R15 ]                 \n" \
 
 
-        /* Ensure the interrupt mask is set to the syscall priority while the kernel
-         * structures are being accessed. */
+        /*
+         * 在访问内核结构期间，确保中断屏蔽设置为系统调用优先级。
+         */
         "MVTIPL     %0                          \n" \
 
-        /* Select the next task to run. */
+        /* 选择下一个要运行的任务。 */
         "BSR.A      _vTaskSwitchContext         \n" \
 
-        /* Reset the interrupt mask as no more data structure access is required. */
+        /* 不再需要访问数据结构，重置中断屏蔽。 */
         "MVTIPL     %1                          \n" \
 
 
-        /* Load the stack pointer of the task that is now selected as the Running
-         * state task from its TCB. */
+        /*
+         * 从 TCB 加载现已选为运行态任务的栈指针。
+         */
         "MOV.L      #_pxCurrentTCB,R15          \n" \
         "MOV.L      [ R15 ], R15                \n" \
         "MOV.L      [ R15 ], R0                 \n" \
 
 
-        /* Restore the context of the new task.  The PSW (Program Status Word) and
-         * PC will be popped by the RTE instruction. */
+        /*
+         * 恢复新任务的上下文。PSW（程序状态字）和 PC 将由 RTE 指令弹出。
+         */
         "POP        R15                         \n" \
         "MVTACLO    R15                         \n" \
         "POP        R15                         \n" \
@@ -424,11 +437,12 @@ void vPortSoftwareInterruptISR( void )
 
 void vPortTickISR( void )
 {
-    /* Re-enabled interrupts. */
+    /* 重新使能中断。 */
     __asm volatile ( "SETPSW I" );
 
-    /* Increment the tick, and perform any processing the new tick value
-     * necessitates.  Ensure IPL is at the max syscall value first. */
+    /*
+     * 递增 tick，并执行新 tick 值所需的任何处理。首先确保 IPL 处于最大系统调用值。
+     */
     portDISABLE_INTERRUPTS_FROM_KERNEL_ISR();
     {
         if( xTaskIncrementTick() != pdFALSE )
@@ -440,11 +454,12 @@ void vPortTickISR( void )
 
     #if configUSE_TICKLESS_IDLE == 1
     {
-        /* The CPU woke because of a tick. */
+        /* CPU 因时钟节拍而唤醒。 */
         ulTickFlag = pdTRUE;
 
-        /* If this is the first tick since exiting tickless mode then the CMT
-         * compare match value needs resetting. */
+        /*
+         * 若这是退出 tickless 模式后的第一个 tick，则需要重新设置 CMT 比较匹配值。
+         */
         CMT0.CMCOR = ( uint16_t ) ulMatchValueForOneTick;
     }
     #endif
@@ -460,7 +475,7 @@ uint32_t ulPortGetIPL( void )
         "RTS                      "
     );
 
-    /* This will never get executed, but keeps the compiler from complaining. */
+    /* 这永远不会执行，但可避免编译器报怨。 */
     return 0;
 }
 /*-----------------------------------------------------------*/
@@ -483,22 +498,22 @@ void vPortSetIPL( uint32_t ulNewIPL )
 
 static void prvSetupTimerInterrupt( void )
 {
-    /* Unlock. */
+    /* 解锁。 */
     SYSTEM.PRCR.WORD = portUNLOCK_KEY;
 
-    /* Enable CMT0. */
+    /* 使能 CMT0。 */
     MSTP( CMT0 ) = 0;
 
-    /* Lock again. */
+    /* 再次加锁。 */
     SYSTEM.PRCR.WORD = portLOCK_KEY;
 
-    /* Interrupt on compare match. */
+    /* 比较匹配时产生中断。 */
     CMT0.CMCR.BIT.CMIE = 1;
 
-    /* Set the compare match value. */
+    /* 设置比较匹配值。 */
     CMT0.CMCOR = ( uint16_t ) ulMatchValueForOneTick;
 
-    /* Divide the PCLK. */
+    /* 对 PCLK 分频。 */
     #if portCLOCK_DIVISOR == 512
     {
         CMT0.CMCR.BIT.CKS = 3;
@@ -515,19 +530,19 @@ static void prvSetupTimerInterrupt( void )
     {
         CMT0.CMCR.BIT.CKS = 0;
     }
-    #else /* if portCLOCK_DIVISOR == 512 */
+    #else /* 若 portCLOCK_DIVISOR == 512 */
     {
         #error Invalid portCLOCK_DIVISOR setting
     }
-    #endif /* if portCLOCK_DIVISOR == 512 */
+    #endif /* 若 portCLOCK_DIVISOR == 512 */
 
-    /* Enable the interrupt... */
+    /* 使能中断…… */
     _IEN( _CMT0_CMI0 ) = 1;
 
-    /* ...and set its priority to the application defined kernel priority. */
+    /* ……并将其优先级设置为应用程序定义的内核优先级。 */
     _IPR( _CMT0_CMI0 ) = configKERNEL_INTERRUPT_PRIORITY;
 
-    /* Start the timer. */
+    /* 启动定时器。 */
     CMT.CMSTR0.BIT.STR0 = 1;
 }
 /*-----------------------------------------------------------*/
@@ -536,22 +551,23 @@ static void prvSetupTimerInterrupt( void )
 
     static void prvSleep( TickType_t xExpectedIdleTime )
     {
-        /* Allow the application to define some pre-sleep processing. */
+        /* 允许应用程序定义一些睡眠前处理。 */
         configPRE_SLEEP_PROCESSING( xExpectedIdleTime );
 
-        /* xExpectedIdleTime being set to 0 by configPRE_SLEEP_PROCESSING()
-         * means the application defined code has already executed the WAIT
-         * instruction. */
+        /*
+         * configPRE_SLEEP_PROCESSING() 将 xExpectedIdleTime 置为 0，表示应用程序定义
+         * 的代码已执行 WAIT 指令。
+         */
         if( xExpectedIdleTime > 0 )
         {
             __asm volatile ( "WAIT" );
         }
 
-        /* Allow the application to define some post sleep processing. */
+        /* 允许应用程序定义一些睡眠后处理。 */
         configPOST_SLEEP_PROCESSING( xExpectedIdleTime );
     }
 
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE（宏） */
 /*-----------------------------------------------------------*/
 
 #if configUSE_TICKLESS_IDLE == 1
@@ -561,154 +577,164 @@ static void prvSetupTimerInterrupt( void )
         uint32_t ulMatchValue, ulCompleteTickPeriods, ulCurrentCount;
         eSleepModeStatus eSleepAction;
 
-        /* THIS FUNCTION IS CALLED WITH THE SCHEDULER SUSPENDED. */
+        /* 此函数在调度器挂起的情况下被调用。 */
 
-        /* Make sure the CMT reload value does not overflow the counter. */
+        /* 确保 CMT 重载值不会使计数器溢出。 */
         if( xExpectedIdleTime > xMaximumPossibleSuppressedTicks )
         {
             xExpectedIdleTime = xMaximumPossibleSuppressedTicks;
         }
 
-        /* Calculate the reload value required to wait xExpectedIdleTime tick
-         * periods. */
+        /*
+         * 计算等待 xExpectedIdleTime 个 tick 周期所需的重载值。
+         */
         ulMatchValue = ulMatchValueForOneTick * xExpectedIdleTime;
 
         if( ulMatchValue > ulStoppedTimerCompensation )
         {
-            /* Compensate for the fact that the CMT is going to be stopped
-             * momentarily. */
+            /*
+             * 补偿 CMT 将短暂停止的事实。
+             */
             ulMatchValue -= ulStoppedTimerCompensation;
         }
 
-        /* Stop the CMT momentarily.  The time the CMT is stopped for is
-         * accounted for as best it can be, but using the tickless mode will
-         * inevitably result in some tiny drift of the time maintained by the
-         * kernel with respect to calendar time. */
+        /*
+         * 暂时停止 CMT。CMT 停止的时间已尽可能计入，但使用 tickless 模式不可避免地
+         * 会导致内核维护的时间相对于日历时间出现微小漂移。
+         */
         CMT.CMSTR0.BIT.STR0 = 0;
 
         while( CMT.CMSTR0.BIT.STR0 == 1 )
         {
-            /* Nothing to do here. */
+            /* 此处无需执行任何操作。 */
         }
 
-        /* Critical section using the global interrupt bit as the i bit is
-         * automatically reset by the WAIT instruction. */
+        /*
+         * 使用全局中断位构成临界区，因为 i 位会被 WAIT 指令自动复位。
+         */
         __asm volatile ( "CLRPSW i" );
 
-        /* The tick flag is set to false before sleeping.  If it is true when
-         * sleep mode is exited then sleep mode was probably exited because the
-         * tick was suppressed for the entire xExpectedIdleTime period. */
+        /*
+         * 睡眠前将 tick 标志置为 false。若退出睡眠模式时为 true，则说明很可能是因为在
+         * 整个 xExpectedIdleTime 期间抑制了 tick 而退出睡眠模式。
+         */
         ulTickFlag = pdFALSE;
 
-        /* If a context switch is pending then abandon the low power entry as
-         * the context switch might have been pended by an external interrupt that
-         * requires processing. */
+        /*
+         * 若有上下文切换挂起，则放弃进入低功耗模式，因为该上下文切换可能是由需要处理
+         * 的外部中断挂起的。
+         */
         eSleepAction = eTaskConfirmSleepModeStatus();
 
         if( eSleepAction == eAbortSleep )
         {
-            /* Restart tick. */
+            /* 重启 tick。 */
             CMT.CMSTR0.BIT.STR0 = 1;
             __asm volatile ( "SETPSW i" );
         }
         else if( eSleepAction == eNoTasksWaitingTimeout )
         {
-            /* Protection off. */
+            /* 关闭保护。 */
             SYSTEM.PRCR.WORD = portUNLOCK_KEY;
 
-            /* Ready for software standby with all clocks stopped. */
+            /* 准备进入所有时钟停止的软件待机模式。 */
             SYSTEM.SBYCR.BIT.SSBY = 1;
 
-            /* Protection on. */
+            /* 开启保护。 */
             SYSTEM.PRCR.WORD = portLOCK_KEY;
 
-            /* Sleep until something happens.  Calling prvSleep() will
-             * automatically reset the i bit in the PSW. */
+            /*
+             * 睡眠直到有事件发生。调用 prvSleep() 会自动复位 PSW 中的 i 位。
+             */
             prvSleep( xExpectedIdleTime );
 
-            /* Restart the CMT. */
+            /* 重启 CMT。 */
             CMT.CMSTR0.BIT.STR0 = 1;
         }
         else
         {
-            /* Protection off. */
+            /* 关闭保护。 */
             SYSTEM.PRCR.WORD = portUNLOCK_KEY;
 
-            /* Ready for deep sleep mode. */
+            /* 准备进入深度睡眠模式。 */
             SYSTEM.MSTPCRC.BIT.DSLPE = 1;
             SYSTEM.MSTPCRA.BIT.MSTPA28 = 1;
             SYSTEM.SBYCR.BIT.SSBY = 0;
 
-            /* Protection on. */
+            /* 开启保护。 */
             SYSTEM.PRCR.WORD = portLOCK_KEY;
 
-            /* Adjust the match value to take into account that the current
-             * time slice is already partially complete. */
+            /*
+             * 调整匹配值，以考虑当前时间片已部分完成。
+             */
             ulMatchValue -= ( uint32_t ) CMT0.CMCNT;
             CMT0.CMCOR = ( uint16_t ) ulMatchValue;
 
-            /* Restart the CMT to count up to the new match value. */
+            /* 重启 CMT，向上计数到新的匹配值。 */
             CMT0.CMCNT = 0;
             CMT.CMSTR0.BIT.STR0 = 1;
 
-            /* Sleep until something happens.  Calling prvSleep() will
-             * automatically reset the i bit in the PSW. */
+            /*
+             * 睡眠直到有事件发生。调用 prvSleep() 会自动复位 PSW 中的 i 位。
+             */
             prvSleep( xExpectedIdleTime );
 
-            /* Stop CMT.  Again, the time the SysTick is stopped for is
-             * accounted for as best it can be, but using the tickless mode will
-             * inevitably result in some tiny drift of the time maintained by the
-             * kernel with respect to calendar time. */
+            /*
+             * 停止 CMT。同样，SysTick 停止的时间已尽可能计入，但使用 tickless 模式不可避免地
+             * 会导致内核维护的时间相对于日历时间出现微小漂移。
+             */
             CMT.CMSTR0.BIT.STR0 = 0;
 
             while( CMT.CMSTR0.BIT.STR0 == 1 )
             {
-                /* Nothing to do here. */
+                /* 此处无需执行任何操作。 */
             }
 
             ulCurrentCount = ( uint32_t ) CMT0.CMCNT;
 
             if( ulTickFlag != pdFALSE )
             {
-                /* The tick interrupt has already executed, although because
-                 * this function is called with the scheduler suspended the actual
-                 * tick processing will not occur until after this function has
-                 * exited.  Reset the match value with whatever remains of this
-                 * tick period. */
+                /*
+                 * 时钟节拍中断已经执行，但由于此函数在调度器挂起的情况下被调用，实际的 tick
+                 * 处理要等到此函数退出后才进行。用本 tick 周期剩余的时间重置匹配值。
+                 */
                 ulMatchValue = ulMatchValueForOneTick - ulCurrentCount;
                 CMT0.CMCOR = ( uint16_t ) ulMatchValue;
 
-                /* The tick interrupt handler will already have pended the tick
-                 * processing in the kernel.  As the pending tick will be
-                 * processed as soon as this function exits, the tick value
-                 * maintained by the tick is stepped forward by one less than the
-                 * time spent sleeping.  The actual stepping of the tick appears
-                 * later in this function. */
+                /*
+                 * 时钟节拍中断处理程序已在内核中挂起 tick 处理。由于挂起的 tick 将在此函数退出后
+                 * 立即处理，tick 维护的值会向前步进比睡眠时间少一的值。tick 的实际步进出现在
+                 * 此函数的后面。
+                 */
                 ulCompleteTickPeriods = xExpectedIdleTime - 1UL;
             }
             else
             {
-                /* Something other than the tick interrupt ended the sleep.
-                 * How many complete tick periods passed while the processor was
-                 * sleeping? */
+                /*
+                 * 睡眠是被时钟节拍中断以外的其他事件结束的。
+                 * 处理器睡眠期间经过了多少个完整的 tick 周期？
+                 */
                 ulCompleteTickPeriods = ulCurrentCount / ulMatchValueForOneTick;
 
-                /* The match value is set to whatever fraction of a single tick
-                 * period remains. */
+                /*
+                 * 匹配值设置为单个 tick 周期剩余的比例。
+                 */
                 ulMatchValue = ulCurrentCount - ( ulCompleteTickPeriods * ulMatchValueForOneTick );
                 CMT0.CMCOR = ( uint16_t ) ulMatchValue;
             }
 
-            /* Restart the CMT so it runs up to the match value.  The match value
-             * will get set to the value required to generate exactly one tick period
-             * the next time the CMT interrupt executes. */
+            /*
+             * 重启 CMT，使其运行到匹配值。下次 CMT 中断执行时，匹配值将被设置为恰好产生
+             * 一个 tick 周期所需的值。
+             */
             CMT0.CMCNT = 0;
             CMT.CMSTR0.BIT.STR0 = 1;
 
-            /* Wind the tick forward by the number of tick periods that the CPU
-             * remained in a low power state. */
+            /*
+             * 将 tick 向前推进 CPU 处于低功耗状态的 tick 周期数。
+             */
             vTaskStepTick( ulCompleteTickPeriods );
         }
     }
 
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE（宏） */
