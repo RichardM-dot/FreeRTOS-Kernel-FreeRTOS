@@ -26,56 +26,56 @@
  *
  */
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <stdint.h>
 
-/* Configuration includes. */
+/* 配置头文件包含。 */
 #include "FreeRTOSConfig.h"
 
-/* Secure context heap includes. */
+/* 安全上下文堆头文件包含。 */
 #include "secure_heap.h"
 
-/* Secure port macros. */
+/* 安全移植层宏。 */
 #include "secure_port_macros.h"
 
 /**
- * @brief Total heap size.
+ * @brief 堆总大小。
  */
 #ifndef secureconfigTOTAL_HEAP_SIZE
     #define secureconfigTOTAL_HEAP_SIZE    ( ( ( size_t ) ( 10 * 1024 ) ) )
 #endif
 
-/* No test marker by default. */
+/* 默认不使用测试标记。 */
 #ifndef mtCOVERAGE_TEST_MARKER
     #define mtCOVERAGE_TEST_MARKER()
 #endif
 
-/* No tracing by default. */
+/* 默认不启用跟踪。 */
 #ifndef traceMALLOC
     #define traceMALLOC( pvReturn, xWantedSize )
 #endif
 
-/* No tracing by default. */
+/* 默认不启用跟踪。 */
 #ifndef traceFREE
     #define traceFREE( pv, xBlockSize )
 #endif
 
-/* Block sizes must not get too small. */
+/* 块大小不得过小。 */
 #define secureheapMINIMUM_BLOCK_SIZE    ( ( size_t ) ( xHeapStructSize << 1 ) )
 
-/* Assumes 8bit bytes! */
+/* 假定字节为 8 位！ */
 #define secureheapBITS_PER_BYTE         ( ( size_t ) 8 )
 
-/* Max value that fits in a size_t type. */
+/* size_t 类型可容纳的最大值。 */
 #define secureheapSIZE_MAX              ( ~( ( size_t ) 0 ) )
 
-/* Check if adding a and b will result in overflow. */
+/* 检查 a 与 b 相加是否会溢出。 */
 #define secureheapADD_WILL_OVERFLOW( a, b )    ( ( a ) > ( secureheapSIZE_MAX - ( b ) ) )
 
-/* MSB of the xBlockSize member of an BlockLink_t structure is used to track
- * the allocation status of a block.  When MSB of the xBlockSize member of
- * an BlockLink_t structure is set then the block belongs to the application.
- * When the bit is free the block is still part of the free heap space. */
+/*
+ * BlockLink_t 结构体 xBlockSize 成员的最高位用于跟踪块的分配状态。
+ * 当 BlockLink_t 结构体 xBlockSize 成员的最高位被置位时，表示该块属于应用程序；该位为 0 时，块仍属于空闲堆空间。
+ */
 #define secureheapBLOCK_ALLOCATED_BITMASK    ( ( ( size_t ) 1 ) << ( ( sizeof( size_t ) * secureheapBITS_PER_BYTE ) - 1 ) )
 #define secureheapBLOCK_SIZE_IS_VALID( xBlockSize )    ( ( ( xBlockSize ) & secureheapBLOCK_ALLOCATED_BITMASK ) == 0 )
 #define secureheapBLOCK_IS_ALLOCATED( pxBlock )        ( ( ( pxBlock->xBlockSize ) & secureheapBLOCK_ALLOCATED_BITMASK ) != 0 )
@@ -83,61 +83,57 @@
 #define secureheapFREE_BLOCK( pxBlock )                ( ( pxBlock->xBlockSize ) &= ~secureheapBLOCK_ALLOCATED_BITMASK )
 /*-----------------------------------------------------------*/
 
-/* Allocate the memory for the heap. */
+/* 为堆分配内存。 */
 #if ( configAPPLICATION_ALLOCATED_HEAP == 1 )
 
-/* The application writer has already defined the array used for the RTOS
-* heap - probably so it can be placed in a special segment or address. */
+/*
+ * 应用程序编写者已定义用于 RTOS 堆的数组——通常是为了将其放置在特殊段或特定地址。
+ */
     extern uint8_t ucHeap[ secureconfigTOTAL_HEAP_SIZE ];
-#else /* configAPPLICATION_ALLOCATED_HEAP */
+#else /* configAPPLICATION_ALLOCATED_HEAP 条件编译分支 */
     static uint8_t ucHeap[ secureconfigTOTAL_HEAP_SIZE ];
-#endif /* configAPPLICATION_ALLOCATED_HEAP */
+#endif /* configAPPLICATION_ALLOCATED_HEAP 条件编译结束 */
 
 /**
- * @brief The linked list structure.
+ * @brief 链表结构体。
  *
- * This is used to link free blocks in order of their memory address.
+ * 用于按内存地址顺序链接空闲块。
  */
 typedef struct A_BLOCK_LINK
 {
-    struct A_BLOCK_LINK * pxNextFreeBlock; /**< The next free block in the list. */
-    size_t xBlockSize;                     /**< The size of the free block. */
+    struct A_BLOCK_LINK * pxNextFreeBlock; /**< 链表中的下一个空闲块。 */
+    size_t xBlockSize;                     /**< 空闲块的大小。 */
 } BlockLink_t;
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Called automatically to setup the required heap structures the first
- * time pvPortMalloc() is called.
+ * @brief 首次调用 pvPortMalloc() 时自动调用，用于建立所需的堆结构。
  */
 static void prvHeapInit( void );
 
 /**
- * @brief Inserts a block of memory that is being freed into the correct
- * position in the list of free memory blocks.
+ * @brief 将正在释放的内存块插入空闲内存块链表的正确位置。
  *
- * The block being freed will be merged with the block in front it and/or the
- * block behind it if the memory blocks are adjacent to each other.
+ * 如果相邻，被释放的块将与其前面和/或后面的块合并。
  *
- * @param[in] pxBlockToInsert The block being freed.
+ * @param[in] pxBlockToInsert 正在释放的块。
  */
 static void prvInsertBlockIntoFreeList( BlockLink_t * pxBlockToInsert );
 /*-----------------------------------------------------------*/
 
 /**
- * @brief The size of the structure placed at the beginning of each allocated
- * memory block must by correctly byte aligned.
+ * @brief 放置在每个已分配内存块起始处的结构体大小必须正确按字节对齐。
  */
 static const size_t xHeapStructSize = ( sizeof( BlockLink_t ) + ( ( size_t ) ( secureportBYTE_ALIGNMENT - 1 ) ) ) & ~( ( size_t ) secureportBYTE_ALIGNMENT_MASK );
 
 /**
- * @brief Create a couple of list links to mark the start and end of the list.
+ * @brief 创建两个链表链接项，用于标记链表的开始和结束。
  */
 static BlockLink_t xStart;
 static BlockLink_t * pxEnd = NULL;
 
 /**
- * @brief Keeps track of the number of free bytes remaining, but says nothing
- * about fragmentation.
+ * @brief 记录剩余空闲字节数，但不反映内存碎片情况。
  */
 static size_t xFreeBytesRemaining = 0U;
 static size_t xMinimumEverFreeBytesRemaining = 0U;
@@ -151,7 +147,7 @@ static void prvHeapInit( void )
     size_t uxAddress;
     size_t xTotalHeapSize = secureconfigTOTAL_HEAP_SIZE;
 
-    /* Ensure the heap starts on a correctly aligned boundary. */
+    /* 确保堆从正确对齐的边界开始。 */
     uxAddress = ( size_t ) ucHeap;
 
     if( ( uxAddress & secureportBYTE_ALIGNMENT_MASK ) != 0 )
@@ -163,13 +159,15 @@ static void prvHeapInit( void )
 
     pucAlignedHeap = ( uint8_t * ) uxAddress;
 
-    /* xStart is used to hold a pointer to the first item in the list of free
-     * blocks.  The void cast is used to prevent compiler warnings. */
+    /*
+     * xStart 用于保存指向空闲块链表首项的指针。使用 void 强制转换以避免编译器警告。
+     */
     xStart.pxNextFreeBlock = ( void * ) pucAlignedHeap;
     xStart.xBlockSize = ( size_t ) 0;
 
-    /* pxEnd is used to mark the end of the list of free blocks and is inserted
-     * at the end of the heap space. */
+    /*
+     * pxEnd 用于标记空闲块链表的结尾，插入在堆空间的末尾。
+     */
     uxAddress = ( ( size_t ) pucAlignedHeap ) + xTotalHeapSize;
     uxAddress -= xHeapStructSize;
     uxAddress &= ~( ( size_t ) secureportBYTE_ALIGNMENT_MASK );
@@ -177,13 +175,14 @@ static void prvHeapInit( void )
     pxEnd->xBlockSize = 0;
     pxEnd->pxNextFreeBlock = NULL;
 
-    /* To start with there is a single free block that is sized to take up the
-     * entire heap space, minus the space taken by pxEnd. */
+    /*
+     * 初始时只有一个空闲块，其大小占据整个堆空间减去 pxEnd 占用的空间。
+     */
     pxFirstFreeBlock = ( void * ) pucAlignedHeap;
     pxFirstFreeBlock->xBlockSize = uxAddress - ( size_t ) pxFirstFreeBlock;
     pxFirstFreeBlock->pxNextFreeBlock = pxEnd;
 
-    /* Only one block exists - and it covers the entire usable heap space. */
+    /* 只存在一个块——它覆盖整个可用堆空间。 */
     xMinimumEverFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
     xFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
 }
@@ -194,15 +193,17 @@ static void prvInsertBlockIntoFreeList( BlockLink_t * pxBlockToInsert )
     BlockLink_t * pxIterator;
     uint8_t * puc;
 
-    /* Iterate through the list until a block is found that has a higher address
-     * than the block being inserted. */
+    /*
+     * 遍历链表，直到找到地址高于待插入块的空闲块。
+     */
     for( pxIterator = &xStart; pxIterator->pxNextFreeBlock < pxBlockToInsert; pxIterator = pxIterator->pxNextFreeBlock )
     {
-        /* Nothing to do here, just iterate to the right position. */
+        /* 此处无需操作，只需遍历到正确位置。 */
     }
 
-    /* Do the block being inserted, and the block it is being inserted after
-     * make a contiguous block of memory? */
+    /*
+     * 待插入块与其前一个块是否构成连续内存块？
+     */
     puc = ( uint8_t * ) pxIterator;
 
     if( ( puc + pxIterator->xBlockSize ) == ( uint8_t * ) pxBlockToInsert )
@@ -215,15 +216,16 @@ static void prvInsertBlockIntoFreeList( BlockLink_t * pxBlockToInsert )
         mtCOVERAGE_TEST_MARKER();
     }
 
-    /* Do the block being inserted, and the block it is being inserted before
-     * make a contiguous block of memory? */
+    /*
+     * 待插入块与其后一个块是否构成连续内存块？
+     */
     puc = ( uint8_t * ) pxBlockToInsert;
 
     if( ( puc + pxBlockToInsert->xBlockSize ) == ( uint8_t * ) pxIterator->pxNextFreeBlock )
     {
         if( pxIterator->pxNextFreeBlock != pxEnd )
         {
-            /* Form one big block from the two blocks. */
+            /* 将两个块合并为一个大块。 */
             pxBlockToInsert->xBlockSize += pxIterator->pxNextFreeBlock->xBlockSize;
             pxBlockToInsert->pxNextFreeBlock = pxIterator->pxNextFreeBlock->pxNextFreeBlock;
         }
@@ -237,10 +239,10 @@ static void prvInsertBlockIntoFreeList( BlockLink_t * pxBlockToInsert )
         pxBlockToInsert->pxNextFreeBlock = pxIterator->pxNextFreeBlock;
     }
 
-    /* If the block being inserted plugged a gap, so was merged with the block
-     * before and the block after, then it's pxNextFreeBlock pointer will have
-     * already been set, and should not be set here as that would make it point
-     * to itself. */
+    /*
+     * 如果待插入块填补了空隙，即同时与前后的块合并，则其 pxNextFreeBlock 指针已经设置好，
+     * 此处不应再设置，否则会指向自身。
+     */
     if( pxIterator != pxBlockToInsert )
     {
         pxIterator->pxNextFreeBlock = pxBlockToInsert;
@@ -261,8 +263,9 @@ void * pvPortMalloc( size_t xWantedSize )
     size_t xAdditionalRequiredSize;
     size_t xAllocatedBlockSize = 0;
 
-    /* If this is the first call to malloc then the heap will require
-     * initialisation to setup the list of free blocks. */
+    /*
+     * 如果这是首次调用 malloc，则需要初始化堆，建立空闲块链表。
+     */
     if( pxEnd == NULL )
     {
         prvHeapInit();
@@ -274,17 +277,19 @@ void * pvPortMalloc( size_t xWantedSize )
 
     if( xWantedSize > 0 )
     {
-        /* The wanted size must be increased so it can contain a BlockLink_t
-         * structure in addition to the requested amount of bytes. */
+        /*
+         * 所需大小必须增加，以便除请求的字节数外还能容纳一个 BlockLink_t 结构体。
+         */
         if( secureheapADD_WILL_OVERFLOW( xWantedSize, xHeapStructSize ) == 0 )
         {
             xWantedSize += xHeapStructSize;
 
-            /* Ensure that blocks are always aligned to the required number
-             * of bytes. */
+            /*
+             * 确保块始终对齐到所需的字节数。
+             */
             if( ( xWantedSize & secureportBYTE_ALIGNMENT_MASK ) != 0x00 )
             {
-                /* Byte alignment required. */
+                /* 需要字节对齐。 */
                 xAdditionalRequiredSize = secureportBYTE_ALIGNMENT - ( xWantedSize & secureportBYTE_ALIGNMENT_MASK );
 
                 if( secureheapADD_WILL_OVERFLOW( xWantedSize, xAdditionalRequiredSize ) == 0 )
@@ -311,16 +316,17 @@ void * pvPortMalloc( size_t xWantedSize )
         mtCOVERAGE_TEST_MARKER();
     }
 
-    /* Check the requested block size is not so large that the top bit is set.
-     * The top bit of the block size member of the BlockLink_t structure is used
-     * to determine who owns the block - the application or the kernel, so it
-     * must be free. */
+    /*
+     * 检查请求的块大小不会大到使最高位被置位。
+     * BlockLink_t 结构体块大小成员的最高位用于判断块归应用程序还是内核所有，因此该位必须为 0。
+     */
     if( secureheapBLOCK_SIZE_IS_VALID( xWantedSize ) != 0 )
     {
         if( ( xWantedSize > 0 ) && ( xWantedSize <= xFreeBytesRemaining ) )
         {
-            /* Traverse the list from the start (lowest address) block until
-             * one of adequate size is found. */
+            /*
+             * 从起始块（最低地址）开始遍历链表，直到找到大小足够的块。
+             */
             pxPreviousBlock = &xStart;
             pxBlock = xStart.pxNextFreeBlock;
 
@@ -330,35 +336,40 @@ void * pvPortMalloc( size_t xWantedSize )
                 pxBlock = pxBlock->pxNextFreeBlock;
             }
 
-            /* If the end marker was reached then a block of adequate size was
-             * not found. */
+            /*
+             * 如果到达结束标记，则未找到大小足够的块。
+             */
             if( pxBlock != pxEnd )
             {
-                /* Return the memory space pointed to - jumping over the
-                 * BlockLink_t structure at its start. */
+                /*
+                 * 返回指向的内存空间——跳过其起始处的 BlockLink_t 结构体。
+                 */
                 pvReturn = ( void * ) ( ( ( uint8_t * ) pxPreviousBlock->pxNextFreeBlock ) + xHeapStructSize );
 
-                /* This block is being returned for use so must be taken out
-                 * of the list of free blocks. */
+                /*
+                 * 该块将被返回使用，因此必须从空闲块链表中移除。
+                 */
                 pxPreviousBlock->pxNextFreeBlock = pxBlock->pxNextFreeBlock;
 
-                /* If the block is larger than required it can be split into
-                 * two. */
+                /*
+                 * 如果块大于所需大小，可以将其拆分为两个块。
+                 */
                 if( ( pxBlock->xBlockSize - xWantedSize ) > secureheapMINIMUM_BLOCK_SIZE )
                 {
-                    /* This block is to be split into two.  Create a new
-                     * block following the number of bytes requested. The void
-                     * cast is used to prevent byte alignment warnings from the
-                     * compiler. */
+                    /*
+                     * 该块将被拆分为两个。在请求的字节数之后创建一个新块。
+                     * 使用 void 强制转换以避免编译器产生字节对齐警告。
+                     */
                     pxNewBlockLink = ( void * ) ( ( ( uint8_t * ) pxBlock ) + xWantedSize );
                     secureportASSERT( ( ( ( size_t ) pxNewBlockLink ) & secureportBYTE_ALIGNMENT_MASK ) == 0 );
 
-                    /* Calculate the sizes of two blocks split from the single
-                     * block. */
+                    /*
+                     * 计算由单个块拆分出的两个块的大小。
+                     */
                     pxNewBlockLink->xBlockSize = pxBlock->xBlockSize - xWantedSize;
                     pxBlock->xBlockSize = xWantedSize;
 
-                    /* Insert the new block into the list of free blocks. */
+                    /* 将新块插入空闲块链表。 */
                     pxNewBlockLink->pxNextFreeBlock = pxPreviousBlock->pxNextFreeBlock;
                     pxPreviousBlock->pxNextFreeBlock = pxNewBlockLink;
                 }
@@ -380,8 +391,9 @@ void * pvPortMalloc( size_t xWantedSize )
 
                 xAllocatedBlockSize = pxBlock->xBlockSize;
 
-                /* The block is being returned - it is allocated and owned by
-                 * the application and has no "next" block. */
+                /*
+                 * 该块正被返回——它已分配并归应用程序所有，没有“下一个”块。
+                 */
                 secureheapALLOCATE_BLOCK( pxBlock );
                 pxBlock->pxNextFreeBlock = NULL;
             }
@@ -402,7 +414,7 @@ void * pvPortMalloc( size_t xWantedSize )
 
     traceMALLOC( pvReturn, xAllocatedBlockSize );
 
-    /* Prevent compiler warnings when trace macros are not used. */
+    /* 在未使用跟踪宏时防止编译器警告。 */
     ( void ) xAllocatedBlockSize;
 
     #if ( secureconfigUSE_MALLOC_FAILED_HOOK == 1 )
@@ -417,7 +429,7 @@ void * pvPortMalloc( size_t xWantedSize )
             mtCOVERAGE_TEST_MARKER();
         }
     }
-    #endif /* if ( secureconfigUSE_MALLOC_FAILED_HOOK == 1 ) */
+    #endif /* if ( secureconfigUSE_MALLOC_FAILED_HOOK == 1 ) 条件编译结束 */
 
     secureportASSERT( ( ( ( size_t ) pvReturn ) & ( size_t ) secureportBYTE_ALIGNMENT_MASK ) == 0 );
     return pvReturn;
@@ -431,14 +443,15 @@ void vPortFree( void * pv )
 
     if( pv != NULL )
     {
-        /* The memory being freed will have an BlockLink_t structure immediately
-         * before it. */
+        /*
+         * 正在释放的内存其前方紧邻一个 BlockLink_t 结构体。
+         */
         puc -= xHeapStructSize;
 
-        /* This casting is to keep the compiler from issuing warnings. */
+        /* 此强制转换用于避免编译器发出警告。 */
         pxLink = ( void * ) puc;
 
-        /* Check the block is actually allocated. */
+        /* 检查该块确实已分配。 */
         secureportASSERT( secureheapBLOCK_IS_ALLOCATED( pxLink ) != 0 );
         secureportASSERT( pxLink->pxNextFreeBlock == NULL );
 
@@ -446,13 +459,14 @@ void vPortFree( void * pv )
         {
             if( pxLink->pxNextFreeBlock == NULL )
             {
-                /* The block is being returned to the heap - it is no longer
-                 * allocated. */
+                /*
+                 * 该块正归还给堆——它不再处于已分配状态。
+                 */
                 secureheapFREE_BLOCK( pxLink );
 
                 secureportDISABLE_NON_SECURE_INTERRUPTS();
                 {
-                    /* Add this block to the list of free blocks. */
+                    /* 将此块加入空闲块链表。 */
                     xFreeBytesRemaining += pxLink->xBlockSize;
                     traceFREE( pv, pxLink->xBlockSize );
                     prvInsertBlockIntoFreeList( ( ( BlockLink_t * ) pxLink ) );

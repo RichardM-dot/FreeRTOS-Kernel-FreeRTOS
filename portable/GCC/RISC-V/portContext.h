@@ -51,11 +51,12 @@
 
 #include "freertos_risc_v_chip_specific_extensions.h"
 
-/* Only the standard core registers are stored by default.  Any additional
- * registers must be saved by the portasmSAVE_ADDITIONAL_REGISTERS and
- * portasmRESTORE_ADDITIONAL_REGISTERS macros - which can be defined in a chip
- * specific version of freertos_risc_v_chip_specific_extensions.h.  See the
- * notes at the top of portASM.S file. */
+/*
+ * 默认只保存标准核心寄存器。任何附加寄存器都必须由
+ * portasmSAVE_ADDITIONAL_REGISTERS 和 portasmRESTORE_ADDITIONAL_REGISTERS
+ * 宏保存——这两个宏可在芯片专用的 freertos_risc_v_chip_specific_extensions.h
+ * 版本中定义。参见 portASM.S 文件顶部的说明。
+ */
 #ifdef __riscv_32e
     #define portCONTEXT_SIZE               ( 15 * portWORD_SIZE )
     #define portCRITICAL_NESTING_OFFSET    14
@@ -65,12 +66,12 @@
 #endif
 
 #if ( configENABLE_FPU == 1 )
-    /* Bit [14:13] in the mstatus encode the status of FPU state which is one of
-     * the following values:
-     * 1. Value: 0, Meaning: Off.
-     * 2. Value: 1, Meaning: Initial.
-     * 3. Value: 2, Meaning: Clean.
-     * 4. Value: 3, Meaning: Dirty.
+    /*
+     * mstatus 中的位 [14:13] 编码 FPU 状态，取值如下：
+     * 1. 值：0，含义：关闭。
+     * 2. 值：1，含义：初始。
+     * 3. 值：2，含义：干净。
+     * 4. 值：3，含义：脏。
      */
     #define MSTATUS_FS_MASK                 0x6000
     #define MSTATUS_FS_INITIAL              0x2000
@@ -90,7 +91,7 @@
         #endif
 
         #define portFPU_REG_SIZE                ( __riscv_flen / 8 )
-        #define portFPU_REG_COUNT               33 /* 32 Floating point registers plus one CSR. */
+        #define portFPU_REG_COUNT               33 /* 32 个浮点寄存器加 1 个 CSR。 */
         #define portFPU_REG_OFFSET( regIndex )  ( ( 2 * portWORD_SIZE ) + ( regIndex * portFPU_REG_SIZE ) )
         #define portFPU_CONTEXT_SIZE            ( portFPU_REG_SIZE * portFPU_REG_COUNT )
     #else
@@ -99,12 +100,12 @@
 #endif
 
 #if ( configENABLE_VPU == 1 )
-    /* Bit [10:9] in the mstatus encode the status of VPU state which is one of
-     * the following values:
-     * 1. Value: 0, Meaning: Off.
-     * 2. Value: 1, Meaning: Initial.
-     * 3. Value: 2, Meaning: Clean.
-     * 4. Value: 3, Meaning: Dirty.
+    /*
+     * mstatus 中的位 [10:9] 编码 VPU 状态，取值如下：
+     * 1. 值：0，含义：关闭。
+     * 2. 值：1，含义：初始。
+     * 3. 值：2，含义：干净。
+     * 4. 值：3，含义：脏。
      */
     #define MSTATUS_VS_MASK                 0x600
     #define MSTATUS_VS_INITIAL              0x200
@@ -126,7 +127,7 @@
 
     .macro portcontexSAVE_FPU_CONTEXT
 addi sp, sp, -( portFPU_CONTEXT_SIZE )
-/* Store the FPU registers. */
+/* 保存 FPU 寄存器。 */
 store_f f0,  portFPU_REG_OFFSET( 0  )( sp )
 store_f f1,  portFPU_REG_OFFSET( 1  )( sp )
 store_f f2,  portFPU_REG_OFFSET( 2  )( sp )
@@ -165,7 +166,7 @@ store_x t0,  portFPU_REG_OFFSET( 32 )( sp )
 /*-----------------------------------------------------------*/
 
     .macro portcontextRESTORE_FPU_CONTEXT
-/* Restore the FPU registers. */
+/* 恢复 FPU 寄存器。 */
 load_f f0,  portFPU_REG_OFFSET( 0  )( sp )
 load_f f1,  portFPU_REG_OFFSET( 1  )( sp )
 load_f f2,  portFPU_REG_OFFSET( 2  )( sp )
@@ -205,24 +206,24 @@ addi sp, sp, ( portFPU_CONTEXT_SIZE )
 /*-----------------------------------------------------------*/
 
     .macro portcontexSAVE_VPU_CONTEXT
-/* Un-reserve the space reserved for mstatus and epc. */
+/* 取消为 mstatus 和 epc 预留的空间。 */
 add sp, sp, ( 2 * portWORD_SIZE )
 
-csrr t0, vlenb /* t0 = vlenb. vlenb is the length of each vector register in bytes. */
-slli t0, t0, 3 /* t0 = vlenb * 8. t0 now contains the space required to store 8 vector registers. */
+csrr t0, vlenb /* t0 = vlenb。vlenb 是每个向量寄存器的字节长度。 */
+slli t0, t0, 3 /* t0 = vlenb * 8。此时 t0 保存存储 8 个向量寄存器所需的空间。 */
 neg  t0, t0
 
-/* Store the vector registers in group of 8. */
+/* 按 8 个一组保存向量寄存器。 */
 add     sp, sp, t0
-vs8r.v  v24, (sp)   /* Store v24-v31. */
+vs8r.v  v24, (sp)   /* 保存 v24-v31。 */
 add     sp, sp, t0
-vs8r.v  v16, (sp)   /* Store v16-v23. */
+vs8r.v  v16, (sp)   /* 保存 v16-v23。 */
 add     sp, sp, t0
-vs8r.v  v8, (sp)    /* Store v8-v15. */
+vs8r.v  v8, (sp)    /* 保存 v8-v15。 */
 add     sp, sp, t0
-vs8r.v  v0, (sp)    /* Store v0-v7. */
+vs8r.v  v0, (sp)    /* 保存 v0-v7。 */
 
-/* Store the VPU CSRs. */
+/* 保存 VPU 的 CSR。 */
 addi    sp, sp, -( 4 * portWORD_SIZE )
 csrr    t0, vstart
 store_x t0, 0 * portWORD_SIZE( sp )
@@ -233,39 +234,39 @@ store_x t0, 2 * portWORD_SIZE( sp )
 csrr    t0, vtype
 store_x t0, 3 * portWORD_SIZE( sp )
 
-/* Re-reserve the space for mstatus and epc. */
+/* 重新为 mstatus 和 epc 预留空间。 */
 add sp, sp, -( 2 * portWORD_SIZE )
     .endm
 /*-----------------------------------------------------------*/
 
     .macro portcontextRESTORE_VPU_CONTEXT
-/* Un-reserve the space reserved for mstatus and epc. */
+/* 取消为 mstatus 和 epc 预留的空间。 */
 add sp, sp, ( 2 * portWORD_SIZE )
 
-/* Restore the VPU CSRs. */
+/* 恢复 VPU 的 CSR。 */
 load_x  t0, 0  * portWORD_SIZE( sp )
 csrw    vstart, t0
 load_x  t0, 1 * portWORD_SIZE( sp )
 csrw    vcsr, t0
 load_x  t0, 2 * portWORD_SIZE( sp )
 load_x  t1, 3 * portWORD_SIZE( sp )
-vsetvl  x0, t0, t1 /* vlen and vtype can only be updated by using vset*vl* instructions. */
+vsetvl  x0, t0, t1 /* vlen 和 vtype 只能通过 vset*vl* 指令更新。 */
 addi    sp, sp, ( 4 * portWORD_SIZE )
 
-csrr t0, vlenb /* t0 = vlenb. vlenb is the length of each vector register in bytes. */
-slli t0, t0, 3 /* t0 = vlenb * 8. t0 now contains the space required to store 8 vector registers. */
+csrr t0, vlenb /* t0 = vlenb。vlenb 是每个向量寄存器的字节长度。 */
+slli t0, t0, 3 /* t0 = vlenb * 8。此时 t0 保存存储 8 个向量寄存器所需的空间。 */
 
-/* Restore the vector registers. */
-vl8r.v  v0, (sp)    /* Restore v0-v7. */
+/* 恢复向量寄存器。 */
+vl8r.v  v0, (sp)    /* 恢复 v0-v7。 */
 add     sp, sp, t0
-vl8r.v  v8, (sp)    /* Restore v8-v15. */
+vl8r.v  v8, (sp)    /* 恢复 v8-v15。 */
 add     sp, sp, t0
-vl8r.v  v16, (sp)   /* Restore v16-v23. */
+vl8r.v  v16, (sp)   /* 恢复 v16-v23。 */
 add     sp, sp, t0
-vl8r.v  v24, (sp)   /* Restore v23-v31. */
+vl8r.v  v24, (sp)   /* 恢复 v23-v31。 */
 add     sp, sp, t0
 
-/* Re-reserve the space for mstatus and epc. */
+/* 重新为 mstatus 和 epc 预留空间。 */
 add sp, sp, -( 2 * portWORD_SIZE )
     .endm
 /*-----------------------------------------------------------*/
@@ -301,17 +302,17 @@ store_x x15, 13 * portWORD_SIZE( sp )
     store_x x29, 27 * portWORD_SIZE( sp )
     store_x x30, 28 * portWORD_SIZE( sp )
     store_x x31, 29 * portWORD_SIZE( sp )
-#endif /* ifndef __riscv_32e */
+#endif /* ifndef __riscv_32e 条件结束 */
 
-load_x t0, xCriticalNesting                                   /* Load the value of xCriticalNesting into t0. */
-store_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Store the critical nesting value to the stack. */
+load_x t0, xCriticalNesting                                   /* 将 xCriticalNesting 的值加载到 t0。 */
+store_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* 将临界区嵌套值保存到栈中。 */
 
 #if( configENABLE_FPU == 1 )
     csrr t0, mstatus
     srl t1, t0, MSTATUS_FS_OFFSET
     andi t1, t1, 3
     addi t2, x0, 3
-    bne t1, t2, 1f /* If FPU status is not dirty, do not save FPU registers. */
+    bne t1, t2, 1f /* 若 FPU 状态不是脏，则不保存 FPU 寄存器。 */
 
     portcontexSAVE_FPU_CONTEXT
 1:
@@ -322,7 +323,7 @@ store_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Store the criti
     srl t1, t0, MSTATUS_VS_OFFSET
     andi t1, t1, 3
     addi t2, x0, 3
-    bne t1, t2, 2f /* If VPU status is not dirty, do not save VPU registers. */
+    bne t1, t2, 2f /* 若 VPU 状态不是脏，则不保存 VPU 寄存器。 */
 
     portcontexSAVE_VPU_CONTEXT
 2:
@@ -331,10 +332,10 @@ store_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Store the criti
 csrr t0, mstatus
 store_x t0, 1 * portWORD_SIZE( sp )
 
-portasmSAVE_ADDITIONAL_REGISTERS /* Defined in freertos_risc_v_chip_specific_extensions.h to save any registers unique to the RISC-V implementation. */
+portasmSAVE_ADDITIONAL_REGISTERS /* 由 freertos_risc_v_chip_specific_extensions.h 定义，用于保存 RISC-V 实现特有的所有寄存器。 */
 
 #if( configENABLE_FPU == 1 )
-    /* Mark the FPU as clean, if it was dirty and we saved FPU registers. */
+    /* 若 FPU 此前为脏且已保存 FPU 寄存器，则将 FPU 标记为干净。 */
     srl t1, t0, MSTATUS_FS_OFFSET
     andi t1, t1, 3
     addi t2, x0, 3
@@ -349,7 +350,7 @@ portasmSAVE_ADDITIONAL_REGISTERS /* Defined in freertos_risc_v_chip_specific_ext
 #endif
 
 #if( configENABLE_VPU == 1 )
-    /* Mark the VPU as clean, if it was dirty and we saved VPU registers. */
+    /* 若 VPU 此前为脏且已保存 VPU 寄存器，则将 VPU 标记为干净。 */
     srl t1, t0, MSTATUS_VS_OFFSET
     andi t1, t1, 3
     addi t2, x0, 3
@@ -363,8 +364,8 @@ portasmSAVE_ADDITIONAL_REGISTERS /* Defined in freertos_risc_v_chip_specific_ext
 4:
 #endif
 
-load_x t0, pxCurrentTCB          /* Load pxCurrentTCB. */
-store_x sp, 0 ( t0 )             /* Write sp to first TCB member. */
+load_x t0, pxCurrentTCB          /* 加载 pxCurrentTCB。 */
+store_x sp, 0 ( t0 )             /* 将 sp 写入 TCB 的第一个成员。 */
 
    .endm
 /*-----------------------------------------------------------*/
@@ -373,9 +374,9 @@ store_x sp, 0 ( t0 )             /* Write sp to first TCB member. */
 portcontextSAVE_CONTEXT_INTERNAL
 csrr a0, mcause
 csrr a1, mepc
-addi a1, a1, 4          /* Synchronous so update exception return address to the instruction after the instruction that generated the exception. */
-store_x a1, 0 ( sp )    /* Save updated exception return address. */
-load_x sp, xISRStackTop /* Switch to ISR stack. */
+addi a1, a1, 4          /* 同步异常，因此将异常返回地址更新为产生异常的指令之后的下一条指令。 */
+store_x a1, 0 ( sp )    /* 保存更新后的异常返回地址。 */
+load_x sp, xISRStackTop /* 切换到 ISR 栈。 */
    .endm
 /*-----------------------------------------------------------*/
 
@@ -383,25 +384,26 @@ load_x sp, xISRStackTop /* Switch to ISR stack. */
 portcontextSAVE_CONTEXT_INTERNAL
 csrr a0, mcause
 csrr a1, mepc
-store_x a1, 0 ( sp )    /* Asynchronous interrupt so save unmodified exception return address. */
-load_x sp, xISRStackTop /* Switch to ISR stack. */
+store_x a1, 0 ( sp )    /* 异步中断，因此保存未修改的异常返回地址。 */
+load_x sp, xISRStackTop /* 切换到 ISR 栈。 */
    .endm
 /*-----------------------------------------------------------*/
 
    .macro portcontextRESTORE_CONTEXT
-load_x t1, pxCurrentTCB /* Load pxCurrentTCB. */
-load_x sp, 0 ( t1 )     /* Read sp from first TCB member. */
+load_x t1, pxCurrentTCB /* 加载 pxCurrentTCB。 */
+load_x sp, 0 ( t1 )     /* 从 TCB 的第一个成员读取 sp。 */
 
-/* Load mepc with the address of the instruction in the task to run next. */
+/* 将下一条要执行的任务指令地址加载到 mepc。 */
 load_x t0, 0 ( sp )
 csrw mepc, t0
 
-/* Defined in freertos_risc_v_chip_specific_extensions.h to restore any registers unique to the RISC-V implementation. */
+/* 由 freertos_risc_v_chip_specific_extensions.h 定义，用于恢复 RISC-V 实现特有的所有寄存器。 */
 portasmRESTORE_ADDITIONAL_REGISTERS
 
-/* Restore mstatus register. It is important to use t3 (and not t0) here as t3
- * is not clobbered by portcontextRESTORE_VPU_CONTEXT and
- * portcontextRESTORE_FPU_CONTEXT. */
+/*
+ * 恢复 mstatus 寄存器。此处必须使用 t3（而不是 t0），因为 t3 不会被
+ * portcontextRESTORE_VPU_CONTEXT 和 portcontextRESTORE_FPU_CONTEXT 破坏。
+ */
 load_x t3, 1 * portWORD_SIZE( sp )
 csrw mstatus, t3
 
@@ -409,25 +411,25 @@ csrw mstatus, t3
     srl t1, t3, MSTATUS_VS_OFFSET
     andi t1, t1, 3
     addi t2, x0, 3
-    bne t1, t2, 5f /* If VPU status is not dirty, do not restore VPU registers. */
+    bne t1, t2, 5f /* 若 VPU 状态不是脏，则不恢复 VPU 寄存器。 */
 
     portcontextRESTORE_VPU_CONTEXT
 5:
-#endif /* ifdef portasmSTORE_VPU_CONTEXT */
+#endif /* ifdef portasmSTORE_VPU_CONTEXT 条件结束 */
 
 #if( configENABLE_FPU == 1 )
     srl t1, t3, MSTATUS_FS_OFFSET
     andi t1, t1, 3
     addi t2, x0, 3
-    bne t1, t2, 6f /* If FPU status is not dirty, do not restore FPU registers. */
+    bne t1, t2, 6f /* 若 FPU 状态不是脏，则不恢复 FPU 寄存器。 */
 
     portcontextRESTORE_FPU_CONTEXT
 6:
-#endif /* ifdef portasmSTORE_FPU_CONTEXT */
+#endif /* ifdef portasmSTORE_FPU_CONTEXT 条件结束 */
 
-load_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* Obtain xCriticalNesting value for this task from task's stack. */
-load_x t1, pxCriticalNesting                                 /* Load the address of xCriticalNesting into t1. */
-store_x t0, 0 ( t1 )                                         /* Restore the critical nesting value for this task. */
+load_x t0, portCRITICAL_NESTING_OFFSET * portWORD_SIZE( sp ) /* 从任务栈中获取该任务的 xCriticalNesting 值。 */
+load_x t1, pxCriticalNesting                                 /* 将 xCriticalNesting 的地址加载到 t1。 */
+store_x t0, 0 ( t1 )                                         /* 恢复该任务的临界区嵌套值。 */
 
 load_x x1,  2  * portWORD_SIZE( sp )
 load_x x5,  3  * portWORD_SIZE( sp )
@@ -458,11 +460,11 @@ load_x x15, 13 * portWORD_SIZE( sp )
     load_x x29, 27 * portWORD_SIZE( sp )
     load_x x30, 28 * portWORD_SIZE( sp )
     load_x x31, 29 * portWORD_SIZE( sp )
-#endif /* ifndef __riscv_32e */
+#endif /* ifndef __riscv_32e 条件结束 */
 addi sp, sp, portCONTEXT_SIZE
 
 mret
    .endm
 /*-----------------------------------------------------------*/
 
-#endif /* PORTCONTEXT_H */
+#endif /* 头文件保护：PORTCONTEXT_H */

@@ -30,13 +30,13 @@
 #define __SECURE_PORT_MACROS_H__
 
 /**
- * @brief Byte alignment requirements.
+ * @brief 字节对齐要求。
  */
 #define secureportBYTE_ALIGNMENT         8
 #define secureportBYTE_ALIGNMENT_MASK    ( 0x0007 )
 
 /**
- * @brief Macro to declare a function as non-secure callable.
+ * @brief 将函数声明为非安全可调用（non-secure callable）的宏。
  */
 #if defined( __IAR_SYSTEMS_ICC__ )
     #define secureportNON_SECURE_CALLABLE    __cmse_nonsecure_entry __root
@@ -45,89 +45,88 @@
 #endif
 
 /**
- * @brief Set the secure PRIMASK value.
+ * @brief 设置安全 PRIMASK 的值。
  */
 #define secureportSET_SECURE_PRIMASK( ulPrimaskValue ) \
     __asm volatile ( "msr primask, %0" : : "r" ( ulPrimaskValue ) : "memory" )
 
 /**
- * @brief Set the non-secure PRIMASK value.
+ * @brief 设置非安全 PRIMASK 的值。
  */
 #define secureportSET_NON_SECURE_PRIMASK( ulPrimaskValue ) \
     __asm volatile ( "msr primask_ns, %0" : : "r" ( ulPrimaskValue ) : "memory" )
 
 /**
- * @brief Read the PSP value in the given variable.
+ * @brief 将 PSP 的值读入指定变量。
  */
 #define secureportREAD_PSP( pucOutCurrentStackPointer ) \
     __asm volatile ( "mrs %0, psp"  : "=r" ( pucOutCurrentStackPointer ) )
 
 /**
- * @brief Set the PSP to the given value.
+ * @brief 将 PSP 设置为指定值。
  */
 #define secureportSET_PSP( pucCurrentStackPointer ) \
     __asm volatile ( "msr psp, %0" : : "r" ( pucCurrentStackPointer ) )
 
 /**
- * @brief Read the PSPLIM value in the given variable.
+ * @brief 将 PSPLIM 的值读入指定变量。
  */
 #define secureportREAD_PSPLIM( pucOutStackLimit ) \
     __asm volatile ( "mrs %0, psplim"  : "=r" ( pucOutStackLimit ) )
 
 /**
- * @brief Set the PSPLIM to the given value.
+ * @brief 将 PSPLIM 设置为指定值。
  */
 #define secureportSET_PSPLIM( pucStackLimit ) \
     __asm volatile ( "msr psplim, %0" : : "r" ( pucStackLimit ) )
 
 /**
- * @brief Set the NonSecure MSP to the given value.
+ * @brief 将非安全 MSP 设置为指定值。
  */
 #define secureportSET_MSP_NS( pucMainStackPointer ) \
     __asm volatile ( "msr msp_ns, %0" : : "r" ( pucMainStackPointer ) )
 
 /**
- * @brief Set the CONTROL register to the given value.
+ * @brief 将 CONTROL 寄存器设置为指定值。
  */
 #define secureportSET_CONTROL( ulControl ) \
     __asm volatile ( "msr control, %0" : : "r" ( ulControl ) : "memory" )
 
 /**
- * @brief Read the Interrupt Program Status Register (IPSR) value in the given
- * variable.
+ * @brief 将中断程序状态寄存器（IPSR）的值读入指定变量。
  */
 #define secureportREAD_IPSR( ulIPSR ) \
     __asm volatile ( "mrs %0, ipsr"  : "=r" ( ulIPSR ) )
 
 /**
- * @brief PRIMASK value to enable interrupts.
+ * @brief 用于使能中断的 PRIMASK 值。
  */
 #define secureportPRIMASK_ENABLE_INTERRUPTS_VAL     0
 
 /**
- * @brief PRIMASK value to disable interrupts.
+ * @brief 用于禁用中断的 PRIMASK 值。
  */
 #define secureportPRIMASK_DISABLE_INTERRUPTS_VAL    1
 
 /**
- * @brief Disable secure interrupts.
+ * @brief 禁用安全中断。
  */
 #define secureportDISABLE_SECURE_INTERRUPTS()        secureportSET_SECURE_PRIMASK( secureportPRIMASK_DISABLE_INTERRUPTS_VAL )
 
 /**
- * @brief Disable non-secure interrupts.
+ * @brief 禁用非安全中断。
  *
- * This effectively disables context switches.
+ * 这实际上会禁用上下文切换。
  */
 #define secureportDISABLE_NON_SECURE_INTERRUPTS()    secureportSET_NON_SECURE_PRIMASK( secureportPRIMASK_DISABLE_INTERRUPTS_VAL )
 
 /**
- * @brief Enable non-secure interrupts.
+ * @brief 使能非安全中断。
  */
 #define secureportENABLE_NON_SECURE_INTERRUPTS()     secureportSET_NON_SECURE_PRIMASK( secureportPRIMASK_ENABLE_INTERRUPTS_VAL )
 
 /**
- * @brief Assert definition.
+ * @brief 断言定义。
  */
 #define secureportASSERT( x )                      \
     if( ( x ) == 0 )                               \
@@ -137,4 +136,4 @@
         for( ; ; ) {; }                            \
     }
 
-#endif /* __SECURE_PORT_MACROS_H__ */
+#endif /* 头文件保护：__SECURE_PORT_MACROS_H__ */

@@ -29,86 +29,82 @@
 #ifndef __PORT_ASM_H__
 #define __PORT_ASM_H__
 
-/* Scheduler includes. */
+/* 调度器相关头文件。 */
 #include "FreeRTOS.h"
 
-/* MPU wrappers includes. */
+/* MPU 包装器相关头文件。 */
 #include "mpu_wrappers.h"
 
 /**
- * @brief Restore the context of the first task so that the first task starts
- * executing.
+ * @brief 恢复第一个任务的上下文，使第一个任务开始
+ * 执行。
  */
 void vRestoreContextOfFirstTask( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Checks whether or not the processor is privileged.
+ * @brief 检查处理器是否具有特权。
  *
- * @return 1 if the processor is already privileged, 0 otherwise.
+ * @return 如果处理器已具有特权则返回 1，否则返回 0。
  */
 BaseType_t xIsPrivileged( void ) __attribute__( ( naked ) );
 
 /**
- * @brief Raises the privilege level by clearing the bit 0 of the CONTROL
- * register.
+ * @brief 通过清除 CONTROL 寄存器的 bit 0 提升特权级。
  *
- * @note This is a privileged function and should only be called from the kernel
- * code.
+ * @note 这是一个特权函数，只应从内核代码中调用。
  *
- * Bit 0 of the CONTROL register defines the privilege level of Thread Mode.
- *  Bit[0] = 0 --> The processor is running privileged
- *  Bit[0] = 1 --> The processor is running unprivileged.
+ * CONTROL 寄存器的 bit 0 定义线程模式的特权级。
+ *  Bit[0] = 0 --> 处理器以特权级运行
+ *  Bit[0] = 1 --> 处理器以非特权级运行。
  */
 void vRaisePrivilege( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Lowers the privilege level by setting the bit 0 of the CONTROL
- * register.
+ * @brief 通过设置 CONTROL 寄存器的 bit 0 降低特权级。
  *
- * Bit 0 of the CONTROL register defines the privilege level of Thread Mode.
- *  Bit[0] = 0 --> The processor is running privileged
- *  Bit[0] = 1 --> The processor is running unprivileged.
+ * CONTROL 寄存器的 bit 0 定义线程模式的特权级。
+ *  Bit[0] = 0 --> 处理器以特权级运行
+ *  Bit[0] = 1 --> 处理器以非特权级运行。
  */
 void vResetPrivilege( void ) __attribute__( ( naked ) );
 
 /**
- * @brief Starts the first task.
+ * @brief 启动第一个任务。
  */
 void vStartFirstTask( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Disables interrupts.
+ * @brief 禁用中断。
  */
 uint32_t ulSetInterruptMask( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Enables interrupts.
+ * @brief 使能中断。
  */
 void vClearInterruptMask( uint32_t ulMask ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief PendSV Exception handler.
+ * @brief PendSV 异常处理程序。
  */
 void PendSV_Handler( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief SVC Handler.
+ * @brief SVC 处理程序。
  */
 void SVC_Handler( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Allocate a Secure context for the calling task.
+ * @brief 为调用任务分配安全上下文。
  *
- * @param[in] ulSecureStackSize The size of the stack to be allocated on the
- * secure side for the calling task.
+ * @param[in] ulSecureStackSize 为调用任务在安全侧分配的栈大小。
  */
 void vPortAllocateSecureContext( uint32_t ulSecureStackSize ) __attribute__( ( naked ) );
 
 /**
- * @brief Free the task's secure context.
+ * @brief 释放任务的安全上下文。
  *
- * @param[in] pulTCB Pointer to the Task Control Block (TCB) of the task.
+ * @param[in] pulTCB 指向任务控制块（TCB）的指针。
  */
 void vPortFreeSecureContext( uint32_t * pulTCB ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
-#endif /* __PORT_ASM_H__ */
+#endif /* __PORT_ASM_H__（头文件保护宏） */

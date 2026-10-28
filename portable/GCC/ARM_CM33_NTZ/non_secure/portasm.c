@@ -27,258 +27,261 @@
  *
  */
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <stdint.h>
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE ensures that PRIVILEGED_FUNCTION
- * is defined correctly and privileged functions are placed in correct sections. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可确保 PRIVILEGED_FUNCTION
+ * 被正确定义，并将特权函数放置在正确的段中。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/* Portasm includes. */
+/* portasm 相关头文件包含。 */
 #include "portasm.h"
 
-/* System call numbers includes. */
+/* 系统调用编号相关头文件包含。 */
 #include "mpu_syscall_numbers.h"
 
-/* MPU_WRAPPERS_INCLUDED_FROM_API_FILE is needed to be defined only for the
- * header files. */
+/*
+ * 仅需为头文件定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE。
+ */
 #undef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 #if ( configENABLE_MPU == 1 )
 
-    void vRestoreContextOfFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+    void vRestoreContextOfFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
     {
         __asm volatile
         (
             " .syntax unified                                 \n"
             "                                                 \n"
             " program_mpu_first_task:                         \n"
-            "    ldr r2, =pxCurrentTCB                        \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB. */
+            "    ldr r2, =pxCurrentTCB                        \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB（当前任务控制块指针）。 */
             "                                                 \n"
-            "    dmb                                          \n" /* Complete outstanding transfers before disabling MPU. */
-            "    ldr r1, =0xe000ed94                          \n" /* r1 = 0xe000ed94 [Location of MPU_CTRL]. */
-            "    ldr r2, [r1]                                 \n" /* Read the value of MPU_CTRL. */
-            "    bic r2, #1                                   \n" /* r2 = r2 & ~1 i.e. Clear the bit 0 in r2. */
-            "    str r2, [r1]                                 \n" /* Disable MPU. */
+            "    dmb                                          \n" /* 在禁止 MPU 之前完成尚未结束的传输。 */
+            "    ldr r1, =0xe000ed94                          \n" /* r1 = 0xe000ed94（MPU_CTRL 的地址）。 */
+            "    ldr r2, [r1]                                 \n" /* 读取 MPU_CTRL 的值。 */
+            "    bic r2, #1                                   \n" /* r2 = r2 & ~1，即清除 r2 中的位 0。 */
+            "    str r2, [r1]                                 \n" /* 禁止 MPU。 */
             "                                                 \n"
-            "    adds r0, #4                                  \n" /* r0 = r0 + 4. r0 now points to MAIR0 in TCB. */
-            "    ldr r1, [r0]                                 \n" /* r1 = *r0 i.e. r1 = MAIR0. */
-            "    ldr r2, =0xe000edc0                          \n" /* r2 = 0xe000edc0 [Location of MAIR0]. */
-            "    str r1, [r2]                                 \n" /* Program MAIR0. */
+            "    adds r0, #4                                  \n" /* r0 = r0 + 4。r0 现在指向 TCB 中的 MAIR0。 */
+            "    ldr r1, [r0]                                 \n" /* r1 = *r0，即 r1 = MAIR0。 */
+            "    ldr r2, =0xe000edc0                          \n" /* r2 = 0xe000edc0（MAIR0 的地址）。 */
+            "    str r1, [r2]                                 \n" /* 配置 MAIR0。 */
             "                                                 \n"
-            "    adds r0, #4                                  \n" /* r0 = r0 + 4. r0 now points to first RBAR in TCB. */
-            "    ldr r1, =0xe000ed98                          \n" /* r1 = 0xe000ed98 [Location of RNR]. */
-            "    ldr r2, =0xe000ed9c                          \n" /* r2 = 0xe000ed9c [Location of RBAR]. */
+            "    adds r0, #4                                  \n" /* r0 = r0 + 4。r0 现在指向 TCB 中的第一个 RBAR。 */
+            "    ldr r1, =0xe000ed98                          \n" /* r1 = 0xe000ed98（RNR 的地址）。 */
+            "    ldr r2, =0xe000ed9c                          \n" /* r2 = 0xe000ed9c（RBAR 的地址）。 */
             "                                                 \n"
-            "    movs r3, #4                                  \n" /* r3 = 4. */
-            "    str r3, [r1]                                 \n" /* Program RNR = 4. */
-            "    ldmia r0!, {r4-r11}                          \n" /* Read 4 sets of RBAR/RLAR registers from TCB. */
-            "    stmia r2, {r4-r11}                           \n" /* Write 4 set of RBAR/RLAR registers using alias registers. */
+            "    movs r3, #4                                  \n" /* r3 = 4（区域编号）。 */
+            "    str r3, [r1]                                 \n" /* 配置 RNR = 4。 */
+            "    ldmia r0!, {r4-r11}                          \n" /* 从 TCB 读取 4 组 RBAR/RLAR 寄存器。 */
+            "    stmia r2, {r4-r11}                           \n" /* 使用别名寄存器写入 4 组 RBAR/RLAR 寄存器。 */
             "                                                 \n"
         #if ( configTOTAL_MPU_REGIONS == 16 )
-            "    movs r3, #8                                  \n" /* r3 = 8. */
-            "    str r3, [r1]                                 \n" /* Program RNR = 8. */
-            "    ldmia r0!, {r4-r11}                          \n" /* Read 4 sets of RBAR/RLAR registers from TCB. */
-            "    stmia r2, {r4-r11}                           \n" /* Write 4 set of RBAR/RLAR registers using alias registers. */
-            "    movs r3, #12                                 \n" /* r3 = 12. */
-            "    str r3, [r1]                                 \n" /* Program RNR = 12. */
-            "    ldmia r0!, {r4-r11}                          \n" /* Read 4 sets of RBAR/RLAR registers from TCB. */
-            "    stmia r2, {r4-r11}                           \n" /* Write 4 set of RBAR/RLAR registers using alias registers. */
-        #endif /* configTOTAL_MPU_REGIONS == 16 */
+            "    movs r3, #8                                  \n" /* r3 = 8（区域编号）。 */
+            "    str r3, [r1]                                 \n" /* 配置 RNR = 8。 */
+            "    ldmia r0!, {r4-r11}                          \n" /* 从 TCB 读取 4 组 RBAR/RLAR 寄存器。 */
+            "    stmia r2, {r4-r11}                           \n" /* 使用别名寄存器写入 4 组 RBAR/RLAR 寄存器。 */
+            "    movs r3, #12                                 \n" /* r3 = 12（区域编号）。 */
+            "    str r3, [r1]                                 \n" /* 配置 RNR = 12。 */
+            "    ldmia r0!, {r4-r11}                          \n" /* 从 TCB 读取 4 组 RBAR/RLAR 寄存器。 */
+            "    stmia r2, {r4-r11}                           \n" /* 使用别名寄存器写入 4 组 RBAR/RLAR 寄存器。 */
+        #endif /* configTOTAL_MPU_REGIONS == 16（条件编译结束） */
             "                                                 \n"
-            "   ldr r1, =0xe000ed94                           \n" /* r1 = 0xe000ed94 [Location of MPU_CTRL]. */
-            "   ldr r2, [r1]                                  \n" /* Read the value of MPU_CTRL. */
-            "   orr r2, #1                                    \n" /* r2 = r2 | 1 i.e. Set the bit 0 in r2. */
-            "   str r2, [r1]                                  \n" /* Enable MPU. */
-            "   dsb                                           \n" /* Force memory writes before continuing. */
+            "   ldr r1, =0xe000ed94                           \n" /* r1 = 0xe000ed94（MPU_CTRL 的地址）。 */
+            "   ldr r2, [r1]                                  \n" /* 读取 MPU_CTRL 的值。 */
+            "   orr r2, #1                                    \n" /* r2 = r2 | 1，即置位 r2 中的位 0。 */
+            "   str r2, [r1]                                  \n" /* 使能 MPU。 */
+            "   dsb                                           \n" /* 在继续之前强制完成内存写入。 */
             "                                                 \n"
             " restore_context_first_task:                     \n"
-            "    ldr r2, =pxCurrentTCB                        \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB.*/
-            "    ldr r1, [r0]                                 \n" /* r1 = Location of saved context in TCB. */
+            "    ldr r2, =pxCurrentTCB                        \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB（当前任务控制块指针）。 */
+            "    ldr r1, [r0]                                 \n" /* r1 = TCB 中保存上下文的位置。 */
             "                                                 \n"
             " restore_special_regs_first_task:                \n"
         #if ( configENABLE_PAC == 1 )
-            "   ldmdb r1!, {r2-r5}                            \n" /* Read task's dedicated PAC key from the task's context. */
-            "   msr  PAC_KEY_P_0, r2                          \n" /* Write the task's dedicated PAC key to the PAC key registers. */
+            "   ldmdb r1!, {r2-r5}                            \n" /* 从任务上下文中读取该任务专用的 PAC 密钥。 */
+            "   msr  PAC_KEY_P_0, r2                          \n" /* 将任务专用的 PAC 密钥写入 PAC 密钥寄存器。 */
             "   msr  PAC_KEY_P_1, r3                          \n"
             "   msr  PAC_KEY_P_2, r4                          \n"
             "   msr  PAC_KEY_P_3, r5                          \n"
-            "   clrm {r2-r5}                                  \n" /* Clear r2-r5. */
-        #endif /* configENABLE_PAC */
-            "    ldmdb r1!, {r2-r4, lr}                       \n" /* r2 = original PSP, r3 = PSPLIM, r4 = CONTROL, LR restored. */
+            "   clrm {r2-r5}                                  \n" /* 清除 r2-r5。 */
+        #endif /* configENABLE_PAC（条件编译结束） */
+            "    ldmdb r1!, {r2-r4, lr}                       \n" /* r2 = 原始 PSP，r3 = PSPLIM，r4 = CONTROL，LR 已恢复。 */
             "    msr psp, r2                                  \n"
             "    msr psplim, r3                               \n"
             "    msr control, r4                              \n"
             "                                                 \n"
             " restore_general_regs_first_task:                \n"
-            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 contain hardware saved context. */
-            "    stmia r2!, {r4-r11}                          \n" /* Copy the hardware saved context on the task stack. */
-            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 restored. */
+            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 包含硬件保存的上下文。 */
+            "    stmia r2!, {r4-r11}                          \n" /* 将硬件保存的上下文复制到任务栈上。 */
+            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 已恢复。 */
             "                                                 \n"
             " restore_context_done_first_task:                \n"
-            "    str r1, [r0]                                 \n" /* Save the location where the context should be saved next as the first member of TCB. */
+            "    str r1, [r0]                                 \n" /* 将下次保存上下文的位置作为 TCB 的第一个成员保存。 */
             "    mov r0, #0                                   \n"
-            "    msr basepri, r0                              \n" /* Ensure that interrupts are enabled when the first task starts. */
+            "    msr basepri, r0                              \n" /* 确保第一个任务启动时中断已使能。 */
             "    bx lr                                        \n"
         );
     }
 
-#else /* configENABLE_MPU */
+#else /* configENABLE_MPU（条件编译结束） */
 
-    void vRestoreContextOfFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+    void vRestoreContextOfFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
     {
         __asm volatile
         (
             "   .syntax unified                                 \n"
             "                                                   \n"
         /*
-         * The SMP-specific logic below is derived from the Raspberry Pi
-         * implementation in the FreeRTOS-Kernel-Community-Supported-Ports project.
-         * Source: GCC/RP2350_ARM_NTZ/non_secure/portasm.c
-         * Upstream commit: 8b2955f6d97bf4cd582db9f5b62d9eb1587b76d7
+         * 以下 SMP 专用逻辑源自 FreeRTOS-Kernel-Community-Supported-Ports 项目中的
+         * Raspberry Pi 实现。
+         * 来源：GCC/RP2350_ARM_NTZ/non_secure/portasm.c
+         * 上游提交：8b2955f6d97bf4cd582db9f5b62d9eb1587b76d7
          */
         #if ( configNUMBER_OF_CORES == 1)
-            "   ldr  r2, =pxCurrentTCB                          \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "   ldr  r1, [r2]                                   \n" /* Read pxCurrentTCB. */
-        #else /* if ( configNUMBER_OF_CORES == 1) */
-            "   ldr r1, =ulFirstTaskLiteralPool                 \n" /* Get the location of the current TCB and the Id of the current core. */
+            "   ldr  r2, =pxCurrentTCB                          \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "   ldr  r1, [r2]                                   \n" /* 读取 pxCurrentTCB（当前任务控制块指针）。 */
+        #else /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
+            "   ldr r1, =ulFirstTaskLiteralPool                 \n" /* 获取当前 TCB 的位置和当前内核的 ID。 */
             "   ldmia r1!, {r2, r3}                             \n"
-            "   ldr r2, [r2]                                    \n" /* r2 = Core Id */
-            "   ldr r1, [r3, r2, LSL #2]                        \n" /* r1 = pxCurrentTCBs[CORE_ID] */
-        #endif /* if ( configNUMBER_OF_CORES == 1) */
-            "   ldr  r0, [r1]                                   \n" /* Read top of stack from TCB - The first item in pxCurrentTCB is the task top of stack. */
+            "   ldr r2, [r2]                                    \n" /* r2 = 内核 ID */
+            "   ldr r1, [r3, r2, LSL #2]                        \n" /* r1 = pxCurrentTCBs[CORE_ID]（按内核 ID 索引的当前 TCB 指针） */
+        #endif /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
+            "   ldr  r0, [r1]                                   \n" /* 从 TCB 读取栈顶——pxCurrentTCB 的第一项即任务栈顶。 */
             "                                                   \n"
         #if ( configENABLE_PAC == 1 )
-            "   ldmia r0!, {r1-r4}                              \n" /* Read task's dedicated PAC key from stack. */
-            "   msr  PAC_KEY_P_3, r1                            \n" /* Write the task's dedicated PAC key to the PAC key registers. */
+            "   ldmia r0!, {r1-r4}                              \n" /* 从栈中读取任务专用的 PAC 密钥。 */
+            "   msr  PAC_KEY_P_3, r1                            \n" /* 将任务专用的 PAC 密钥写入 PAC 密钥寄存器。 */
             "   msr  PAC_KEY_P_2, r2                            \n"
             "   msr  PAC_KEY_P_1, r3                            \n"
             "   msr  PAC_KEY_P_0, r4                            \n"
-            "   clrm {r1-r4}                                    \n" /* Clear r1-r4. */
-        #endif /* configENABLE_PAC */
+            "   clrm {r1-r4}                                    \n" /* 清除 r1-r4。 */
+        #endif /* configENABLE_PAC（条件编译结束） */
             "                                                   \n"
-            "   ldm  r0!, {r1-r2}                               \n" /* Read from stack - r1 = PSPLIM and r2 = EXC_RETURN. */
-            "   msr  psplim, r1                                 \n" /* Set this task's PSPLIM value. */
-            "   mrs  r1, control                                \n" /* Obtain current control register value. */
-            "   orrs r1, r1, #2                                 \n" /* r1 = r1 | 0x2 - Set the second bit to use the program stack pointer (PSP). */
-            "   msr control, r1                                 \n" /* Write back the new control register value. */
-            "   adds r0, #32                                    \n" /* Discard everything up to r0. */
-            "   msr  psp, r0                                    \n" /* This is now the new top of stack to use in the task. */
+            "   ldm  r0!, {r1-r2}                               \n" /* 从栈中读取——r1 = PSPLIM，r2 = EXC_RETURN。 */
+            "   msr  psplim, r1                                 \n" /* 设置该任务的 PSPLIM 值。 */
+            "   mrs  r1, control                                \n" /* 获取当前 control 寄存器的值。 */
+            "   orrs r1, r1, #2                                 \n" /* r1 = r1 | 0x2——置位第 2 位，以使用进程栈指针（PSP）。 */
+            "   msr control, r1                                 \n" /* 写回新的 control 寄存器值。 */
+            "   adds r0, #32                                    \n" /* 丢弃直到 r0 的所有内容。 */
+            "   msr  psp, r0                                    \n" /* 这就是任务中要使用的新栈顶。 */
             "   isb                                             \n"
             "   mov  r0, #0                                     \n"
-            "   msr  basepri, r0                                \n" /* Ensure that interrupts are enabled when the first task starts. */
-            "   bx   r2                                         \n" /* Finally, branch to EXC_RETURN. */
+            "   msr  basepri, r0                                \n" /* 确保第一个任务启动时中断已使能。 */
+            "   bx   r2                                         \n" /* 最后，跳转到 EXC_RETURN。 */
         #if ( configNUMBER_OF_CORES > 1 )
             "                                                   \n"
             "     .align 4                                      \n"
             "ulFirstTaskLiteralPool:                            \n"
-            "    .word %c0                                      \n" /* CORE_ID_REGISTER */
+            "    .word %c0                                      \n" /* CORE_ID_REGISTER（内核 ID 寄存器） */
             "    .word pxCurrentTCBs                            \n"
             :: "i" (configCORE_ID_REGISTER)
-        #endif /* if ( configNUMBER_OF_CORES > 1 ) */
+        #endif /* if ( configNUMBER_OF_CORES > 1 )（条件编译结束） */
         );
     }
 
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU（条件编译结束） */
 /*-----------------------------------------------------------*/
 
-BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked )) */
+BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked ))（裸函数） */
 {
     __asm volatile
     (
         "   .syntax unified                                 \n"
         "                                                   \n"
-        "   mrs r0, control                                 \n" /* r0 = CONTROL. */
-        "   tst r0, #1                                      \n" /* Perform r0 & 1 (bitwise AND) and update the conditions flag. */
+        "   mrs r0, control                                 \n" /* r0 = CONTROL（控制寄存器）。 */
+        "   tst r0, #1                                      \n" /* 执行 r0 & 1（按位与），并更新条件标志。 */
         "   ite ne                                          \n"
-        "   movne r0, #0                                    \n" /* CONTROL[0]!=0. Return false to indicate that the processor is not privileged. */
-        "   moveq r0, #1                                    \n" /* CONTROL[0]==0. Return true to indicate that the processor is privileged. */
-        "   bx lr                                           \n" /* Return. */
+        "   movne r0, #0                                    \n" /* CONTROL[0]!=0。返回 false，表示处理器为非特权级。 */
+        "   moveq r0, #1                                    \n" /* CONTROL[0]==0。返回 true，表示处理器为特权级。 */
+        "   bx lr                                           \n" /* 返回。 */
         ::: "r0", "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-void vRaisePrivilege( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+void vRaisePrivilege( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
 {
     __asm volatile
     (
         "   .syntax unified                                 \n"
         "                                                   \n"
-        "   mrs  r0, control                                \n" /* Read the CONTROL register. */
-        "   bic r0, #1                                      \n" /* Clear the bit 0. */
-        "   msr  control, r0                                \n" /* Write back the new CONTROL value. */
-        "   bx lr                                           \n" /* Return to the caller. */
+        "   mrs  r0, control                                \n" /* 读取 CONTROL 寄存器。 */
+        "   bic r0, #1                                      \n" /* 清除位 0。 */
+        "   msr  control, r0                                \n" /* 写回新的 CONTROL 值。 */
+        "   bx lr                                           \n" /* 返回调用者。 */
         ::: "r0", "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-void vResetPrivilege( void ) /* __attribute__ (( naked )) */
+void vResetPrivilege( void ) /* __attribute__ (( naked ))（裸函数） */
 {
     __asm volatile
     (
         "   .syntax unified                                 \n"
         "                                                   \n"
-        "   mrs r0, control                                 \n" /* r0 = CONTROL. */
-        "   orr r0, #1                                      \n" /* r0 = r0 | 1. */
-        "   msr control, r0                                 \n" /* CONTROL = r0. */
-        "   bx lr                                           \n" /* Return to the caller. */
+        "   mrs r0, control                                 \n" /* r0 = CONTROL（控制寄存器）。 */
+        "   orr r0, #1                                      \n" /* r0 = r0 | 1（置位位 0）。 */
+        "   msr control, r0                                 \n" /* CONTROL = r0（写回控制寄存器）。 */
+        "   bx lr                                           \n" /* 返回调用者。 */
         ::: "r0", "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-void vStartFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+void vStartFirstTask( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
 {
     __asm volatile
     (
         "   .syntax unified                                 \n"
         "                                                   \n"
-        "   ldr r0, =0xe000ed08                             \n" /* Use the NVIC offset register to locate the stack. */
-        "   ldr r0, [r0]                                    \n" /* Read the VTOR register which gives the address of vector table. */
-        "   ldr r0, [r0]                                    \n" /* The first entry in vector table is stack pointer. */
-        "   msr msp, r0                                     \n" /* Set the MSP back to the start of the stack. */
-        "   cpsie i                                         \n" /* Globally enable interrupts. */
+        "   ldr r0, =0xe000ed08                             \n" /* 使用 NVIC 偏移寄存器定位栈。 */
+        "   ldr r0, [r0]                                    \n" /* 读取 VTOR 寄存器，该寄存器给出向量表的地址。 */
+        "   ldr r0, [r0]                                    \n" /* 向量表中的第一项是栈指针。 */
+        "   msr msp, r0                                     \n" /* 将 MSP 重新设置为栈的起始位置。 */
+        "   cpsie i                                         \n" /* 全局使能中断。 */
         "   cpsie f                                         \n"
         "   dsb                                             \n"
         "   isb                                             \n"
-        "   svc %0                                          \n" /* System call to start the first task. */
+        "   svc %0                                          \n" /* 通过系统调用启动第一个任务。 */
         "   nop                                             \n"
         ::"i" ( portSVC_START_SCHEDULER ) : "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */
+uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
 {
     __asm volatile
     (
         "   .syntax unified                                 \n"
         "                                                   \n"
-        "   mrs r0, basepri                                 \n" /* r0 = basepri. Return original basepri value. */
-        "   mov r1, %0                                      \n" /* r1 = configMAX_SYSCALL_INTERRUPT_PRIORITY. */
-        "   msr basepri, r1                                 \n" /* Disable interrupts up to configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+        "   mrs r0, basepri                                 \n" /* r0 = basepri。返回原始 basepri 值。 */
+        "   mov r1, %0                                      \n" /* r1 = configMAX_SYSCALL_INTERRUPT_PRIORITY（系统调用可用的最高中断优先级）。 */
+        "   msr basepri, r1                                 \n" /* 禁止优先级不高于 configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断。 */
         "   dsb                                             \n"
         "   isb                                             \n"
-        "   bx lr                                           \n" /* Return. */
+        "   bx lr                                           \n" /* 返回。 */
         ::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) : "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-void vClearInterruptMask( __attribute__( ( unused ) ) uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */
+void vClearInterruptMask( __attribute__( ( unused ) ) uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
 {
     __asm volatile
     (
         "   .syntax unified                                 \n"
         "                                                   \n"
-        "   msr basepri, r0                                 \n" /* basepri = ulMask. */
+        "   msr basepri, r0                                 \n" /* basepri = ulMask（设置中断屏蔽值）。 */
         "   dsb                                             \n"
         "   isb                                             \n"
-        "   bx lr                                           \n" /* Return. */
+        "   bx lr                                           \n" /* 返回。 */
         ::: "memory"
     );
 }
@@ -286,240 +289,240 @@ void vClearInterruptMask( __attribute__( ( unused ) ) uint32_t ulMask ) /* __att
 
 #if ( configENABLE_MPU == 1 )
 
-    void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+    void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
     {
         __asm volatile
         (
             " .syntax unified                                 \n"
             "                                                 \n"
-            " ldr r2, =pxCurrentTCB                           \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            " ldr r0, [r2]                                    \n" /* r0 = pxCurrentTCB. */
-            " ldr r1, [r0]                                    \n" /* r1 = Location in TCB where the context should be saved. */
-            " mrs r2, psp                                     \n" /* r2 = PSP. */
+            " ldr r2, =pxCurrentTCB                           \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            " ldr r0, [r2]                                    \n" /* r0 = pxCurrentTCB（当前任务控制块指针）。 */
+            " ldr r1, [r0]                                    \n" /* r1 = TCB 中应保存上下文的位置。 */
+            " mrs r2, psp                                     \n" /* r2 = PSP（进程栈指针）。 */
             "                                                 \n"
             " save_general_regs:                              \n"
         #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) )
-            "    add r2, r2, #0x20                            \n" /* Move r2 to location where s0 is saved. */
+            "    add r2, r2, #0x20                            \n" /* 将 r2 移到保存 s0 的位置。 */
             "    tst lr, #0x10                                \n"
             "    ittt eq                                      \n"
-            "    vstmiaeq r1!, {s16-s31}                      \n" /* Store s16-s31. */
-            "    vldmiaeq r2, {s0-s16}                        \n" /* Copy hardware saved FP context into s0-s16. */
-            "    vstmiaeq r1!, {s0-s16}                       \n" /* Store hardware saved FP context. */
-            "    sub r2, r2, #0x20                            \n" /* Set r2 back to the location of hardware saved context. */
-        #endif /* configENABLE_FPU || configENABLE_MVE */
-            "    stmia r1!, {r4-r11}                          \n" /* Store r4-r11. */
-            "    ldmia r2, {r4-r11}                           \n" /* Copy the hardware saved context into r4-r11. */
-            "    stmia r1!, {r4-r11}                          \n" /* Store the hardware saved context. */
+            "    vstmiaeq r1!, {s16-s31}                      \n" /* 保存 s16-s31。 */
+            "    vldmiaeq r2, {s0-s16}                        \n" /* 将硬件保存的 FP 上下文复制到 s0-s16。 */
+            "    vstmiaeq r1!, {s0-s16}                       \n" /* 保存硬件保存的 FP 上下文。 */
+            "    sub r2, r2, #0x20                            \n" /* 将 r2 重新设置为硬件保存上下文的位置。 */
+        #endif /* configENABLE_FPU || configENABLE_MVE（条件编译结束） */
+            "    stmia r1!, {r4-r11}                          \n" /* 保存 r4-r11。 */
+            "    ldmia r2, {r4-r11}                           \n" /* 将硬件保存的上下文复制到 r4-r11。 */
+            "    stmia r1!, {r4-r11}                          \n" /* 保存硬件保存的上下文。 */
             "                                                 \n"
             " save_special_regs:                              \n"
-            "    mrs r3, psplim                               \n" /* r3 = PSPLIM. */
-            "    mrs r4, control                              \n" /* r4 = CONTROL. */
-            "    stmia r1!, {r2-r4, lr}                       \n" /* Store original PSP (after hardware has saved context), PSPLIM, CONTROL and LR. */
+            "    mrs r3, psplim                               \n" /* r3 = PSPLIM（进程栈限）。 */
+            "    mrs r4, control                              \n" /* r4 = CONTROL（控制寄存器）。 */
+            "    stmia r1!, {r2-r4, lr}                       \n" /* 保存原始 PSP（硬件已保存上下文之后）、PSPLIM、CONTROL 和 LR。 */
         #if ( configENABLE_PAC == 1 )
-            "   mrs  r2, PAC_KEY_P_0                          \n" /* Read task's dedicated PAC key from the PAC key registers. */
+            "   mrs  r2, PAC_KEY_P_0                          \n" /* 从 PAC 密钥寄存器读取任务专用的 PAC 密钥。 */
             "   mrs  r3, PAC_KEY_P_1                          \n"
             "   mrs  r4, PAC_KEY_P_2                          \n"
             "   mrs  r5, PAC_KEY_P_3                          \n"
-            "   stmia r1!, {r2-r5}                            \n" /* Store the task's dedicated PAC key on the task's context. */
-            "   clrm {r2-r5}                                  \n" /* Clear r2-r5. */
-        #endif /* configENABLE_PAC */
-            "    str r1, [r0]                                 \n" /* Save the location from where the context should be restored as the first member of TCB. */
+            "   stmia r1!, {r2-r5}                            \n" /* 将任务专用的 PAC 密钥保存到任务上下文中。 */
+            "   clrm {r2-r5}                                  \n" /* 清除 r2-r5。 */
+        #endif /* configENABLE_PAC（条件编译结束） */
+            "    str r1, [r0]                                 \n" /* 将应从中恢复上下文的位置作为 TCB 的第一个成员保存。 */
             "                                                 \n"
             " select_next_task:                               \n"
-            "    mov r0, %0                                   \n" /* r0 = configMAX_SYSCALL_INTERRUPT_PRIORITY */
-            "    msr basepri, r0                              \n" /* Disable interrupts up to configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+            "    mov r0, %0                                   \n" /* r0 = configMAX_SYSCALL_INTERRUPT_PRIORITY（系统调用可用的最高中断优先级）。 */
+            "    msr basepri, r0                              \n" /* 禁止优先级不高于 configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断。 */
             "    dsb                                          \n"
             "    isb                                          \n"
             "    bl vTaskSwitchContext                        \n"
-            "    mov r0, #0                                   \n" /* r0 = 0. */
-            "    msr basepri, r0                              \n" /* Enable interrupts. */
+            "    mov r0, #0                                   \n" /* r0 = 0（不屏蔽任何中断）。 */
+            "    msr basepri, r0                              \n" /* 使能中断。 */
             "                                                 \n"
             " program_mpu:                                    \n"
-            "    ldr r2, =pxCurrentTCB                        \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB. */
+            "    ldr r2, =pxCurrentTCB                        \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB（当前任务控制块指针）。 */
             "                                                 \n"
-            "    dmb                                          \n" /* Complete outstanding transfers before disabling MPU. */
-            "    ldr r1, =0xe000ed94                          \n" /* r1 = 0xe000ed94 [Location of MPU_CTRL]. */
-            "    ldr r2, [r1]                                 \n" /* Read the value of MPU_CTRL. */
-            "    bic r2, #1                                   \n" /* r2 = r2 & ~1 i.e. Clear the bit 0 in r2. */
-            "    str r2, [r1]                                 \n" /* Disable MPU. */
+            "    dmb                                          \n" /* 在禁止 MPU 之前完成尚未结束的传输。 */
+            "    ldr r1, =0xe000ed94                          \n" /* r1 = 0xe000ed94（MPU_CTRL 的地址）。 */
+            "    ldr r2, [r1]                                 \n" /* 读取 MPU_CTRL 的值。 */
+            "    bic r2, #1                                   \n" /* r2 = r2 & ~1，即清除 r2 中的位 0。 */
+            "    str r2, [r1]                                 \n" /* 禁止 MPU。 */
             "                                                 \n"
-            "    adds r0, #4                                  \n" /* r0 = r0 + 4. r0 now points to MAIR0 in TCB. */
-            "    ldr r1, [r0]                                 \n" /* r1 = *r0 i.e. r1 = MAIR0. */
-            "    ldr r2, =0xe000edc0                          \n" /* r2 = 0xe000edc0 [Location of MAIR0]. */
-            "    str r1, [r2]                                 \n" /* Program MAIR0. */
+            "    adds r0, #4                                  \n" /* r0 = r0 + 4。r0 现在指向 TCB 中的 MAIR0。 */
+            "    ldr r1, [r0]                                 \n" /* r1 = *r0，即 r1 = MAIR0。 */
+            "    ldr r2, =0xe000edc0                          \n" /* r2 = 0xe000edc0（MAIR0 的地址）。 */
+            "    str r1, [r2]                                 \n" /* 配置 MAIR0。 */
             "                                                 \n"
-            "    adds r0, #4                                  \n" /* r0 = r0 + 4. r0 now points to first RBAR in TCB. */
-            "    ldr r1, =0xe000ed98                          \n" /* r1 = 0xe000ed98 [Location of RNR]. */
-            "    ldr r2, =0xe000ed9c                          \n" /* r2 = 0xe000ed9c [Location of RBAR]. */
+            "    adds r0, #4                                  \n" /* r0 = r0 + 4。r0 现在指向 TCB 中的第一个 RBAR。 */
+            "    ldr r1, =0xe000ed98                          \n" /* r1 = 0xe000ed98（RNR 的地址）。 */
+            "    ldr r2, =0xe000ed9c                          \n" /* r2 = 0xe000ed9c（RBAR 的地址）。 */
             "                                                 \n"
-            "    movs r3, #4                                  \n" /* r3 = 4. */
-            "    str r3, [r1]                                 \n" /* Program RNR = 4. */
-            "    ldmia r0!, {r4-r11}                          \n" /* Read 4 sets of RBAR/RLAR registers from TCB. */
-            "    stmia r2, {r4-r11}                           \n" /* Write 4 set of RBAR/RLAR registers using alias registers. */
+            "    movs r3, #4                                  \n" /* r3 = 4（区域编号）。 */
+            "    str r3, [r1]                                 \n" /* 配置 RNR = 4。 */
+            "    ldmia r0!, {r4-r11}                          \n" /* 从 TCB 读取 4 组 RBAR/RLAR 寄存器。 */
+            "    stmia r2, {r4-r11}                           \n" /* 使用别名寄存器写入 4 组 RBAR/RLAR 寄存器。 */
             "                                                 \n"
         #if ( configTOTAL_MPU_REGIONS == 16 )
-            "    movs r3, #8                                  \n" /* r3 = 8. */
-            "    str r3, [r1]                                 \n" /* Program RNR = 8. */
-            "    ldmia r0!, {r4-r11}                          \n" /* Read 4 sets of RBAR/RLAR registers from TCB. */
-            "    stmia r2, {r4-r11}                           \n" /* Write 4 set of RBAR/RLAR registers using alias registers. */
-            "    movs r3, #12                                 \n" /* r3 = 12. */
-            "    str r3, [r1]                                 \n" /* Program RNR = 12. */
-            "    ldmia r0!, {r4-r11}                          \n" /* Read 4 sets of RBAR/RLAR registers from TCB. */
-            "    stmia r2, {r4-r11}                           \n" /* Write 4 set of RBAR/RLAR registers using alias registers. */
-        #endif /* configTOTAL_MPU_REGIONS == 16 */
+            "    movs r3, #8                                  \n" /* r3 = 8（区域编号）。 */
+            "    str r3, [r1]                                 \n" /* 配置 RNR = 8。 */
+            "    ldmia r0!, {r4-r11}                          \n" /* 从 TCB 读取 4 组 RBAR/RLAR 寄存器。 */
+            "    stmia r2, {r4-r11}                           \n" /* 使用别名寄存器写入 4 组 RBAR/RLAR 寄存器。 */
+            "    movs r3, #12                                 \n" /* r3 = 12（区域编号）。 */
+            "    str r3, [r1]                                 \n" /* 配置 RNR = 12。 */
+            "    ldmia r0!, {r4-r11}                          \n" /* 从 TCB 读取 4 组 RBAR/RLAR 寄存器。 */
+            "    stmia r2, {r4-r11}                           \n" /* 使用别名寄存器写入 4 组 RBAR/RLAR 寄存器。 */
+        #endif /* configTOTAL_MPU_REGIONS == 16（条件编译结束） */
             "                                                 \n"
-            "   ldr r1, =0xe000ed94                           \n" /* r1 = 0xe000ed94 [Location of MPU_CTRL]. */
-            "   ldr r2, [r1]                                  \n" /* Read the value of MPU_CTRL. */
-            "   orr r2, #1                                    \n" /* r2 = r2 | 1 i.e. Set the bit 0 in r2. */
-            "   str r2, [r1]                                  \n" /* Enable MPU. */
-            "   dsb                                           \n" /* Force memory writes before continuing. */
+            "   ldr r1, =0xe000ed94                           \n" /* r1 = 0xe000ed94（MPU_CTRL 的地址）。 */
+            "   ldr r2, [r1]                                  \n" /* 读取 MPU_CTRL 的值。 */
+            "   orr r2, #1                                    \n" /* r2 = r2 | 1，即置位 r2 中的位 0。 */
+            "   str r2, [r1]                                  \n" /* 使能 MPU。 */
+            "   dsb                                           \n" /* 在继续之前强制完成内存写入。 */
             "                                                 \n"
             " restore_context:                                \n"
-            "    ldr r2, =pxCurrentTCB                        \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB.*/
-            "    ldr r1, [r0]                                 \n" /* r1 = Location of saved context in TCB. */
+            "    ldr r2, =pxCurrentTCB                        \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "    ldr r0, [r2]                                 \n" /* r0 = pxCurrentTCB（当前任务控制块指针）。 */
+            "    ldr r1, [r0]                                 \n" /* r1 = TCB 中保存上下文的位置。 */
             "                                                 \n"
             " restore_special_regs:                           \n"
         #if ( configENABLE_PAC == 1 )
-            "   ldmdb r1!, {r2-r5}                            \n" /* Read task's dedicated PAC key from the task's context. */
-            "   msr  PAC_KEY_P_0, r2                          \n" /* Write the task's dedicated PAC key to the PAC key registers. */
+            "   ldmdb r1!, {r2-r5}                            \n" /* 从任务上下文中读取该任务专用的 PAC 密钥。 */
+            "   msr  PAC_KEY_P_0, r2                          \n" /* 将任务专用的 PAC 密钥写入 PAC 密钥寄存器。 */
             "   msr  PAC_KEY_P_1, r3                          \n"
             "   msr  PAC_KEY_P_2, r4                          \n"
             "   msr  PAC_KEY_P_3, r5                          \n"
-            "   clrm {r2-r5}                                  \n" /* Clear r2-r5. */
-        #endif /* configENABLE_PAC */
-            "    ldmdb r1!, {r2-r4, lr}                       \n" /* r2 = original PSP, r3 = PSPLIM, r4 = CONTROL, LR restored. */
+            "   clrm {r2-r5}                                  \n" /* 清除 r2-r5。 */
+        #endif /* configENABLE_PAC（条件编译结束） */
+            "    ldmdb r1!, {r2-r4, lr}                       \n" /* r2 = 原始 PSP，r3 = PSPLIM，r4 = CONTROL，LR 已恢复。 */
             "    msr psp, r2                                  \n"
             "    msr psplim, r3                               \n"
             "    msr control, r4                              \n"
             "                                                 \n"
             " restore_general_regs:                           \n"
-            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 contain hardware saved context. */
-            "    stmia r2!, {r4-r11}                          \n" /* Copy the hardware saved context on the task stack. */
-            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 restored. */
+            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 包含硬件保存的上下文。 */
+            "    stmia r2!, {r4-r11}                          \n" /* 将硬件保存的上下文复制到任务栈上。 */
+            "    ldmdb r1!, {r4-r11}                          \n" /* r4-r11 已恢复。 */
         #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) )
             "    tst lr, #0x10                                \n"
             "    ittt eq                                      \n"
-            "    vldmdbeq r1!, {s0-s16}                       \n" /* s0-s16 contain hardware saved FP context. */
-            "    vstmiaeq r2!, {s0-s16}                       \n" /* Copy hardware saved FP context on the task stack. */
-            "    vldmdbeq r1!, {s16-s31}                      \n" /* Restore s16-s31. */
-        #endif /* configENABLE_FPU || configENABLE_MVE */
+            "    vldmdbeq r1!, {s0-s16}                       \n" /* s0-s16 包含硬件保存的 FP 上下文。 */
+            "    vstmiaeq r2!, {s0-s16}                       \n" /* 将硬件保存的 FP 上下文复制到任务栈上。 */
+            "    vldmdbeq r1!, {s16-s31}                      \n" /* 恢复 s16-s31。 */
+        #endif /* configENABLE_FPU || configENABLE_MVE（条件编译结束） */
             "                                                 \n"
             " restore_context_done:                           \n"
-            "    str r1, [r0]                                 \n" /* Save the location where the context should be saved next as the first member of TCB. */
+            "    str r1, [r0]                                 \n" /* 将下次保存上下文的位置作为 TCB 的第一个成员保存。 */
             "    bx lr                                        \n"
             ::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY )
         );
     }
 
-#else /* configENABLE_MPU */
+#else /* configENABLE_MPU（条件编译结束） */
 
-    void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+    void PendSV_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
     {
         __asm volatile
         (
             "   .syntax unified                                 \n"
             "                                                   \n"
-            "   mrs r0, psp                                     \n" /* Read PSP in r0. */
+            "   mrs r0, psp                                     \n" /* 将 PSP 读入 r0（进程栈指针）。 */
             "                                                   \n"
         #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) )
-            "   tst lr, #0x10                                   \n" /* Test Bit[4] in LR. Bit[4] of EXC_RETURN is 0 if the Extended Stack Frame is in use. */
+            "   tst lr, #0x10                                   \n" /* 测试 LR 中的位[4]。若使用扩展栈帧，则 EXC_RETURN 的位[4]为 0。 */
             "   it eq                                           \n"
-            "   vstmdbeq r0!, {s16-s31}                         \n" /* Store the additional FP context registers which are not saved automatically. */
-        #endif /* configENABLE_FPU || configENABLE_MVE */
+            "   vstmdbeq r0!, {s16-s31}                         \n" /* 保存不会自动保存的附加 FP 上下文寄存器。 */
+        #endif /* configENABLE_FPU || configENABLE_MVE（条件编译结束） */
             "                                                   \n"
-            "   mrs r2, psplim                                  \n" /* r2 = PSPLIM. */
-            "   mov r3, lr                                      \n" /* r3 = LR/EXC_RETURN. */
-            "   stmdb r0!, {r2-r11}                             \n" /* Store on the stack - PSPLIM, LR and registers that are not automatically saved. */
+            "   mrs r2, psplim                                  \n" /* r2 = PSPLIM（进程栈限）。 */
+            "   mov r3, lr                                      \n" /* r3 = LR/EXC_RETURN（链接寄存器/异常返回信息）。 */
+            "   stmdb r0!, {r2-r11}                             \n" /* 保存到栈中——PSPLIM、LR 以及不会自动保存的寄存器。 */
             "                                                   \n"
         #if ( configENABLE_PAC == 1 )
-            "   mrs  r1, PAC_KEY_P_3                            \n" /* Read task's dedicated PAC key from the PAC key registers. */
+            "   mrs  r1, PAC_KEY_P_3                            \n" /* 从 PAC 密钥寄存器读取任务专用的 PAC 密钥。 */
             "   mrs  r2, PAC_KEY_P_2                            \n"
             "   mrs  r3, PAC_KEY_P_1                            \n"
             "   mrs  r4, PAC_KEY_P_0                            \n"
-            "   stmdb r0!, {r1-r4}                              \n" /* Store the task's dedicated PAC key on the stack. */
-            "   clrm {r1-r4}                                    \n" /* Clear r1-r4. */
-        #endif /* configENABLE_PAC */
+            "   stmdb r0!, {r1-r4}                              \n" /* 将任务专用的 PAC 密钥保存到栈中。 */
+            "   clrm {r1-r4}                                    \n" /* 清除 r1-r4。 */
+        #endif /* configENABLE_PAC（条件编译结束） */
             "                                                   \n"
         /*
-         * The SMP-specific logic below is derived from the Raspberry Pi
-         * implementation in the FreeRTOS-Kernel-Community-Supported-Ports project.
-         * Source: GCC/RP2350_ARM_NTZ/non_secure/portasm.c
-         * Upstream commit: 8b2955f6d97bf4cd582db9f5b62d9eb1587b76d7
+         * 以下 SMP 专用逻辑源自 FreeRTOS-Kernel-Community-Supported-Ports 项目中的
+         * Raspberry Pi 实现。
+         * 来源：GCC/RP2350_ARM_NTZ/non_secure/portasm.c
+         * 上游提交：8b2955f6d97bf4cd582db9f5b62d9eb1587b76d7
          */
         #if ( configNUMBER_OF_CORES == 1)
-            "   ldr r2, =pxCurrentTCB                           \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "   ldr r1, [r2]                                    \n" /* Read pxCurrentTCB. */
-        #else /* if ( configNUMBER_OF_CORES == 1) */
-            "   ldr r1, =ulPendSVLiteralPool                    \n" /* Get the location of the current TCB and the Id of the current core. */
+            "   ldr r2, =pxCurrentTCB                           \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "   ldr r1, [r2]                                    \n" /* 读取 pxCurrentTCB（当前任务控制块指针）。 */
+        #else /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
+            "   ldr r1, =ulPendSVLiteralPool                    \n" /* 获取当前 TCB 的位置和当前内核的 ID。 */
             "   ldmia r1!, {r2, r3}                             \n"
-            "   ldr r2, [r2]                                    \n" /* r2 = Core Id */
-            "   ldr r1, [r3, r2, LSL #2]                        \n" /* r1 = pxCurrentTCBs[CORE_ID] */
-        #endif /* if ( configNUMBER_OF_CORES == 1) */
-            "   str r0, [r1]                                    \n" /* Save the new top of stack in TCB. */
+            "   ldr r2, [r2]                                    \n" /* r2 = 内核 ID */
+            "   ldr r1, [r3, r2, LSL #2]                        \n" /* r1 = pxCurrentTCBs[CORE_ID]（按内核 ID 索引的当前 TCB 指针） */
+        #endif /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
+            "   str r0, [r1]                                    \n" /* 将新的栈顶保存到 TCB 中。 */
             "                                                   \n"
-            "   mov r0, %0                                      \n" /* r0 = configMAX_SYSCALL_INTERRUPT_PRIORITY */
-            "   msr basepri, r0                                 \n" /* Disable interrupts up to configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+            "   mov r0, %0                                      \n" /* r0 = configMAX_SYSCALL_INTERRUPT_PRIORITY（系统调用可用的最高中断优先级）。 */
+            "   msr basepri, r0                                 \n" /* 禁止优先级不高于 configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断。 */
             "   dsb                                             \n"
             "   isb                                             \n"
         #if ( configNUMBER_OF_CORES > 1)
-            "   mov r0, r2                                      \n" /* r0 = ucPortGetCoreID() */
-        #endif /* if ( configNUMBER_OF_CORES == 1) */
+            "   mov r0, r2                                      \n" /* r0 = ucPortGetCoreID()（获取内核 ID） */
+        #endif /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
             "   bl vTaskSwitchContext                           \n"
-            "   mov r0, #0                                      \n" /* r0 = 0. */
-            "   msr basepri, r0                                 \n" /* Enable interrupts. */
+            "   mov r0, #0                                      \n" /* r0 = 0（不屏蔽任何中断）。 */
+            "   msr basepri, r0                                 \n" /* 使能中断。 */
             "                                                   \n"
         #if ( configNUMBER_OF_CORES == 1)
-            "   ldr r2, =pxCurrentTCB                           \n" /* Read the location of pxCurrentTCB i.e. &( pxCurrentTCB ). */
-            "   ldr r1, [r2]                                    \n" /* Read pxCurrentTCB. */
-        #else /* if ( configNUMBER_OF_CORES == 1) */
-            "   ldr r1, =ulPendSVLiteralPool                    \n" /* Get the location of the current TCB and the Id of the current core. */
+            "   ldr r2, =pxCurrentTCB                           \n" /* 读取 pxCurrentTCB 的地址，即 &( pxCurrentTCB )。 */
+            "   ldr r1, [r2]                                    \n" /* 读取 pxCurrentTCB（当前任务控制块指针）。 */
+        #else /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
+            "   ldr r1, =ulPendSVLiteralPool                    \n" /* 获取当前 TCB 的位置和当前内核的 ID。 */
             "   ldmia r1!, {r2, r3}                             \n"
-            "   ldr r2, [r2]                                    \n" /* r2 = Core Id */
-            "   ldr r1, [r3, r2, LSL #2]                        \n" /* r1 = pxCurrentTCBs[CORE_ID] */
-        #endif /* if ( configNUMBER_OF_CORES == 1) */
-            "   ldr r0, [r1]                                    \n" /* The first item in pxCurrentTCB is the task top of stack. r0 now points to the top of stack. */
+            "   ldr r2, [r2]                                    \n" /* r2 = 内核 ID */
+            "   ldr r1, [r3, r2, LSL #2]                        \n" /* r1 = pxCurrentTCBs[CORE_ID]（按内核 ID 索引的当前 TCB 指针） */
+        #endif /* if ( configNUMBER_OF_CORES == 1)（条件编译结束） */
+            "   ldr r0, [r1]                                    \n" /* pxCurrentTCB 的第一项是任务栈顶。r0 现在指向栈顶。 */
             "                                                   \n"
         #if ( configENABLE_PAC == 1 )
-            "   ldmia r0!, {r2-r5}                              \n" /* Read task's dedicated PAC key from stack. */
-            "   msr  PAC_KEY_P_3, r2                            \n" /* Write the task's dedicated PAC key to the PAC key registers. */
+            "   ldmia r0!, {r2-r5}                              \n" /* 从栈中读取任务专用的 PAC 密钥。 */
+            "   msr  PAC_KEY_P_3, r2                            \n" /* 将任务专用的 PAC 密钥写入 PAC 密钥寄存器。 */
             "   msr  PAC_KEY_P_2, r3                            \n"
             "   msr  PAC_KEY_P_1, r4                            \n"
             "   msr  PAC_KEY_P_0, r5                            \n"
-            "   clrm {r2-r5}                                    \n" /* Clear r2-r5. */
-        #endif /* configENABLE_PAC */
+            "   clrm {r2-r5}                                    \n" /* 清除 r2-r5。 */
+        #endif /* configENABLE_PAC（条件编译结束） */
             "                                                   \n"
-            "   ldmia r0!, {r2-r11}                             \n" /* Read from stack - r2 = PSPLIM, r3 = LR and r4-r11 restored. */
+            "   ldmia r0!, {r2-r11}                             \n" /* 从栈中读取——r2 = PSPLIM，r3 = LR，r4-r11 已恢复。 */
             "                                                   \n"
         #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) )
-            "   tst r3, #0x10                                   \n" /* Test Bit[4] in LR. Bit[4] of EXC_RETURN is 0 if the Extended Stack Frame is in use. */
+            "   tst r3, #0x10                                   \n" /* 测试 LR 中的位[4]。若使用扩展栈帧，则 EXC_RETURN 的位[4]为 0。 */
             "   it eq                                           \n"
-            "   vldmiaeq r0!, {s16-s31}                         \n" /* Restore the additional FP context registers which are not restored automatically. */
-        #endif /* configENABLE_FPU || configENABLE_MVE */
+            "   vldmiaeq r0!, {s16-s31}                         \n" /* 恢复不会自动恢复的附加 FP 上下文寄存器。 */
+        #endif /* configENABLE_FPU || configENABLE_MVE（条件编译结束） */
             "                                                   \n"
-            "   msr psplim, r2                                  \n" /* Restore the PSPLIM register value for the task. */
-            "   msr psp, r0                                     \n" /* Remember the new top of stack for the task. */
+            "   msr psplim, r2                                  \n" /* 恢复该任务的 PSPLIM 寄存器值。 */
+            "   msr psp, r0                                     \n" /* 记住该任务的新栈顶。 */
             "   bx r3                                           \n"
         #if ( configNUMBER_OF_CORES > 1 )
             "   .align 4                           \n"
             "   ulPendSVLiteralPool:               \n"
-            "   .word %c1                          \n" /* CORE_ID_REGISTER */
+            "   .word %c1                          \n" /* CORE_ID_REGISTER（内核 ID 寄存器） */
             "   .word pxCurrentTCBs                \n"
             :: "i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ), "i" ( configCORE_ID_REGISTER )
-        #else /* #if ( configNUMBER_OF_CORES > 1 ) */
+        #else /* #if ( configNUMBER_OF_CORES > 1 )（条件编译结束） */
             :: "i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY )
-        #endif /* #if ( configNUMBER_OF_CORES > 1 ) */
+        #endif /* #if ( configNUMBER_OF_CORES > 1 )（条件编译结束） */
 
         );
     }
 
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU（条件编译结束） */
 /*-----------------------------------------------------------*/
 
 #if ( ( configENABLE_MPU == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) )
 
-    void SVC_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+    void SVC_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
     {
         __asm volatile
         (
@@ -549,15 +552,15 @@ void vClearInterruptMask( __attribute__( ( unused ) ) uint32_t ulMask ) /* __att
             "    mov r1, lr                 \n"
             "    b vSystemCallExit          \n"
             "                               \n"
-            : /* No outputs. */
+            : /* 无输出。 */
             : "i" ( NUM_SYSTEM_CALLS ), "i" ( portSVC_SYSTEM_CALL_EXIT )
             : "r0", "r1", "r2", "memory"
         );
     }
 
-#else /* ( configENABLE_MPU == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#else /* ( configENABLE_MPU == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 )（条件编译结束） */
 
-    void SVC_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */
+    void SVC_Handler( void ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数、特权函数） */
     {
         __asm volatile
         (
@@ -572,5 +575,5 @@ void vClearInterruptMask( __attribute__( ( unused ) ) uint32_t ulMask ) /* __att
         );
     }
 
-#endif /* ( configENABLE_MPU == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* ( configENABLE_MPU == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 )（条件编译结束） */
 /*-----------------------------------------------------------*/

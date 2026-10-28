@@ -29,38 +29,37 @@
 #ifndef __SECURE_HEAP_H__
 #define __SECURE_HEAP_H__
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <stdlib.h>
 
 /**
- * @brief Allocates memory from heap.
+ * @brief 从堆中分配存储器。
  *
- * @param[in] xWantedSize The size of the memory to be allocated.
+ * @param[in] xWantedSize 要分配的存储器大小。
  *
- * @return Pointer to the memory region if the allocation is successful, NULL
- * otherwise.
+ * @return 若分配成功则返回指向存储器区域的指针，否则返回 NULL。
  */
 void * pvPortMalloc( size_t xWantedSize );
 
 /**
- * @brief Frees the previously allocated memory.
+ * @brief 释放先前分配的存储器。
  *
- * @param[in] pv Pointer to the memory to be freed.
+ * @param[in] pv 指向要释放的存储器的指针。
  */
 void vPortFree( void * pv );
 
 /**
- * @brief Get the free heap size.
+ * @brief 获取空闲堆大小。
  *
- * @return Free heap size.
+ * @return 空闲堆大小。
  */
 size_t xPortGetFreeHeapSize( void );
 
 /**
- * @brief Get the minimum ever free heap size.
+ * @brief 获取历史最小空闲堆大小。
  *
- * @return Minimum ever free heap size.
+ * @return 历史最小空闲堆大小。
  */
 size_t xPortGetMinimumEverFreeHeapSize( void );
 
-#endif /* __SECURE_HEAP_H__ */
+#endif /* 头文件保护：__SECURE_HEAP_H__ */

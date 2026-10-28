@@ -31,23 +31,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -63,15 +63,17 @@
 
     typedef uint64_t         TickType_t;
     #define portMAX_DELAY    ( ( TickType_t ) 0xffffffffffffffff )
-#endif /* if !defined(__ASSEMBLER__) */
+#endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
-/* 64-bit tick type on a 64-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 64 位架构上使用 64 位时钟节拍类型，因此读取节拍计数
+ * 无需用临界区保护。
+ */
 #define portTICK_TYPE_IS_ATOMIC    1
 
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portSTACK_GROWTH         ( -1 )
 #define portTICK_PERIOD_MS       ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT       16
@@ -79,10 +81,10 @@
 
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务相关工具宏。 */
 
 #if !defined(__ASSEMBLER__)
-    /* Called at the end of an ISR that can cause a context switch. */
+    /* 在可能引发上下文切换的中断服务程序（ISR）末尾调用。 */
     #if ( configNUMBER_OF_CORES == 1 )
         #define portEND_SWITCHING_ISR( xSwitchRequired ) \
         {                                                \
@@ -103,11 +105,11 @@
                 ullPortYieldRequired[ portGET_CORE_ID() ] = pdTRUE;        \
             }                                                              \
         }
-    #endif /* if ( configNUMBER_OF_CORES == 1 ) */
-#endif /* if !defined(__ASSEMBLER__) */
+    #endif /* if ( configNUMBER_OF_CORES == 1 ) 条件编译结束 */
+#endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
 /**
- * @brief SVC numbers.
+ * @brief SVC 编号。
  */
 
 #define portSVC_SYSTEM_CALL_EXIT                    104
@@ -128,9 +130,11 @@
 #define portYIELD_FROM_ISR( x )    portEND_SWITCHING_ISR( x )
 #define portYIELD()                __asm volatile ( "SVC %0" : : "i" ( portSVC_YIELD ) : "memory" )
 
-/*-----------------------------------------------------------
-* Critical section control
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 临界区控制
+ * ----------------------------------------------------------
+ */
 
 #if !defined(__ASSEMBLER__)
     extern UBaseType_t vTaskEnterCriticalFromISR( void );
@@ -140,20 +144,24 @@
     extern void vPortClearInterruptMask( UBaseType_t uxNewMaskValue );
     extern void vPortClearInterruptMaskFromISR( UBaseType_t uxNewMaskValue );
     extern void vInterruptCore( uint32_t ulInterruptID, uint8_t ucCoreID );
-#endif /* if !defined(__ASSEMBLER__) */
+#endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
-/* Use SVC so this is safe from EL0. EL1 sites in the port use direct MSR. */
+/* 使用 SVC，因此从 EL0 调用是安全的。移植层中 EL1 处的代码直接使用 MSR。 */
 #define portDISABLE_INTERRUPTS() __asm volatile ( "SVC %0" : : "i" ( portSVC_DISABLE_INTERRUPTS ) : "memory" )
 
 #define portENABLE_INTERRUPTS()  __asm volatile ( "SVC %0" : : "i" ( portSVC_ENABLE_INTERRUPTS ) : "memory" )
 
-/* In all GICs 255 can be written to the priority mask register to unmask all
- * (but the lowest) interrupt priority. */
+/*
+ * 在所有 GIC 中，可向优先级屏蔽寄存器写入 255，以解除屏蔽
+ * 除最低优先级以外的所有中断优先级。
+ */
 #define portUNMASK_VALUE           ( 0xFFUL )
 
 #if !defined(__ASSEMBLER__)
-    /* These macros do not globally disable/enable interrupts.  They do mask off
-     * interrupts that have a priority below configMAX_API_CALL_INTERRUPT_PRIORITY. */
+    /*
+     * 这些宏不会全局禁止/使能中断，而是屏蔽优先级低于
+     * configMAX_API_CALL_INTERRUPT_PRIORITY 的中断。
+     */
     #if  ( configNUMBER_OF_CORES == 1 )
         extern void vPortEnterCritical( void );
         extern void vPortExitCritical( void );
@@ -167,36 +175,42 @@
     #define portCLEAR_INTERRUPT_MASK_FROM_ISR( x )    vPortClearInterruptMaskFromISR( x )
     #define portENTER_CRITICAL_FROM_ISR()             vTaskEnterCriticalFromISR()
     #define portEXIT_CRITICAL_FROM_ISR( x )           vTaskExitCriticalFromISR( x )
-#endif /* if !defined(__ASSEMBLER__) */
+#endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site.  These are
- * not required for this port but included in case common demo code that uses these
- * macros is used. */
+/*
+ * FreeRTOS.org 网站上所述的任务函数宏。本移植层并不需要它们，
+ * 但保留下来以便使用这些宏的通用示例代码仍可编译。
+ */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
 #if !defined(__ASSEMBLER__)
-    /* Prototype of the FreeRTOS tick handler.  This must be installed as the
-     * handler for whichever peripheral is used to generate the RTOS tick. */
+    /*
+     * FreeRTOS 时钟节拍处理程序的原型。必须将该处理程序安装为产生
+     * RTOS 节拍的外设所对应的中断处理程序。
+     */
     void FreeRTOS_Tick_Handler( void );
-#endif /* if !defined(__ASSEMBLER__) */
+#endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
 #define portTASK_NO_FPU_CONTEXT_BY_DEFAULT     ( 1U )
 #define portTASK_HAVE_FPU_CONTEXT_BY_DEFAULT   ( 2U )
 
-/* If configUSE_TASK_FPU_SUPPORT is set to portTASK_NO_FPU_CONTEXT_BY_DEFAULT (1U)
- * (or left undefined) then tasks are created without an FPU context and
- * must call vPortTaskUsesFPU() to give themselves an FPU context before
- * using any FPU instructions.  If configUSE_TASK_FPU_SUPPORT is set to
- * portTASK_HAVE_FPU_CONTEXT_BY_DEFAULT (2U) then all tasks will have an FPU context
- * by default. */
+/*
+ * 若 configUSE_TASK_FPU_SUPPORT 设为 portTASK_NO_FPU_CONTEXT_BY_DEFAULT (1U)
+ * （或未定义），任务创建时不带 FPU 上下文，必须先调用 vPortTaskUsesFPU()
+ * 获得 FPU 上下文，才能使用任何 FPU 指令。若 configUSE_TASK_FPU_SUPPORT
+ * 设为 portTASK_HAVE_FPU_CONTEXT_BY_DEFAULT (2U)，则所有任务默认都具有
+ * FPU 上下文。
+ */
 #if ( configUSE_TASK_FPU_SUPPORT == portTASK_NO_FPU_CONTEXT_BY_DEFAULT )
     void vPortTaskUsesFPU( void );
 #else
-/* Each task has an FPU context already, so define this function away to
- * nothing to prevent it from being called accidentally. */
+/*
+ * 每个任务已具有 FPU 上下文，因此将该函数定义为空，
+ * 防止被误调用。
+ */
     #define vPortTaskUsesFPU()
 #endif
 
@@ -205,31 +219,32 @@
 #define portLOWEST_INTERRUPT_PRIORITY           ( ( ( uint32_t ) configUNIQUE_INTERRUPT_PRIORITIES ) - 1UL )
 #define portLOWEST_USABLE_INTERRUPT_PRIORITY    ( portLOWEST_INTERRUPT_PRIORITY - 1UL )
 
-/* Architecture specific optimisations. */
+/* 体系结构相关的优化。 */
 #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
     #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #endif
 
 #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
 
-    /* Store/clear the ready priorities in a bit map. */
+    /* 在位图中存储/清除就绪优先级。 */
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )    ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )     ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities )    uxTopPriority = ( 31 - __builtin_clz( uxReadyPriorities ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION 条件编译结束 */
 
 #if ( configASSERT_DEFINED == 1 )
     void vPortValidateInterruptPriority( void );
     #define portASSERT_IF_INTERRUPT_PRIORITY_INVALID()    vPortValidateInterruptPriority()
-#endif /* configASSERT */
+#endif /* configASSERT 条件编译结束 */
 
 #define portNOP()     __asm volatile ( "NOP" )
 #define portINLINE    __inline
 
-/* The number of bits to shift for an interrupt priority is dependent on the
- * number of bits implemented by the interrupt controller. */
+/*
+ * 中断优先级需要移位的位数取决于中断控制器实现的位数。
+ */
 #if configUNIQUE_INTERRUPT_PRIORITIES == 16
     #define portPRIORITY_SHIFT            4
     #define portMAX_BINARY_POINT_VALUE    3
@@ -245,9 +260,9 @@
 #elif configUNIQUE_INTERRUPT_PRIORITIES == 256
     #define portPRIORITY_SHIFT            0
     #define portMAX_BINARY_POINT_VALUE    0
-#else /* if configUNIQUE_INTERRUPT_PRIORITIES == 16 */
+#else /* if configUNIQUE_INTERRUPT_PRIORITIES == 16 条件分支 */
     #error Invalid configUNIQUE_INTERRUPT_PRIORITIES setting.  configUNIQUE_INTERRUPT_PRIORITIES must be set to the number of unique priorities implemented by the target hardware
-#endif /* if configUNIQUE_INTERRUPT_PRIORITIES == 16 */
+#endif /* if configUNIQUE_INTERRUPT_PRIORITIES == 16 条件结束 */
 
 #define portINTERRUPT_PRIORITY_REGISTER_OFFSET    ( 0x400U )
 #define portYIELD_CORE_INT_ID                     ( 0x0U )
@@ -269,7 +284,7 @@
                                         BaseType_t uxAcquire );
         extern uint8_t ucPortGetCoreID( void );
         extern uint8_t ucPortGetCoreIDFromIsr( void );
-    #endif /* if !defined(__ASSEMBLER__) */
+    #endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
     #define portSET_INTERRUPT_MASK()         uxPortSetInterruptMask()
     #define portCLEAR_INTERRUPT_MASK( x )    vPortClearInterruptMask( x )
@@ -278,7 +293,7 @@
     #define portGET_CORE_ID()                ucPortGetCoreID()
     #define portGET_CORE_ID_FROM_ISR()       ucPortGetCoreIDFromIsr()
 
-    /* Use SGI 0 as the yield core interrupt. */
+    /* 使用 SGI 0 作为让出 CPU 的核心间中断。 */
     #define portYIELD_CORE( xCoreID )                          vInterruptCore( portYIELD_CORE_INT_ID, ( uint8_t ) xCoreID )
 
     #define portRELEASE_ISR_LOCK( xCoreID )                    vPortRecursiveLock( ( uint8_t ) xCoreID, eIsrLock, pdFALSE )
@@ -291,23 +306,24 @@
     #define portINCREMENT_CRITICAL_NESTING_COUNT( xCoreID )    ( ullCriticalNestings[ ( uint8_t ) xCoreID ]++ )
     #define portDECREMENT_CRITICAL_NESTING_COUNT( xCoreID )    ( ullCriticalNestings[ ( uint8_t ) xCoreID ]-- )
 
-#endif /* configNUMBER_OF_CORES > 1 */
+#endif /* configNUMBER_OF_CORES > 1 条件编译结束 */
 
 #define portMEMORY_BARRIER()    __asm volatile ( "" ::: "memory" )
 
 /**
- * @brief MPU specific constants.
+ * @brief MPU 专用常量。
  */
 #if ( configENABLE_MPU == 1 )
 
     #if !defined(__ASSEMBLER__)
         extern BaseType_t xPortIsTaskPrivileged( void );
-    #endif /* if !defined(__ASSEMBLER__) */
+    #endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
-    /* Device memory attributes used in MAIR_EL1 registers.
+    /*
+     * MAIR_EL1 寄存器中使用的设备存储器属性。
      *
-     * 8-bit values encoded as follows:
-     *  Bit[7:4] - 0000 - Device Memory
+     * 8 位值编码如下：
+     *  Bit[7:4] - 0000 - 设备存储器
      *  Bit[3:2] - 00 --> Device-nGnRnE
      *             01 --> Device-nGnRE
      *             10 --> Device-nGRE
@@ -319,59 +335,60 @@
     #define portMPU_DEVICE_MEMORY_nGRE                   ( 0x08 )
     #define portMPU_DEVICE_MEMORY_GRE                    ( 0x0C )
 
-    /* MPU settings that can be overridden in FreeRTOSConfig.h. */
+    /* 可在 FreeRTOSConfig.h 中覆盖的 MPU 设置。 */
     #ifndef configTOTAL_MPU_REGIONS
         #define configTOTAL_MPU_REGIONS                  ( 16UL )
     #endif
 
-    #define portPRIVILEGED_FLASH_REGION                  ( 0ULL )                                /* Privileged flash region number. */
-    #define portUNPRIVILEGED_FLASH_REGION                ( 1ULL )                                /* Unprivileged flash region number. */
-    #define portUNPRIVILEGED_SYSCALLS_REGION             ( 2ULL )                                /* Unprivileged syscalls region number. */
-    #define portPRIVILEGED_RAM_REGION                    ( 3ULL )                                /* Privileged RAM region number. */
-    #define portSTACK_REGION                             ( 4ULL )                                /* Stack region number. */
-    #define portSTACK_REGION_INDEX                       ( 0ULL )                                /* Stack region index in the xRegionSettings array. */
-    #define portFIRST_CONFIGURABLE_REGION                ( 5ULL )                                /* First user configurable region number. */
+    #define portPRIVILEGED_FLASH_REGION                  ( 0ULL )                                /* 特权 Flash 区域编号。 */
+    #define portUNPRIVILEGED_FLASH_REGION                ( 1ULL )                                /* 非特权 Flash 区域编号。 */
+    #define portUNPRIVILEGED_SYSCALLS_REGION             ( 2ULL )                                /* 非特权系统调用区域编号。 */
+    #define portPRIVILEGED_RAM_REGION                    ( 3ULL )                                /* 特权 RAM 区域编号。 */
+    #define portSTACK_REGION                             ( 4ULL )                                /* 栈区域编号。 */
+    #define portSTACK_REGION_INDEX                       ( 0ULL )                                /* 栈区域在 xRegionSettings 数组中的索引。 */
+    #define portFIRST_CONFIGURABLE_REGION                ( 5ULL )                                /* 第一个用户可配置区域编号。 */
     #define portLAST_CONFIGURABLE_REGION                 ( configTOTAL_MPU_REGIONS - 1UL )
     #define portNUM_CONFIGURABLE_REGIONS                 ( ( portLAST_CONFIGURABLE_REGION - portFIRST_CONFIGURABLE_REGION ) + 1 )
-    #define portTOTAL_NUM_REGIONS                        ( portNUM_CONFIGURABLE_REGIONS + 1 )    /* Plus one to make space for the stack region. */
+    #define portTOTAL_NUM_REGIONS                        ( portNUM_CONFIGURABLE_REGIONS + 1 )    /* 加一，为栈区域留出空间。 */
 
     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
         #define portACL_ENTRY_SIZE_BITS ( 32UL )
-    #endif /* configENABLE_ACCESS_CONTROL_LIST == 1 */
+    #endif /* configENABLE_ACCESS_CONTROL_LIST == 1 条件编译结束 */
 
     #if !defined(__ASSEMBLER__)
         /**
-         * @brief Settings to define an MPU region.
+         * @brief 定义 MPU 区域的设置。
          */
         typedef struct MPURegionSettings
         {
-            uint64_t ullPrbarEl1; /**< PRBAR_EL1 for the region. */
-            uint64_t ullPrlarEl1; /**< PRLAR_EL1 for the region. */
+            uint64_t ullPrbarEl1; /**< 该区域的 PRBAR_EL1。 */
+            uint64_t ullPrlarEl1; /**< 该区域的 PRLAR_EL1。 */
         } MPURegionSettings_t;
 
         #ifndef configSYSTEM_CALL_STACK_SIZE
-            #define configSYSTEM_CALL_STACK_SIZE 128  /* must be defined to the desired size of the system call stack in words for using MPU wrappers v2. */
+            #define configSYSTEM_CALL_STACK_SIZE 128  /* 使用 MPU 包装函数 v2 时，必须按字（word）定义系统调用栈的期望大小。 */
         #endif
 
         /**
-         * @brief System call info.
+         * @brief 系统调用信息。
          */
         typedef struct SYSTEM_CALL_INFO
         {
-            /* Used to save both the user-mode stack pointer (SP_EL0) and link register (X30)
-             * at system call entry so they can be restored or referenced safely even if the task
-             * switches out while executing the system call.
+            /*
+             * 用于在系统调用入口保存用户模式栈指针（SP_EL0）和链接寄存器（X30），
+             * 以便即使任务在执行系统调用期间被换出，也能安全地恢复或引用它们。
              */
             uint64_t ullLinkRegisterAtSystemCallEntry;
             uint64_t ullUserSPAtSystemCallEntry;
         } xSYSTEM_CALL_INFO;
-    #endif /* if !defined(__ASSEMBLER__) */
+    #endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
     /**
-     * @brief Task context as stored in the TCB.
+     * @brief 保存在 TCB 中的任务上下文。
      */
     #if ( configENABLE_FPU == 1 )
         /*
+         * 任务上下文布局（含 FPU）：
          * +-----------+------------+--------------------------------+-------------+------------------+
          * |  Q0-Q31   | FPSR, FPCR |  CRITICAL_NESTING, FPU_CONTEXT | X0-X30, XZR | INIT_PSTATE, PC  |
          * +-----------+------------+--------------------------------+-------------+------------------+
@@ -381,8 +398,9 @@
          */
         #define MAX_CONTEXT_SIZE    102
 
-    #else /* #if ( configENABLE_FPU == 1 ) */
+    #else /* configENABLE_FPU == 1 条件分支 */
         /*
+         * 任务上下文布局（不含 FPU）：
          * +--------------------------------+-------------+------------------+
          * |  CRITICAL_NESTING, FPU_CONTEXT | X0-X30, XZR | INIT_PSTATE, PC  |
          * +--------------------------------+-------------+------------------+
@@ -390,31 +408,31 @@
          *                 2                      32               2
          */
         #define MAX_CONTEXT_SIZE    36
-    #endif /* #if ( configENABLE_FPU == 1 ) */
+    #endif /* configENABLE_FPU == 1 条件结束 */
 
     #if !defined(__ASSEMBLER__)
         typedef struct MPU_SETTINGS
         {
-            uint64_t ullTaskUnprivilegedSP;                                              /* Task's unprivileged user stack pointer. */
-            uint64_t ullMairEl1;                                                         /* MAIR_EL1 for the task containing attributes. */
-            MPURegionSettings_t xRegionsSettings[ portTOTAL_NUM_REGIONS ];               /* Settings for tasks' regions. */
-            uint64_t ullContext[ MAX_CONTEXT_SIZE + configSYSTEM_CALL_STACK_SIZE ];      /* Task's saved context. */
+            uint64_t ullTaskUnprivilegedSP;                                              /* 任务的非特权用户栈指针。 */
+            uint64_t ullMairEl1;                                                         /* 包含属性信息的任务 MAIR_EL1。 */
+            MPURegionSettings_t xRegionsSettings[ portTOTAL_NUM_REGIONS ];               /* 任务各区域的设置。 */
+            uint64_t ullContext[ MAX_CONTEXT_SIZE + configSYSTEM_CALL_STACK_SIZE ];      /* 任务保存的上下文。 */
             uint64_t ullTaskFlags;
 
             xSYSTEM_CALL_INFO xSystemCallInfo;
 
             #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
                 uint32_t ulAccessControlList[ ( configPROTECTED_KERNEL_OBJECT_POOL_SIZE / portACL_ENTRY_SIZE_BITS ) + 1 ];
-            #endif /* configENABLE_ACCESS_CONTROL_LIST */
+            #endif /* configENABLE_ACCESS_CONTROL_LIST 条件编译结束 */
         } xMPU_SETTINGS;
-    #endif /* if !defined(__ASSEMBLER__) */
+    #endif /* if !defined(__ASSEMBLER__) 条件编译结束 */
 
     #define portUSING_MPU_WRAPPERS                        ( 1 )
     #define portPRIVILEGE_BIT                             ( 0x80000000UL )
 
-    /* Normal memory attributes used in MAIR_EL1 registers. */
-    #define portMPU_NORMAL_MEMORY_NON_CACHEABLE           ( 0x44 )       /* Non-cacheable. */
-    #define portMPU_NORMAL_MEMORY_BUFFERABLE_CACHEABLE    ( 0xFF )       /* Non-Transient, Write-back, Read-Allocate and Write-Allocate. */
+    /* MAIR_EL1 寄存器中使用的普通存储器属性。 */
+    #define portMPU_NORMAL_MEMORY_NON_CACHEABLE           ( 0x44 )       /* 不可缓存。 */
+    #define portMPU_NORMAL_MEMORY_BUFFERABLE_CACHEABLE    ( 0xFF )       /* 非瞬态、写回、读分配和写分配。 */
 
     #define portMPU_MAIR_EL1_ATTR0_POS                    ( 0UL )
     #define portMPU_MAIR_EL1_ATTR0_MASK                   ( 0x00000000000000ffULL )
@@ -469,30 +487,32 @@
     #define portMPU_ENABLE_BIT                            ( 1ULL << 0ULL )
     #define portMPU_PRIV_BACKGROUND_ENABLE_BIT            ( 1ULL << 17ULL )
 
-    /* Max value that fits in a uint64_t type. */
+    /* uint64_t 类型可容纳的最大值。 */
     #define portUINT64_MAX                                ( ~( ( uint64_t ) 0 ) )
     #define portADD_UINT64_WILL_OVERFLOW( a, b )          ( ( a ) > ( portUINT64_MAX - ( b ) ) )
 
-    /* Extract first address of the MPU region as encoded in the
-     * PRBAR_EL1 register value. */
+    /*
+     * 从 PRBAR_EL1 寄存器值中提取 MPU 区域的起始地址。
+     */
     #define portEXTRACT_FIRST_ADDRESS_FROM_PRBAR_EL1( prbar_el1 ) \
         ( ( prbar_el1 ) & portMPU_PRBAR_EL1_ADDRESS_MASK )
 
-    /* Extract last address of the MPU region as encoded in the
-     * PRLAR_EL1 register value. */
+    /*
+     * 从 PRLAR_EL1 寄存器值中提取 MPU 区域的结束地址。
+     */
     #define portEXTRACT_LAST_ADDRESS_FROM_PRLAR_EL1( prlar_el1 ) \
         ( ( ( prlar_el1 ) & portMPU_PRLAR_EL1_ADDRESS_MASK ) | ~portMPU_PRLAR_EL1_ADDRESS_MASK )
 
-    /* Does addr lies within [start, end] address range? */
+    /* addr 是否位于 [start, end] 地址范围内？ */
     #define portIS_ADDRESS_WITHIN_RANGE( addr, start, end ) \
         ( ( ( addr ) >= ( start ) ) && ( ( addr ) <= ( end ) ) )
 
-    /* Is the access request satisfied by the available permissions? */
+    /* 可用权限是否满足该访问请求？ */
     #define portIS_AUTHORIZED( accessRequest, permissions ) \
         ( ( ( permissions ) & ( accessRequest ) ) == accessRequest )
 
     /**
-     * @brief Offsets in the task's stack (context).
+     * @brief 任务栈（上下文）中的偏移量。
      */
     #if ( configUSE_TASK_FPU_SUPPORT == portTASK_HAVE_FPU_CONTEXT_BY_DEFAULT )
         #define portOFFSET_TO_PC     ( 68 )
@@ -511,16 +531,16 @@
     #endif
 
     /**
-     * @brief Flag used to mark that a Task is privileged.
+     * @brief 用于标记任务具有特权的标志。
      *
      * @ingroup Port Privilege
      */
     #define portTASK_IS_PRIVILEGED_FLAG   ( 1UL << 1UL )
 
     /**
-     * @brief Checks whether or not the calling task is privileged.
+     * @brief 检查调用任务是否具有特权。
      *
-     * @return pdTRUE if the calling task is privileged, pdFALSE otherwise.
+     * @return 若调用任务具有特权则返回 pdTRUE，否则返回 pdFALSE。
      */
     #define portIS_TASK_PRIVILEGED() xPortIsTaskPrivileged()
 
@@ -528,14 +548,14 @@
 
     #define portPRIVILEGE_BIT        ( 0x0UL )
 
-#endif /* #if ( configENABLE_MPU == 1 ) */
+#endif /* configENABLE_MPU == 1 条件编译结束 */
 
 #define portPSTATE_I_BIT             ( 0x7 )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* 头文件保护：PORTMACRO_H */

@@ -30,51 +30,51 @@
 #ifndef PORTMACROCOMMON_H
 #define PORTMACROCOMMON_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进标记） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进标记） */
 
-/*------------------------------------------------------------------------------
- * Port specific definitions.
+/*
+ * ------------------------------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 此文件中的设置针对给定硬件和编译器正确配置 FreeRTOS。
  *
- * These settings should not be altered.
- *------------------------------------------------------------------------------
+ * 不应修改这些设置。
+ * ------------------------------------------------------------------------------
  */
 
 #ifndef configENABLE_FPU
     #error configENABLE_FPU must be defined in FreeRTOSConfig.h.  Set configENABLE_FPU to 1 to enable the FPU or 0 to disable the FPU.
-#endif /* configENABLE_FPU */
+#endif /* configENABLE_FPU 条件编译结束 */
 
 #ifndef configENABLE_MPU
     #error configENABLE_MPU must be defined in FreeRTOSConfig.h.  Set configENABLE_MPU to 1 to enable the MPU or 0 to disable the MPU.
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU 条件编译结束 */
 
 #ifndef configENABLE_TRUSTZONE
     #error configENABLE_TRUSTZONE must be defined in FreeRTOSConfig.h.  Set configENABLE_TRUSTZONE to 1 to enable TrustZone or 0 to disable TrustZone.
-#endif /* configENABLE_TRUSTZONE */
+#endif /* configENABLE_TRUSTZONE 条件编译结束 */
 
 #if ( configNUMBER_OF_CORES > 1 )
     #if ( portVALIDATED_FOR_SMP != 1 ) || ( configENABLE_MPU == 1 ) || ( configENABLE_TRUSTZONE == 1 )
         #error "Multi-core SMP is currently only validated for Cortex-M33 non-TrustZone non-MPU port."
-    #endif /* if ( portVALIDATED_FOR_SMP != 1 ) || ( configENABLE_MPU == 1 ) || ( configENABLE_TRUSTZONE == 1 ) ) */
+    #endif /* if ( portVALIDATED_FOR_SMP != 1 ) || ( configENABLE_MPU == 1 ) || ( configENABLE_TRUSTZONE == 1 ) ) 条件编译结束 */
 
     #ifndef configCORE_ID_REGISTER
         #error "configCORE_ID_REGISTER must be defined to the address of the register used to identify the core executing the code."
-    #endif /* ifndef configCORE_ID_REGISTER */
+    #endif /* ifndef configCORE_ID_REGISTER 条件编译结束 */
 
     #ifndef configWAKE_SECONDARY_CORES
         #error "configWAKE_SECONDARY_CORES must be defined to a function that wakes the secondary cores."
-    #endif /* ifndef configWAKE_SECONDARY_CORES */
-#endif /* #if ( configNUMBER_OF_CORES > 1 ) */
+    #endif /* ifndef configWAKE_SECONDARY_CORES 条件编译结束 */
+#endif /* #if ( configNUMBER_OF_CORES > 1 ) 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Type definitions.
+ * @brief 类型定义。
  */
 #define portCHAR          char
 #define portFLOAT         float
@@ -95,8 +95,9 @@ typedef unsigned long    UBaseType_t;
     typedef uint32_t     TickType_t;
     #define portMAX_DELAY              ( TickType_t ) 0xffffffffUL
 
-/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 32 位架构上使用 32 位 tick 类型，因此读取 tick 计数无需用临界区保护。
+ */
     #define portTICK_TYPE_IS_ATOMIC    1
 #else
     #error configTICK_TYPE_WIDTH_IN_BITS set to unsupported tick type width.
@@ -104,7 +105,7 @@ typedef unsigned long    UBaseType_t;
 /*-----------------------------------------------------------*/
 
 /**
- * Architecture specifics.
+ * 架构相关细节。
  */
 #define portSTACK_GROWTH                   ( -1 )
 #define portTICK_PERIOD_MS                 ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
@@ -118,58 +119,57 @@ typedef unsigned long    UBaseType_t;
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Extern declarations.
+ * @brief 外部声明。
  */
 extern BaseType_t xPortIsInsideInterrupt( void );
 
-extern void vPortYield( void ) /* PRIVILEGED_FUNCTION */;
+extern void vPortYield( void ) /* PRIVILEGED_FUNCTION（特权级函数标记） */;
 
-extern void vPortEnterCritical( void ) /* PRIVILEGED_FUNCTION */;
-extern void vPortExitCritical( void ) /* PRIVILEGED_FUNCTION */;
+extern void vPortEnterCritical( void ) /* PRIVILEGED_FUNCTION（特权级函数标记） */;
+extern void vPortExitCritical( void ) /* PRIVILEGED_FUNCTION（特权级函数标记） */;
 
-extern uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */;
-extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */;
+extern uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION（裸函数与特权级函数标记） */;
+extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION（裸函数与特权级函数标记） */;
 
 #if ( configENABLE_TRUSTZONE == 1 )
-    extern void vPortAllocateSecureContext( uint32_t ulSecureStackSize ); /* __attribute__ (( naked )) */
-    extern void vPortFreeSecureContext( uint32_t * pulTCB ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION */;
-#endif /* configENABLE_TRUSTZONE */
+    extern void vPortAllocateSecureContext( uint32_t ulSecureStackSize ); /* __attribute__ (( naked ))（裸函数属性） */
+    extern void vPortFreeSecureContext( uint32_t * pulTCB ) /* __attribute__ (( naked )) PRIVILEGED_FUNCTION（裸函数与特权级函数标记） */;
+#endif /* configENABLE_TRUSTZONE 条件编译结束 */
 
 #if ( configENABLE_MPU == 1 )
-    extern BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked )) */;
-    extern void vResetPrivilege( void ) /* __attribute__ (( naked )) */;
-#endif /* configENABLE_MPU */
+    extern BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked ))（裸函数属性） */;
+    extern void vResetPrivilege( void ) /* __attribute__ (( naked ))（裸函数属性） */;
+#endif /* configENABLE_MPU 条件编译结束 */
 
 #if ( configENABLE_PAC == 1 )
 
     /**
-     * @brief Generates 128-bit task's random PAC key.
+     * @brief 生成任务的 128 位随机 PAC 密钥。
      *
-     * @param[out] pulTaskPacKey Pointer to a 4-word (128-bits) array to be
-     *             filled with a 128-bit random number.
+     * @param[out] pulTaskPacKey 指向 4 字（128 位）数组的指针，用于填充 128 位随机数。
      */
     void vApplicationGenerateTaskRandomPacKey( uint32_t * pulTaskPacKey );
 
-#endif /* configENABLE_PAC */
+#endif /* configENABLE_PAC 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief MPU specific constants.
+ * @brief MPU 专用常量。
  */
 #if ( configENABLE_MPU == 1 )
     #define portUSING_MPU_WRAPPERS    1
     #define portPRIVILEGE_BIT         ( 0x80000000UL )
 #else
     #define portPRIVILEGE_BIT         ( 0x0UL )
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU 条件编译结束 */
 
-/* MPU settings that can be overridden in FreeRTOSConfig.h. */
+/* 可在 FreeRTOSConfig.h 中覆盖的 MPU 设置。 */
 #ifndef configTOTAL_MPU_REGIONS
-    /* Define to 8 for backward compatibility. */
+    /* 为向后兼容定义为 8。 */
     #define configTOTAL_MPU_REGIONS    ( 8UL )
 #endif
 
-/* MPU regions. */
+/* MPU 区域。 */
 #define portPRIVILEGED_FLASH_REGION                   ( 0UL )
 #define portUNPRIVILEGED_FLASH_REGION                 ( 1UL )
 #define portUNPRIVILEGED_SYSCALLS_REGION              ( 2UL )
@@ -178,28 +178,29 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #define portFIRST_CONFIGURABLE_REGION                 ( 5UL )
 #define portLAST_CONFIGURABLE_REGION                  ( configTOTAL_MPU_REGIONS - 1UL )
 #define portNUM_CONFIGURABLE_REGIONS                  ( ( portLAST_CONFIGURABLE_REGION - portFIRST_CONFIGURABLE_REGION ) + 1 )
-#define portTOTAL_NUM_REGIONS                         ( portNUM_CONFIGURABLE_REGIONS + 1 )       /* Plus one to make space for the stack region. */
+#define portTOTAL_NUM_REGIONS                         ( portNUM_CONFIGURABLE_REGIONS + 1 )       /* 加一以便为栈区域留出空间。 */
 
-/* Device memory attributes used in MPU_MAIR registers.
+/*
+ * MPU_MAIR 寄存器中使用的设备内存属性。
  *
- * 8-bit values encoded as follows:
+ * 8 位值的编码方式如下：
  *  Bit[7:4] - 0000 - Device Memory
  *  Bit[3:2] - 00 --> Device-nGnRnE
  *              01 --> Device-nGnRE
  *              10 --> Device-nGRE
  *              11 --> Device-GRE
- *  Bit[1:0] - 00, Reserved.
+ *  Bit[1:0] - 00，保留。
  */
 #define portMPU_DEVICE_MEMORY_nGnRnE                  ( 0x00 )       /* 0000 0000 */
 #define portMPU_DEVICE_MEMORY_nGnRE                   ( 0x04 )       /* 0000 0100 */
 #define portMPU_DEVICE_MEMORY_nGRE                    ( 0x08 )       /* 0000 1000 */
 #define portMPU_DEVICE_MEMORY_GRE                     ( 0x0C )       /* 0000 1100 */
 
-/* Normal memory attributes used in MPU_MAIR registers. */
-#define portMPU_NORMAL_MEMORY_NON_CACHEABLE           ( 0x44 )       /* Non-cacheable. */
-#define portMPU_NORMAL_MEMORY_BUFFERABLE_CACHEABLE    ( 0xFF )       /* Non-Transient, Write-back, Read-Allocate and Write-Allocate. */
+/* MPU_MAIR 寄存器中使用的正常内存属性。 */
+#define portMPU_NORMAL_MEMORY_NON_CACHEABLE           ( 0x44 )       /* 不可缓存。 */
+#define portMPU_NORMAL_MEMORY_BUFFERABLE_CACHEABLE    ( 0xFF )       /* 非瞬态、写回、读分配和写分配。 */
 
-/* Attributes used in MPU_RBAR registers. */
+/* MPU_RBAR 寄存器中使用的属性。 */
 #define portMPU_REGION_NON_SHAREABLE                  ( 0UL << 3UL )
 #define portMPU_REGION_INNER_SHAREABLE                ( 1UL << 3UL )
 #define portMPU_REGION_OUTER_SHAREABLE                ( 2UL << 3UL )
@@ -215,12 +216,12 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #if ( configENABLE_MPU == 1 )
 
     /**
-     * @brief Settings to define an MPU region.
+     * @brief 定义 MPU 区域的设置。
      */
     typedef struct MPURegionSettings
     {
-        uint32_t ulRBAR; /**< RBAR for the region. */
-        uint32_t ulRLAR; /**< RLAR for the region. */
+        uint32_t ulRBAR; /**< 该区域的 RBAR。 */
+        uint32_t ulRLAR; /**< 该区域的 RLAR。 */
     } MPURegionSettings_t;
 
     #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
@@ -230,7 +231,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #endif
 
         /**
-         * @brief System call stack.
+         * @brief 系统调用栈。
          */
         typedef struct SYSTEM_CALL_STACK_INFO
         {
@@ -242,16 +243,17 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
             uint32_t ulStackLimitRegisterAtSystemCallEntry;
         } xSYSTEM_CALL_STACK_INFO;
 
-    #endif /* configUSE_MPU_WRAPPERS_V1 == 0 */
+    #endif /* configUSE_MPU_WRAPPERS_V1 == 0 条件编译结束 */
 
     /**
-     * @brief MPU settings as stored in the TCB.
+     * @brief 存储在 TCB 中的 MPU 设置。
      */
     #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) )
 
         #if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) )
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +-----------+---------------+----------+-----------------+------------------------------+------------+-----+
              * |  s16-s31  | s0-s15, FPSCR |  r4-r11  | r0-r3, r12, LR, | xSecureContext, PSP, PSPLIM, | TaskPacKey |     |
              * |           |               |          | PC, xPSR        | CONTROL, EXC_RETURN          |            |     |
@@ -265,6 +267,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #elif ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 0 ) )
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +-----------+---------------+----------+-----------------+------------------------------+-----+
              * |  s16-s31  | s0-s15, FPSCR |  r4-r11  | r0-r3, r12, LR, | xSecureContext, PSP, PSPLIM, |     |
              * |           |               |          | PC, xPSR        | CONTROL, EXC_RETURN          |     |
@@ -278,6 +281,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #elif ( ( configENABLE_TRUSTZONE == 0 ) && ( configENABLE_PAC == 1 ) )
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +-----------+---------------+----------+-----------------+----------------------+------------+-----+
              * |  s16-s31  | s0-s15, FPSCR |  r4-r11  | r0-r3, r12, LR, | PSP, PSPLIM, CONTROL | TaskPacKey |     |
              * |           |               |          | PC, xPSR        | EXC_RETURN           |            |     |
@@ -288,9 +292,10 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
              */
             #define MAX_CONTEXT_SIZE    70
 
-        #else /* if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) ) */
+        #else /* if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) ) 条件编译 */
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +-----------+---------------+----------+-----------------+----------------------+-----+
              * |  s16-s31  | s0-s15, FPSCR |  r4-r11  | r0-r3, r12, LR, | PSP, PSPLIM, CONTROL |     |
              * |           |               |          | PC, xPSR        | EXC_RETURN           |     |
@@ -301,13 +306,14 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
              */
             #define MAX_CONTEXT_SIZE    54
 
-        #endif /* #if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) ) */
+        #endif /* #if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) ) 条件编译结束 */
 
-    #else /* #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) ) */
+    #else /* #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) ) 条件编译结束 */
 
         #if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) )
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +----------+-----------------+------------------------------+------------+-----+
              * |  r4-r11  | r0-r3, r12, LR, | xSecureContext, PSP, PSPLIM, | TaskPacKey |     |
              * |          | PC, xPSR        | CONTROL, EXC_RETURN          |            |     |
@@ -321,6 +327,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #elif ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 0 ) )
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +----------+-----------------+------------------------------+-----+
              * |  r4-r11  | r0-r3, r12, LR, | xSecureContext, PSP, PSPLIM, |     |
              * |          | PC, xPSR        | CONTROL, EXC_RETURN          |     |
@@ -334,6 +341,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #elif ( ( configENABLE_TRUSTZONE == 0 ) && ( configENABLE_PAC == 1 ) )
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +----------+-----------------+----------------------+------------+-----+
              * |  r4-r11  | r0-r3, r12, LR, | PSP, PSPLIM, CONTROL | TaskPacKey |     |
              * |          | PC, xPSR        | EXC_RETURN           |            |     |
@@ -344,9 +352,10 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
              */
             #define MAX_CONTEXT_SIZE    37
 
-        #else /* #if( configENABLE_TRUSTZONE == 1 ) */
+        #else /* #if( configENABLE_TRUSTZONE == 1 ) 条件编译结束 */
 
             /*
+             * 任务上下文在栈上的布局如下：
              * +----------+-----------------+----------------------+-----+
              * |  r4-r11  | r0-r3, r12, LR, | PSP, PSPLIM, CONTROL |     |
              * |          | PC, xPSR        | EXC_RETURN           |     |
@@ -357,21 +366,21 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
              */
             #define MAX_CONTEXT_SIZE    21
 
-        #endif /* #if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) ) */
+        #endif /* #if ( ( configENABLE_TRUSTZONE == 1 ) && ( configENABLE_PAC == 1 ) ) 条件编译结束 */
 
-    #endif /* #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) ) */
+    #endif /* #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) ) 条件编译结束 */
 
-    /* Flags used for xMPU_SETTINGS.ulTaskFlags member. */
+    /* 用于 xMPU_SETTINGS.ulTaskFlags 成员的标志。 */
     #define portSTACK_FRAME_HAS_PADDING_FLAG    ( 1UL << 0UL )
     #define portTASK_IS_PRIVILEGED_FLAG         ( 1UL << 1UL )
 
-    /* Size of an Access Control List (ACL) entry in bits. */
+    /* 访问控制列表（ACL）条目的大小（以位为单位）。 */
     #define portACL_ENTRY_SIZE_BITS             ( 32U )
 
     typedef struct MPU_SETTINGS
     {
-        uint32_t ulMAIR0;                                              /**< MAIR0 for the task containing attributes for all the 4 per task regions. */
-        MPURegionSettings_t xRegionsSettings[ portTOTAL_NUM_REGIONS ]; /**< Settings for 4 per task regions. */
+        uint32_t ulMAIR0;                                              /**< 任务的 MAIR0，包含所有 4 个按任务划分的区域的属性。 */
+        MPURegionSettings_t xRegionsSettings[ portTOTAL_NUM_REGIONS ]; /**< 4 个按任务划分的区域的设置。 */
         uint32_t ulContext[ MAX_CONTEXT_SIZE ];
         uint32_t ulTaskFlags;
 
@@ -383,12 +392,11 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #endif
     } xMPU_SETTINGS;
 
-#endif /* configENABLE_MPU == 1 */
+#endif /* configENABLE_MPU == 1 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Validate priority of ISRs that are allowed to call FreeRTOS
- * system calls.
+ * @brief 校验允许调用 FreeRTOS 系统调用的 ISR 优先级。
  */
 #if ( configASSERT_DEFINED == 1 )
     #if ( portHAS_ARMV8M_MAIN_EXTENSION == 1 )
@@ -398,7 +406,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #endif
 
 /**
- * @brief SVC numbers.
+ * @brief SVC 编号。
  */
 #define portSVC_ALLOCATE_SECURE_CONTEXT    100
 #define portSVC_FREE_SECURE_CONTEXT        101
@@ -409,7 +417,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Scheduler utilities.
+ * @brief 调度器工具函数。
  */
 #if ( configENABLE_MPU == 1 )
     #define portYIELD()               __asm volatile ( "svc %0" ::"i" ( portSVC_YIELD ) : "memory" )
@@ -438,7 +446,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Critical section management.
+ * @brief 临界区管理。
  */
 
 #define portSET_INTERRUPT_MASK()                  ulSetInterruptMask()
@@ -449,7 +457,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #if ( configNUMBER_OF_CORES == 1 )
     #define portENTER_CRITICAL()                      vPortEnterCritical()
     #define portEXIT_CRITICAL()                       vPortExitCritical()
-#else /* ( configNUMBER_OF_CORES == 1 ) */
+#else /* ( configNUMBER_OF_CORES == 1 ) 条件编译结束 */
     extern void vTaskEnterCritical( void );
     extern void vTaskExitCritical( void );
     extern UBaseType_t vTaskEnterCriticalFromISR( void );
@@ -459,11 +467,11 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
     #define portEXIT_CRITICAL()                       vTaskExitCritical()
     #define portENTER_CRITICAL_FROM_ISR()             vTaskEnterCriticalFromISR()
     #define portEXIT_CRITICAL_FROM_ISR( x )           vTaskExitCriticalFromISR( x )
-#endif /* if ( configNUMBER_OF_CORES != 1 ) */
+#endif /* if ( configNUMBER_OF_CORES != 1 ) 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Tickless idle/low power functionality.
+ * @brief 无节拍空闲/低功耗功能。
  */
 #ifndef portSUPPRESS_TICKS_AND_SLEEP
     extern void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime );
@@ -472,7 +480,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Task function macros as described on the FreeRTOS.org WEB site.
+ * @brief FreeRTOS.org 网站上所述的任务函数宏。
  */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
@@ -481,54 +489,48 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #if ( configENABLE_TRUSTZONE == 1 )
 
 /**
- * @brief Allocate a secure context for the task.
+ * @brief 为任务分配安全上下文。
  *
- * Tasks are not created with a secure context. Any task that is going to call
- * secure functions must call portALLOCATE_SECURE_CONTEXT() to allocate itself a
- * secure context before it calls any secure function.
+ * 任务创建时并不带安全上下文。任何将要调用安全函数的任务都必须先调用 portALLOCATE_SECURE_CONTEXT() 为自己分配安全上下文，然后才能调用任何安全函数。
  *
- * @param[in] ulSecureStackSize The size of the secure stack to be allocated.
+ * @param[in] ulSecureStackSize 要分配的安全栈大小。
  */
     #define portALLOCATE_SECURE_CONTEXT( ulSecureStackSize )    vPortAllocateSecureContext( ulSecureStackSize )
 
 /**
- * @brief Called when a task is deleted to delete the task's secure context,
- * if it has one.
+ * @brief 删除任务时调用，用于删除该任务的安全上下文（如果存在）。
  *
- * @param[in] pxTCB The TCB of the task being deleted.
+ * @param[in] pxTCB 正在删除的任务的 TCB。
  */
     #define portCLEAN_UP_TCB( pxTCB )                           vPortFreeSecureContext( ( uint32_t * ) pxTCB )
-#endif /* configENABLE_TRUSTZONE */
+#endif /* configENABLE_TRUSTZONE 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 #if ( configENABLE_MPU == 1 )
 
 /**
- * @brief Checks whether or not the processor is privileged.
+ * @brief 检查处理器是否处于特权级。
  *
- * @return 1 if the processor is already privileged, 0 otherwise.
+ * @return 若处理器已处于特权级则返回 1，否则返回 0。
  */
     #define portIS_PRIVILEGED()      xIsPrivileged()
 
 /**
- * @brief Raise an SVC request to raise privilege.
+ * @brief 提出 SVC 请求以提升特权级。
  *
- * The SVC handler checks that the SVC was raised from a system call and only
- * then it raises the privilege. If this is called from any other place,
- * the privilege is not raised.
+ * SVC 处理程序会检查该 SVC 是否由系统调用发出，只有在这种情况下才提升特权级。若从其他位置调用，则不会提升特权级。
  */
     #define portRAISE_PRIVILEGE()    __asm volatile ( "svc %0 \n" ::"i" ( portSVC_RAISE_PRIVILEGE ) : "memory" );
 
 /**
- * @brief Lowers the privilege level by setting the bit 0 of the CONTROL
- * register.
+ * @brief 通过设置 CONTROL 寄存器的位 0 降低特权级。
  */
     #define portRESET_PRIVILEGE()    vResetPrivilege()
 #else
     #define portIS_PRIVILEGED()
     #define portRAISE_PRIVILEGE()
     #define portRESET_PRIVILEGE()
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 #if ( configENABLE_MPU == 1 )
@@ -536,38 +538,39 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
     extern BaseType_t xPortIsTaskPrivileged( void );
 
 /**
- * @brief Checks whether or not the calling task is privileged.
+ * @brief 检查调用任务是否处于特权级。
  *
- * @return pdTRUE if the calling task is privileged, pdFALSE otherwise.
+ * @return 若调用任务处于特权级则返回 pdTRUE，否则返回 pdFALSE。
  */
     #define portIS_TASK_PRIVILEGED()    xPortIsTaskPrivileged()
 
-#endif /* configENABLE_MPU == 1 */
+#endif /* configENABLE_MPU == 1 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Barriers.
+ * @brief 屏障指令。
  */
 #define portMEMORY_BARRIER()    __asm volatile ( "" ::: "memory" )
 /*-----------------------------------------------------------*/
 
-/* Select correct value of configUSE_PORT_OPTIMISED_TASK_SELECTION
- * based on whether or not Mainline extension is implemented. */
+/*
+ * 根据是否实现 Mainline 扩展，选择 configUSE_PORT_OPTIMISED_TASK_SELECTION 的正确值。
+ */
 #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
     #if ( ( portHAS_ARMV8M_MAIN_EXTENSION == 1 ) && ( configNUMBER_OF_CORES == 1 ) )
         #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
     #else
         #define configUSE_PORT_OPTIMISED_TASK_SELECTION    0
     #endif
-#endif /* #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION 条件编译结束 */
 
 /**
- * @brief Port-optimised task selection.
+ * @brief 移植层优化的任务选择。
  */
 #if ( configUSE_PORT_OPTIMISED_TASK_SELECTION == 1 )
 
 /**
- * @brief Count the number of leading zeros in a 32-bit value.
+ * @brief 统计 32 位值中前导零的个数。
  */
     static portFORCE_INLINE uint32_t ulPortCountLeadingZeros( uint32_t ulBitmap )
     {
@@ -578,7 +581,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         return ulReturn;
     }
 
-/* Check the configuration. */
+/* 检查配置。 */
     #if ( configMAX_PRIORITIES > 32 )
         #error configUSE_PORT_OPTIMISED_TASK_SELECTION can only be set to 1 when configMAX_PRIORITIES is less than or equal to 32.  It is very rare that a system requires more than 10 to 15 different priorities as tasks that share a priority will time slice.
     #endif
@@ -588,17 +591,17 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
     #endif
 
 /**
- * @brief Store/clear the ready priorities in a bit map.
+ * @brief 在位图中存储/清除就绪优先级。
  */
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )      ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )       ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 
 /**
- * @brief Get the priority of the highest-priority task that is ready to execute.
+ * @brief 获取已就绪且可执行的最高优先级任务的优先级。
  */
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities )    uxTopPriority = ( 31UL - ulPortCountLeadingZeros( ( uxReadyPriorities ) ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 
@@ -636,13 +639,13 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 
     #if ( ( configENABLE_PAC == 1 ) || ( configENABLE_BTI == 1 ) )
         uint32_t vConfigurePACBTI( BaseType_t xWriteControlRegister );
-    #endif /* ( configENABLE_PAC == 1 || configENABLE_BTI == 1 ) */
+    #endif /* ( configENABLE_PAC == 1 || configENABLE_BTI == 1 ) 条件编译结束 */
 #endif
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进标记） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进标记） */
 
-#endif /* PORTMACROCOMMON_H */
+#endif /* PORTMACROCOMMON_H 头文件保护结束 */

@@ -43,36 +43,33 @@ extern "C" {
     #define portMPU_TOTAL_REGIONS ( 16UL )
 #else
     #error "Set configTOTAL_MPU_REGIONS to the number of MPU regions in FreeRTOSConfig.h"
-#endif /* configTOTAL_MPU_REGIONS */
+#endif /* configTOTAL_MPU_REGIONS 条件编译结束 */
 
 /*
- * The application write can disable Floating Point Unit (FPU) support by
- * setting configENABLE_FPU to 0. Floating point context stored in TCB
- * comprises of 32 floating point registers (D0-D31) and FPSCR register.
- * Disabling FPU, therefore, reduces the per-task RAM usage by
- * ( 32 + 1 ) * 4 = 132 bytes per task.
+ * 应用可通过将 configENABLE_FPU 设为 0 来禁用浮点单元（FPU）支持。
+ * TCB 中保存的浮点上下文包含 32 个浮点寄存器（D0-D31）和 FPSCR 寄存器。
+ * 因此禁用 FPU 可使每个任务的 RAM 占用减少
+ * ( 32 + 1 ) * 4 = 132 字节。
  *
- * BE CAREFUL DISABLING THIS: Certain standard library APIs try to optimize
- * themselves by using the floating point registers. If the FPU support is
- * disabled, the use of such APIs may result in memory corruption.
+ * 禁用前请务必注意：某些标准库 API 会尝试使用浮点寄存器进行优化。
+ * 若禁用 FPU 支持，使用此类 API 可能导致内存损坏。
  */
 #ifndef configENABLE_FPU
     #define configENABLE_FPU    1
-#endif /* configENABLE_FPU */
+#endif /* configENABLE_FPU 条件编译结束 */
 
 #define portENABLE_FPU configENABLE_FPU
 
-/* On the ArmV7-R Architecture the Operating mode of the Processor is set
- * using the Current Program Status Register (CPSR) Mode bits, [4:0]. The only
- * unprivileged mode is User Mode.
+/*
+ * 在 ArmV7-R 架构中，处理器的运行模式由当前程序状态寄存器（CPSR）
+ * 的模式位 [4:0] 设置。唯一的非特权模式是用户模式。
  *
- * Additional information about the Processor Modes can be found here:
+ * 有关处理器模式的更多信息，请参见：
  * https://developer.arm.com/documentation/ddi0406/cb/System-Level-Architecture/The-System-Level-Programmers--Model/ARM-processor-modes-and-ARM-core-registers/ARM-processor-modes?lang=en
- *
  */
 
 /**
- * @brief CPSR bits for various processor modes.
+ * @brief 各种处理器模式对应的 CPSR 位。
  *
  * @ingroup Port Privilege
  */
@@ -87,32 +84,32 @@ extern "C" {
 #define SYS_MODE    0x1FU
 
 /**
- * @brief Flag used to mark that a FreeRTOS Task is privileged.
+ * @brief 用于标记某个 FreeRTOS 任务具有特权的标志。
  *
  * @ingroup Port Privilege
  */
 #define portTASK_IS_PRIVILEGED_FLAG   ( 1UL << 1UL )
 
 /**
- * @brief SVC numbers for various scheduler operations.
+ * @brief 各种调度器操作使用的 SVC 编号。
  *
  * @ingroup Scheduler
  *
- * @note These value must not be used in mpu_syscall_numbers.h.
+ * @note 这些值不得在 mpu_syscall_numbers.h 中使用。
  */
 #define portSVC_YIELD                 0x0100U
 #define portSVC_SYSTEM_CALL_EXIT      0x0104U
 
 /**
- * @brief Macros required to manipulate MPU.
+ * @brief 操作 MPU 所需的宏。
  *
- * Further information about MPU can be found in Arm's documentation
+ * 有关 MPU 的更多信息，请参见 Arm 文档：
  * https://developer.arm.com/documentation/ddi0363/g/System-Control/Register-descriptions/c6--MPU-memory-region-programming-registers
- *
  */
 
-/* MPU sub-region disable settings. This information is encoded in the MPU
- * Region Size and Enable Register. */
+/*
+ * MPU 子区域禁用设置。该信息编码在 MPU 区域大小与使能寄存器中。
+ */
 #define portMPU_SUBREGION_0_DISABLE   ( 0x1UL << 8UL )
 #define portMPU_SUBREGION_1_DISABLE   ( 0x1UL << 9UL )
 #define portMPU_SUBREGION_2_DISABLE   ( 0x1UL << 10UL )
@@ -122,7 +119,7 @@ extern "C" {
 #define portMPU_SUBREGION_6_DISABLE   ( 0x1UL << 14UL )
 #define portMPU_SUBREGION_7_DISABLE   ( 0x1UL << 15UL )
 
-/* Default MPU regions. */
+/* 默认 MPU 区域。 */
 #define portFIRST_CONFIGURABLE_REGION ( 0 )
 #define portLAST_CONFIGURABLE_REGION  ( portMPU_TOTAL_REGIONS - 5UL )
 #define portSTACK_REGION              ( portMPU_TOTAL_REGIONS - 4UL )
@@ -131,11 +128,12 @@ extern "C" {
 #define portPRIVILEGED_RAM_REGION     ( portMPU_TOTAL_REGIONS - 1UL )
 #define portNUM_CONFIGURABLE_REGIONS \
     ( ( portLAST_CONFIGURABLE_REGION - portFIRST_CONFIGURABLE_REGION ) + 1UL )
-/* Plus one to make space for the stack region. */
+/* 加一，为栈区域留出空间。 */
 #define portTOTAL_NUM_REGIONS_IN_TCB        ( portNUM_CONFIGURABLE_REGIONS + 1UL )
 
-/* MPU region sizes. This information is encoded in the MPU Region Size and
- * Enable Register. */
+/*
+ * MPU 区域大小。该信息编码在 MPU 区域大小与使能寄存器中。
+ */
 #define portMPU_REGION_SIZE_32B             ( 0x04UL << 1UL )
 #define portMPU_REGION_SIZE_64B             ( 0x05UL << 1UL )
 #define portMPU_REGION_SIZE_128B            ( 0x06UL << 1UL )
@@ -165,84 +163,86 @@ extern "C" {
 #define portMPU_REGION_SIZE_2GB             ( 0x1EUL << 1UL )
 #define portMPU_REGION_SIZE_4GB             ( 0x1FUL << 1UL )
 
-/* MPU memory types. This information is encoded in the TEX, S, C and B bits
- * of the MPU Region Access Control Register. */
-#define portMPU_REGION_STRONGLY_ORDERED_SHAREABLE  ( 0x00UL ) /* TEX=000, S=NA, C=0, B=0. */
-#define portMPU_REGION_DEVICE_SHAREABLE            ( 0x01UL ) /* TEX=000, S=NA, C=0, B=1. */
-#define portMPU_REGION_NORMAL_OIWTNOWA_NONSHARED   ( 0x02UL ) /* TEX=000, S=0, C=1, B=0. */
-#define portMPU_REGION_NORMAL_OIWTNOWA_SHARED      ( 0x06UL ) /* TEX=000, S=1, C=1, B=0. */
-#define portMPU_REGION_NORMAL_OIWBNOWA_NONSHARED   ( 0x03UL ) /* TEX=000, S=0, C=1, B=1. */
-#define portMPU_REGION_NORMAL_OIWBNOWA_SHARED      ( 0x07UL ) /* TEX=000, S=1, C=1, B=1. */
-#define portMPU_REGION_NORMAL_OINC_NONSHARED       ( 0x08UL ) /* TEX=001, S=0, C=0, B=0. */
-#define portMPU_REGION_NORMAL_OINC_SHARED          ( 0x0CUL ) /* TEX=001, S=1, C=0, B=0. */
-#define portMPU_REGION_NORMAL_OIWBWA_NONSHARED     ( 0x0BUL ) /* TEX=001, S=0, C=1, B=1. */
-#define portMPU_REGION_NORMAL_OIWBWA_SHARED        ( 0x0FUL ) /* TEX=001, S=1, C=1, B=1. */
-#define portMPU_REGION_DEVICE_NONSHAREABLE         ( 0x10UL ) /* TEX=010, S=NA, C=0, B=0. */
+/*
+ * MPU 存储器类型。该信息编码在 MPU 区域访问控制寄存器的
+ * TEX、S、C 和 B 位中。
+ */
+#define portMPU_REGION_STRONGLY_ORDERED_SHAREABLE  ( 0x00UL ) /* TEX=000，S=NA，C=0，B=0（存储器类型编码）。 */
+#define portMPU_REGION_DEVICE_SHAREABLE            ( 0x01UL ) /* TEX=000，S=NA，C=0，B=1（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OIWTNOWA_NONSHARED   ( 0x02UL ) /* TEX=000，S=0，C=1，B=0（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OIWTNOWA_SHARED      ( 0x06UL ) /* TEX=000，S=1，C=1，B=0（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OIWBNOWA_NONSHARED   ( 0x03UL ) /* TEX=000，S=0，C=1，B=1（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OIWBNOWA_SHARED      ( 0x07UL ) /* TEX=000，S=1，C=1，B=1（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OINC_NONSHARED       ( 0x08UL ) /* TEX=001，S=0，C=0，B=0（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OINC_SHARED          ( 0x0CUL ) /* TEX=001，S=1，C=0，B=0（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OIWBWA_NONSHARED     ( 0x0BUL ) /* TEX=001，S=0，C=1，B=1（存储器类型编码）。 */
+#define portMPU_REGION_NORMAL_OIWBWA_SHARED        ( 0x0FUL ) /* TEX=001，S=1，C=1，B=1（存储器类型编码）。 */
+#define portMPU_REGION_DEVICE_NONSHAREABLE         ( 0x10UL ) /* TEX=010，S=NA，C=0，B=0（存储器类型编码）。 */
 
-/* MPU access permissions. This information is encoded in the XN and AP bits of
- * the MPU Region Access Control Register. */
+/*
+ * MPU 访问权限。该信息编码在 MPU 区域访问控制寄存器的 XN 和 AP 位中。
+ */
 #define portMPU_REGION_AP_BITMASK                  ( 0x07UL << 8UL )
 #define portMPU_REGION_XN_BITMASK                  ( 0x01UL << 12UL )
 
 #define portMPU_REGION_PRIV_NA_USER_NA             ( 0x00UL << 8UL )
-#define portMPU_REGION_PRIV_NA_USER_NA_EXEC        ( portMPU_REGION_PRIV_NA_USER_NA ) /* Priv: X, Unpriv: X. */
+#define portMPU_REGION_PRIV_NA_USER_NA_EXEC        ( portMPU_REGION_PRIV_NA_USER_NA ) /* 特权级：X，非特权级：X。 */
 #define portMPU_REGION_PRIV_NA_USER_NA_NOEXEC      ( portMPU_REGION_PRIV_NA_USER_NA | \
-                                                     portMPU_REGION_XN_BITMASK ) /* Priv: No Access, Unpriv: No Access. */
+                                                     portMPU_REGION_XN_BITMASK ) /* 特权级：无访问权限，非特权级：无访问权限。 */
 
 #define portMPU_REGION_PRIV_RW_USER_NA             ( 0x01UL << 8UL )
-#define portMPU_REGION_PRIV_RW_USER_NA_EXEC        ( portMPU_REGION_PRIV_RW_USER_NA ) /* Priv: RWX, Unpriv: X. */
+#define portMPU_REGION_PRIV_RW_USER_NA_EXEC        ( portMPU_REGION_PRIV_RW_USER_NA ) /* 特权级：RWX，非特权级：X。 */
 #define portMPU_REGION_PRIV_RW_USER_NA_NOEXEC      ( portMPU_REGION_PRIV_RW_USER_NA | \
-                                                     portMPU_REGION_XN_BITMASK ) /* Priv: RW, Unpriv: No access. */
+                                                     portMPU_REGION_XN_BITMASK ) /* 特权级：RW，非特权级：无访问权限。 */
 
 #define portMPU_REGION_PRIV_RW_USER_RO             ( 0x02UL << 8UL )
-#define portMPU_REGION_PRIV_RW_USER_RO_EXEC        ( portMPU_REGION_PRIV_RW_USER_RO ) /* Priv: RWX, Unpriv: RX. */
+#define portMPU_REGION_PRIV_RW_USER_RO_EXEC        ( portMPU_REGION_PRIV_RW_USER_RO ) /* 特权级：RWX，非特权级：RX。 */
 #define portMPU_REGION_PRIV_RW_USER_RO_NOEXEC      ( portMPU_REGION_PRIV_RW_USER_RO | \
-                                                     portMPU_REGION_XN_BITMASK ) /* Priv: RW, Unpriv: R. */
+                                                     portMPU_REGION_XN_BITMASK ) /* 特权级：RW，非特权级：R。 */
 
 #define portMPU_REGION_PRIV_RW_USER_RW             ( 0x03UL << 8UL )
-#define portMPU_REGION_PRIV_RW_USER_RW_EXEC        ( portMPU_REGION_PRIV_RW_USER_RW ) /* Priv: RWX, Unpriv: RWX. */
+#define portMPU_REGION_PRIV_RW_USER_RW_EXEC        ( portMPU_REGION_PRIV_RW_USER_RW ) /* 特权级：RWX，非特权级：RWX。 */
 #define portMPU_REGION_PRIV_RW_USER_RW_NOEXEC      ( portMPU_REGION_PRIV_RW_USER_RW | \
-                                                     portMPU_REGION_XN_BITMASK ) /* Priv: RW, Unpriv: RW. */
+                                                     portMPU_REGION_XN_BITMASK ) /* 特权级：RW，非特权级：RW。 */
 
 #define portMPU_REGION_PRIV_RO_USER_NA             ( 0x05UL << 8UL )
-#define portMPU_REGION_PRIV_RO_USER_NA_EXEC        ( portMPU_REGION_PRIV_RO_USER_NA ) /* Priv: RX, Unpriv: X. */
+#define portMPU_REGION_PRIV_RO_USER_NA_EXEC        ( portMPU_REGION_PRIV_RO_USER_NA ) /* 特权级：RX，非特权级：X。 */
 #define portMPU_REGION_PRIV_RO_USER_NA_NOEXEC      ( portMPU_REGION_PRIV_RO_USER_NA | \
-                                                     portMPU_REGION_XN_BITMASK ) /* Priv: R, Unpriv: No access. */
+                                                     portMPU_REGION_XN_BITMASK ) /* 特权级：R，非特权级：无访问权限。 */
 
 #define portMPU_REGION_PRIV_RO_USER_RO             ( 0x06UL << 8UL )
-#define portMPU_REGION_PRIV_RO_USER_RO_EXEC        ( portMPU_REGION_PRIV_RO_USER_RO ) /* Priv: RX, Unpriv: RX. */
+#define portMPU_REGION_PRIV_RO_USER_RO_EXEC        ( portMPU_REGION_PRIV_RO_USER_RO ) /* 特权级：RX，非特权级：RX。 */
 #define portMPU_REGION_PRIV_RO_USER_RO_NOEXEC      ( portMPU_REGION_PRIV_RO_USER_RO | \
-                                                     portMPU_REGION_XN_BITMASK ) /* Priv: R, Unpriv: R. */
+                                                     portMPU_REGION_XN_BITMASK ) /* 特权级：R，非特权级：R。 */
 
-/* MPU region management. */
+/* MPU 区域管理。 */
 #define portMPU_REGION_EXECUTE_NEVER               ( 0x01UL << 12UL )
 #define portMPU_REGION_ENABLE                      ( 0x01UL )
 
 /**
- * @brief The size (in words) of a task context.
+ * @brief 任务上下文的字（word）数。
  *
- * An array of this size is allocated in TCB where a task's context is saved
- * when it is switched out.
+ * TCB 中会分配该大小的数组，任务被换出时其上下文保存在此。
  *
- * Information about Floating Point Unit (FPU):
+ * 有关浮点单元（FPU）的信息：
  * https://developer.arm.com/documentation/den0042/a/Floating-Point
  *
- * Additional information related to the Cortex R4-F's FPU Implementation:
+ * Cortex-R4-F FPU 实现的相关信息：
  * https://developer.arm.com/documentation/ddi0363/e/fpu-programmer-s-model
  *
- * Additional information related to the Cortex R5-F's FPU Implementation:
+ * Cortex-R5-F FPU 实现的相关信息：
  * https://developer.arm.com/documentation/ddi0460/d/FPU-Programmers-Model
  *
- * Additional information related to the ArmV7-R CPSR:
+ * ArmV7-R CPSR 的相关信息：
  * https://developer.arm.com/documentation/ddi0406/cb/Application-Level-Architecture/Application-Level-Programmers--Model/The-Application-Program-Status-Register--APSR-?lang=en
  *
- * Additional information related to the GPRs:
+ * 通用寄存器（GPR）的相关信息：
  * https://developer.arm.com/documentation/ddi0406/cb/System-Level-Architecture/The-System-Level-Programmers--Model/ARM-processor-modes-and-ARM-core-registers/ARM-core-registers?lang=en
- *
  */
 
 #if( portENABLE_FPU == 1 )
     /*
+     * 任务上下文布局（含 FPU）：
      * +-------------------+-------+----------+--------+----------+----------+----------+------+
      * | ulCriticalNesting | FPSCR |  S0-S31  | R0-R12 | SP (R13) | LR (R14) | PC (R15) | CPSR |
      * +-------------------+-------+----------+--------+----------+----------+----------+------+
@@ -253,6 +253,7 @@ extern "C" {
     #define CONTEXT_SIZE 51U
 #else
     /*
+     * 任务上下文布局（不含 FPU）：
      * +-------------------+--------+----------+----------+----------+------+
      * | ulCriticalNesting | R0-R12 | SP (R13) | LR (R14) | PC (R15) | CPSR |
      * +-------------------+--------+----------+----------+----------+------+
@@ -261,10 +262,10 @@ extern "C" {
      *           1             13         1         1          1        1
      */
     #define CONTEXT_SIZE 18U
-#endif /* CONTEXT_SIZE */
+#endif /* CONTEXT_SIZE 条件编译结束 */
 
 /**
- * @brief Offset of xSystemCallStackInfo from the start of a TCB.
+ * @brief xSystemCallStackInfo 相对 TCB 起始位置的偏移量。
  */
 #define portSYSTEM_CALL_INFO_OFFSET             \
     ( ( 1U /* pxTopOfStack. */ +                \
@@ -273,7 +274,7 @@ extern "C" {
       ) * 4U )
 
 #ifdef __cplusplus
-} /* extern C */
+} /* extern C 块结束 */
 #endif
 
-#endif /* PORTMACRO_ASM_H */
+#endif /* 头文件保护：PORTMACRO_ASM_H */

@@ -29,110 +29,101 @@
 #ifndef __SECURE_CONTEXT_H__
 #define __SECURE_CONTEXT_H__
 
-/* Standard includes. */
+/* 标准头文件包含。 */
 #include <stdint.h>
 
-/* FreeRTOS includes. */
+/* FreeRTOS 头文件包含。 */
 #include "FreeRTOSConfig.h"
 
 /**
- * @brief PSP value when no secure context is loaded.
+ * @brief 未加载安全上下文时的 PSP 值。
  */
 #define securecontextNO_STACK              0x0
 
 /**
- * @brief Invalid context ID.
+ * @brief 无效的上下文 ID。
  */
 #define securecontextINVALID_CONTEXT_ID    0UL
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Structure to represent a secure context.
+ * @brief 表示安全上下文的结构体。
  *
- * @note Since stack grows down, pucStackStart is the highest address while
- * pucStackLimit is the first address of the allocated memory.
+ * @note 由于栈向下增长，pucStackStart 是最高地址，而 pucStackLimit
+ * 是已分配存储器的第一个地址。
  */
 typedef struct SecureContext
 {
-    uint8_t * pucCurrentStackPointer; /**< Current value of stack pointer (PSP). */
-    uint8_t * pucStackLimit;          /**< Last location of the stack memory (PSPLIM). */
-    uint8_t * pucStackStart;          /**< First location of the stack memory. */
-    void * pvTaskHandle;              /**< Task handle of the task this context is associated with. */
+    uint8_t * pucCurrentStackPointer; /**< 栈指针（PSP）的当前值。 */
+    uint8_t * pucStackLimit;          /**< 栈存储器的最后位置（PSPLIM）。 */
+    uint8_t * pucStackStart;          /**< 栈存储器的第一个位置。 */
+    void * pvTaskHandle;              /**< 与此上下文关联的任务的任务句柄。 */
 } SecureContext_t;
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Opaque handle for a secure context.
+ * @brief 安全上下文的不透明句柄。
  */
 typedef uint32_t SecureContextHandle_t;
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Initializes the secure context management system.
+ * @brief 初始化安全上下文管理系统。
  *
- * PSP is set to NULL and therefore a task must allocate and load a context
- * before calling any secure side function in the thread mode.
+ * PSP 被设置为 NULL，因此任务必须在线程模式下调用任何安全侧函数之前
+ * 分配并加载上下文。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 该函数必须在处理程序模式下调用。若在线程模式下调用，则为空操作。
  */
 void SecureContext_Init( void );
 
 /**
- * @brief Allocates a context on the secure side.
+ * @brief 在安全侧分配上下文。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 该函数必须在处理程序模式下调用。若在线程模式下调用，则为空操作。
  *
- * @param[in] ulSecureStackSize Size of the stack to allocate on secure side.
- * @param[in] ulIsTaskPrivileged 1 if the calling task is privileged, 0 otherwise.
+ * @param[in] ulSecureStackSize 在安全侧分配的栈大小。
+ * @param[in] ulIsTaskPrivileged 若调用任务具有特权则为 1，否则为 0。
  *
- * @return Opaque context handle if context is successfully allocated, NULL
- * otherwise.
+ * @return 若成功分配上下文则返回不透明上下文句柄，否则返回 NULL。
  */
 #if ( configENABLE_MPU == 1 )
     SecureContextHandle_t SecureContext_AllocateContext( uint32_t ulSecureStackSize,
                                                          uint32_t ulIsTaskPrivileged,
                                                          void * pvTaskHandle );
-#else /* configENABLE_MPU */
+#else /* configENABLE_MPU 条件编译结束 */
     SecureContextHandle_t SecureContext_AllocateContext( uint32_t ulSecureStackSize,
                                                          void * pvTaskHandle );
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU 条件编译结束 */
 
 /**
- * @brief Frees the given context.
+ * @brief 释放给定的上下文。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 该函数必须在处理程序模式下调用。若在线程模式下调用，则为空操作。
  *
- * @param[in] xSecureContextHandle Context handle corresponding to the
- * context to be freed.
+ * @param[in] xSecureContextHandle 与要释放的上下文对应的上下文句柄。
  */
 void SecureContext_FreeContext( SecureContextHandle_t xSecureContextHandle,
                                 void * pvTaskHandle );
 
 /**
- * @brief Loads the given context.
+ * @brief 加载给定的上下文。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 该函数必须在处理程序模式下调用。若在线程模式下调用，则为空操作。
  *
- * @param[in] xSecureContextHandle Context handle corresponding to the context
- * to be loaded.
+ * @param[in] xSecureContextHandle 与要加载的上下文对应的上下文句柄。
  */
 void SecureContext_LoadContext( SecureContextHandle_t xSecureContextHandle,
                                 void * pvTaskHandle );
 
 /**
- * @brief Saves the given context.
+ * @brief 保存给定的上下文。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 该函数必须在处理程序模式下调用。若在线程模式下调用，则为空操作。
  *
- * @param[in] xSecureContextHandle Context handle corresponding to the context
- * to be saved.
+ * @param[in] xSecureContextHandle 与要保存的上下文对应的上下文句柄。
  */
 void SecureContext_SaveContext( SecureContextHandle_t xSecureContextHandle,
                                 void * pvTaskHandle );
 
-#endif /* __SECURE_CONTEXT_H__ */
+#endif /* 头文件保护：__SECURE_CONTEXT_H__ */

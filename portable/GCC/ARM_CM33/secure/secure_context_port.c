@@ -26,10 +26,10 @@
  *
  */
 
-/* Secure context includes. */
+/* 安全上下文相关头文件包含。 */
 #include "secure_context.h"
 
-/* Secure port macros. */
+/* 安全移植层宏。 */
 #include "secure_port_macros.h"
 
 void SecureContext_LoadContextAsm( SecureContext_t * pxSecureContext ) __attribute__( ( naked ) );
@@ -37,22 +37,22 @@ void SecureContext_SaveContextAsm( SecureContext_t * pxSecureContext ) __attribu
 
 void SecureContext_LoadContextAsm( SecureContext_t * pxSecureContext )
 {
-    /* pxSecureContext value is in r0. */
+    /* pxSecureContext 的值位于 r0 中。 */
     __asm volatile
     (
         " .syntax unified                   \n"
         "                                   \n"
-        " mrs r1, ipsr                      \n" /* r1 = IPSR. */
-        " cbz r1, load_ctx_therad_mode      \n" /* Do nothing if the processor is running in the Thread Mode. */
-        " ldmia r0!, {r1, r2}               \n" /* r1 = pxSecureContext->pucCurrentStackPointer, r2 = pxSecureContext->pucStackLimit. */
+        " mrs r1, ipsr                      \n" /* r1 = IPSR（中断程序状态寄存器）。 */
+        " cbz r1, load_ctx_therad_mode      \n" /* 若处理器运行在线程模式，则不做任何操作。 */
+        " ldmia r0!, {r1, r2}               \n" /* r1 = pxSecureContext->pucCurrentStackPointer（当前栈指针），r2 = pxSecureContext->pucStackLimit（栈限）。 */
         "                                   \n"
         #if ( configENABLE_MPU == 1 )
-            " ldmia r1!, {r3}               \n" /* Read CONTROL register value from task's stack. r3 = CONTROL. */
-            " msr control, r3               \n" /* CONTROL = r3. */
-        #endif /* configENABLE_MPU */
+            " ldmia r1!, {r3}               \n" /* 从任务栈中读取 CONTROL 寄存器的值。r3 = CONTROL。 */
+            " msr control, r3               \n" /* CONTROL = r3（恢复 CONTROL 寄存器）。 */
+        #endif /* configENABLE_MPU（条件编译结束） */
         "                                   \n"
-        " msr psplim, r2                    \n" /* PSPLIM = r2. */
-        " msr psp, r1                       \n" /* PSP = r1. */
+        " msr psplim, r2                    \n" /* PSPLIM = r2（设置进程栈限）。 */
+        " msr psp, r1                       \n" /* PSP = r1（设置进程栈指针）。 */
         "                                   \n"
         " load_ctx_therad_mode:             \n"
         "    bx lr                          \n"
@@ -64,29 +64,29 @@ void SecureContext_LoadContextAsm( SecureContext_t * pxSecureContext )
 
 void SecureContext_SaveContextAsm( SecureContext_t * pxSecureContext )
 {
-    /* pxSecureContext value is in r0. */
+    /* pxSecureContext 的值位于 r0 中。 */
     __asm volatile
     (
         " .syntax unified                   \n"
         "                                   \n"
-        " mrs r1, ipsr                      \n" /* r1 = IPSR. */
-        " cbz r1, save_ctx_therad_mode      \n" /* Do nothing if the processor is running in the Thread Mode. */
-        " mrs r1, psp                       \n" /* r1 = PSP. */
+        " mrs r1, ipsr                      \n" /* r1 = IPSR（中断程序状态寄存器）。 */
+        " cbz r1, save_ctx_therad_mode      \n" /* 若处理器运行在线程模式，则不做任何操作。 */
+        " mrs r1, psp                       \n" /* r1 = PSP（进程栈指针）。 */
         "                                   \n"
         #if ( ( configENABLE_FPU == 1 ) || ( configENABLE_MVE == 1 ) )
-            " vstmdb r1!, {s0}              \n" /* Trigger the deferred stacking of FPU registers. */
-            " vldmia r1!, {s0}              \n" /* Nullify the effect of the previous statement. */
-        #endif /* configENABLE_FPU || configENABLE_MVE */
+            " vstmdb r1!, {s0}              \n" /* 触发 FPU 寄存器的延迟压栈。 */
+            " vldmia r1!, {s0}              \n" /* 抵消前一条语句的影响。 */
+        #endif /* configENABLE_FPU || configENABLE_MVE（条件编译结束） */
         "                                   \n"
         #if ( configENABLE_MPU == 1 )
-            " mrs r2, control               \n" /* r2 = CONTROL. */
-            " stmdb r1!, {r2}               \n" /* Store CONTROL value on the stack. */
-        #endif /* configENABLE_MPU */
+            " mrs r2, control               \n" /* r2 = CONTROL（读取 CONTROL 寄存器）。 */
+            " stmdb r1!, {r2}               \n" /* 将 CONTROL 的值保存到栈中。 */
+        #endif /* configENABLE_MPU（条件编译结束） */
         "                                   \n"
-        " str r1, [r0]                      \n" /* Save the top of stack in context. pxSecureContext->pucCurrentStackPointer = r1. */
-        " movs r1, %0                       \n" /* r1 = securecontextNO_STACK. */
-        " msr psplim, r1                    \n" /* PSPLIM = securecontextNO_STACK. */
-        " msr psp, r1                       \n" /* PSP = securecontextNO_STACK i.e. No stack for thread mode until next task's context is loaded. */
+        " str r1, [r0]                      \n" /* 将栈顶保存到上下文中。pxSecureContext->pucCurrentStackPointer = r1。 */
+        " movs r1, %0                       \n" /* r1 = securecontextNO_STACK（表示无栈）。 */
+        " msr psplim, r1                    \n" /* PSPLIM = securecontextNO_STACK（无栈限）。 */
+        " msr psp, r1                       \n" /* PSP = securecontextNO_STACK，即在加载下一个任务的上下文之前，线程模式没有可用栈。 */
         "                                   \n"
         " save_ctx_therad_mode:             \n"
         "    bx lr                          \n"

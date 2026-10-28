@@ -30,24 +30,24 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*------------------------------------------------------------------------------
- * Port specific definitions.
+/*
+ * ------------------------------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 本文件中的设置针对给定硬件和编译器正确配置 FreeRTOS。
  *
- * These settings should not be altered.
- *------------------------------------------------------------------------------
+ * 不应修改这些设置。
+ * ------------------------------------------------------------------------------
  */
 
 /**
- * Architecture specifics.
+ * 架构相关定义。
  */
 #define portARCH_NAME                    "Cortex-M35P"
 #define portHAS_ARMV8M_MAIN_EXTENSION    1
@@ -56,7 +56,7 @@
 #define portVALIDATED_FOR_SMP            0
 /*-----------------------------------------------------------*/
 
-/* ARMv8-M common port configurations. */
+/* ARMv8-M 通用移植层配置。 */
 #include "portmacrocommon.h"
 /*-----------------------------------------------------------*/
 
@@ -68,16 +68,16 @@
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Critical section management.
+ * @brief 临界区管理。
  */
 #define portDISABLE_INTERRUPTS()    ulSetInterruptMask()
 #define portENABLE_INTERRUPTS()     vClearInterruptMask( 0 )
 /*-----------------------------------------------------------*/
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* 头文件保护：PORTMACRO_H */

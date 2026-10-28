@@ -27,27 +27,24 @@
  */
 
 /*
- * The FreeRTOS kernel's RISC-V port is split between the code that is
- * common across all currently supported RISC-V chips (implementations of the
- * RISC-V ISA), and code that tailors the port to a specific RISC-V chip:
+ * FreeRTOS 内核的 RISC-V 移植层分为两部分：所有当前支持的 RISC-V 芯片
+ * （RISC-V ISA 实现）共用的代码，以及针对特定 RISC-V 芯片定制的代码：
  *
- * + FreeRTOS\Source\portable\GCC\RISC-V\portASM.S contains the code that
- *   is common to all currently supported RISC-V chips.  There is only one
- *   portASM.S file because the same file is built for all RISC-V target chips.
+ * + FreeRTOS\Source\portable\GCC\RISC-V\portASM.S 包含所有当前支持的
+ *   RISC-V 芯片共用的代码。所有 RISC-V 目标芯片都构建同一个 portASM.S
+ *   文件，因此该文件只有一个。
  *
- * + Header files called freertos_risc_v_chip_specific_extensions.h contain the
- *   code that tailors the FreeRTOS kernel's RISC-V port to a specific RISC-V
- *   chip.  There are multiple freertos_risc_v_chip_specific_extensions.h files
- *   as there are multiple RISC-V chip implementations.
+ * + 名为 freertos_risc_v_chip_specific_extensions.h 的头文件包含针对特定
+ *   RISC-V 芯片定制 FreeRTOS 内核 RISC-V 移植层的代码。由于存在多种
+ *   RISC-V 芯片实现，因此也有多个 freertos_risc_v_chip_specific_extensions.h
+ *   文件。
  *
- * !!!NOTE!!!
- * TAKE CARE TO INCLUDE THE CORRECT freertos_risc_v_chip_specific_extensions.h
- * HEADER FILE FOR THE CHIP IN USE.  This is done using the assembler's (not the
- * compiler's!) include path.  For example, if the chip in use includes a core
- * local interrupter (CLINT) and does not include any chip specific register
- * extensions then add the path below to the assembler's include path:
- * FreeRTOS\Source\portable\GCC\RISC-V\chip_specific_extensions\RISCV_MTIME_CLINT_no_extensions
- *
+ * !!!注意!!!
+ * 务必包含所用芯片对应的正确 freertos_risc_v_chip_specific_extensions.h
+ * 头文件。该文件通过汇编器（而非编译器！）的包含路径选择。例如，若所用芯片
+ * 包含核心本地中断器（CLINT）且不包含任何芯片专用寄存器扩展，则将以下路径
+ * 添加到汇编器的包含路径：
+ * FreeRTOS\Source\portable\GCC\RISC-V\chip_specific_extensions\RV32I_CLINT_no_extensions
  */
 
 
@@ -59,11 +56,11 @@
 #define portasmADDITIONAL_CONTEXT_SIZE    0
 
 .macro portasmSAVE_ADDITIONAL_REGISTERS
-/* No additional registers to save, so this macro does nothing. */
+/* 没有需要保存的附加寄存器，因此该宏为空操作。 */
    .endm
 
    .macro portasmRESTORE_ADDITIONAL_REGISTERS
-/* No additional registers to restore, so this macro does nothing. */
+/* 没有需要恢复的附加寄存器，因此该宏为空操作。 */
    .endm
 
-#endif /* __FREERTOS_RISC_V_EXTENSIONS_H__ */
+#endif /* 头文件保护：__FREERTOS_RISC_V_EXTENSIONS_H__ */

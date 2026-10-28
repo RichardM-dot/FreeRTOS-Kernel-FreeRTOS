@@ -30,25 +30,24 @@
 #define __SECURE_INIT_H__
 
 /**
- * @brief De-prioritizes the non-secure exceptions.
+ * @brief 降低非安全异常的优先级。
  *
- * This is needed to ensure that the non-secure PendSV runs at the lowest
- * priority. Context switch is done in the non-secure PendSV handler.
+ * 此操作可确保非安全 PendSV 以最低优先级运行。上下文切换在非安全
+ * PendSV 处理程序中完成。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 本函数必须在处理程序模式（handler mode）下调用；在线程模式
+ * （thread mode）下调用时不执行任何操作。
  */
 void SecureInit_DePrioritizeNSExceptions( void );
 
 /**
- * @brief Sets up the Floating Point Unit (FPU) for Non-Secure access.
+ * @brief 为非安全访问配置浮点单元（FPU）。
  *
- * Also sets FPCCR.TS=1 to ensure that the content of the Floating Point
- * Registers are not leaked to the non-secure side.
+ * 同时将 FPCCR.TS 置 1，以确保浮点寄存器的内容不会泄露到非安全侧。
  *
- * @note This function must be called in the handler mode. It is no-op if called
- * in the thread mode.
+ * @note 本函数必须在处理程序模式（handler mode）下调用；在线程模式
+ * （thread mode）下调用时不执行任何操作。
  */
 void SecureInit_EnableNSFPUAccess( void );
 
-#endif /* __SECURE_INIT_H__ */
+#endif /* __SECURE_INIT_H__（头文件保护宏） */

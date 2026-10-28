@@ -26,43 +26,43 @@
  *
  */
 
-/* Secure context includes. */
+/* 安全上下文相关头文件包含。 */
 #include "secure_context.h"
 
-/* Secure heap includes. */
+/* 安全堆相关头文件包含。 */
 #include "secure_heap.h"
 
-/* Secure port macros. */
+/* 安全移植层宏。 */
 #include "secure_port_macros.h"
 
 /**
- * @brief CONTROL value for privileged tasks.
+ * @brief 特权任务的 CONTROL 值。
  *
- * Bit[0] - 0 --> Thread mode is privileged.
- * Bit[1] - 1 --> Thread mode uses PSP.
+ * 位[0] - 0 --> 线程模式为特权级。
+ * 位[1] - 1 --> 线程模式使用 PSP。
  */
 #define securecontextCONTROL_VALUE_PRIVILEGED      0x02
 
 /**
- * @brief CONTROL value for un-privileged tasks.
+ * @brief 非特权任务的 CONTROL 值。
  *
- * Bit[0] - 1 --> Thread mode is un-privileged.
- * Bit[1] - 1 --> Thread mode uses PSP.
+ * 位[0] - 1 --> 线程模式为非特权级。
+ * 位[1] - 1 --> 线程模式使用 PSP。
  */
 #define securecontextCONTROL_VALUE_UNPRIVILEGED    0x03
 
 /**
- * @brief Size of stack seal values in bytes.
+ * @brief 栈封印值的大小（字节）。
  */
 #define securecontextSTACK_SEAL_SIZE               8
 
 /**
- * @brief Stack seal value as recommended by ARM.
+ * @brief ARM 推荐的栈封印值。
  */
 #define securecontextSTACK_SEAL_VALUE              0xFEF5EDA5
 
 /**
- * @brief Maximum number of secure contexts.
+ * @brief 安全上下文的最大数量。
  */
 #ifndef secureconfigMAX_SECURE_CONTEXTS
     #define secureconfigMAX_SECURE_CONTEXTS    8UL
@@ -70,37 +70,37 @@
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Pre-allocated array of secure contexts.
+ * @brief 预分配的安全上下文数组。
  */
 SecureContext_t xSecureContexts[ secureconfigMAX_SECURE_CONTEXTS ];
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Get a free secure context for a task from the secure context pool (xSecureContexts).
+ * @brief 从安全上下文池（xSecureContexts）中为任务获取一个空闲的安全上下文。
  *
- * This function ensures that only one secure context is allocated for a task.
+ * 该函数确保一个任务只分配一个安全上下文。
  *
- * @param[in] pvTaskHandle The task handle for which the secure context is allocated.
+ * @param[in] pvTaskHandle 为其分配安全上下文的任务句柄。
  *
- * @return Index of a free secure context in the xSecureContexts array.
+ * @return 空闲安全上下文在 xSecureContexts 数组中的索引。
  */
 static uint32_t ulGetSecureContext( void * pvTaskHandle );
 
 /**
- * @brief Return the secure context to the secure context pool (xSecureContexts).
+ * @brief 将安全上下文归还到安全上下文池（xSecureContexts）。
  *
- * @param[in] ulSecureContextIndex Index of the context in the xSecureContexts array.
+ * @param[in] ulSecureContextIndex 上下文在 xSecureContexts 数组中的索引。
  */
 static void vReturnSecureContext( uint32_t ulSecureContextIndex );
 
-/* These are implemented in assembly. */
+/* 这些函数由汇编实现。 */
 extern void SecureContext_LoadContextAsm( SecureContext_t * pxSecureContext );
 extern void SecureContext_SaveContextAsm( SecureContext_t * pxSecureContext );
 /*-----------------------------------------------------------*/
 
 static uint32_t ulGetSecureContext( void * pvTaskHandle )
 {
-    /* Start with invalid index. */
+    /* 以无效索引开始。 */
     uint32_t i, ulSecureContextIndex = secureconfigMAX_SECURE_CONTEXTS;
 
     for( i = 0; i < secureconfigMAX_SECURE_CONTEXTS; i++ )
@@ -115,8 +115,9 @@ static uint32_t ulGetSecureContext( void * pvTaskHandle )
         }
         else if( xSecureContexts[ i ].pvTaskHandle == pvTaskHandle )
         {
-            /* A task can only have one secure context. Do not allocate a second
-             * context for the same task. */
+            /*
+             * 一个任务只能有一个安全上下文。不要为同一任务分配第二个上下文。
+             */
             ulSecureContextIndex = secureconfigMAX_SECURE_CONTEXTS;
             break;
         }
@@ -140,21 +141,22 @@ secureportNON_SECURE_CALLABLE void SecureContext_Init( void )
     uint32_t ulIPSR, i;
     static uint32_t ulSecureContextsInitialized = 0;
 
-    /* Read the Interrupt Program Status Register (IPSR) value. */
+    /* 读取中断程序状态寄存器（IPSR）的值。 */
     secureportREAD_IPSR( ulIPSR );
 
-    /* Do nothing if the processor is running in the Thread Mode. IPSR is zero
-     * when the processor is running in the Thread Mode. */
+    /*
+     * 若处理器运行在线程模式，则不做任何操作。处理器运行在线程模式时 IPSR 为零。
+     */
     if( ( ulIPSR != 0 ) && ( ulSecureContextsInitialized == 0 ) )
     {
-        /* Ensure to initialize secure contexts only once. */
+        /* 确保安全上下文仅初始化一次。 */
         ulSecureContextsInitialized = 1;
 
-        /* No stack for thread mode until a task's context is loaded. */
+        /* 在加载任务的上下文之前，线程模式没有可用栈。 */
         secureportSET_PSPLIM( securecontextNO_STACK );
         secureportSET_PSP( securecontextNO_STACK );
 
-        /* Initialize all secure contexts. */
+        /* 初始化所有安全上下文。 */
         for( i = 0; i < secureconfigMAX_SECURE_CONTEXTS; i++ )
         {
             xSecureContexts[ i ].pucCurrentStackPointer = NULL;
@@ -165,15 +167,15 @@ secureportNON_SECURE_CALLABLE void SecureContext_Init( void )
 
         #if ( configENABLE_MPU == 1 )
         {
-            /* Configure thread mode to use PSP and to be unprivileged. */
+            /* 将线程模式配置为使用 PSP 且为非特权级。 */
             secureportSET_CONTROL( securecontextCONTROL_VALUE_UNPRIVILEGED );
         }
-        #else /* configENABLE_MPU */
+        #else /* configENABLE_MPU（条件编译结束） */
         {
-            /* Configure thread mode to use PSP and to be privileged. */
+            /* 将线程模式配置为使用 PSP 且为特权级。 */
             secureportSET_CONTROL( securecontextCONTROL_VALUE_PRIVILEGED );
         }
-        #endif /* configENABLE_MPU */
+        #endif /* configENABLE_MPU（条件编译结束） */
     }
 }
 /*-----------------------------------------------------------*/
@@ -182,10 +184,10 @@ secureportNON_SECURE_CALLABLE void SecureContext_Init( void )
     secureportNON_SECURE_CALLABLE SecureContextHandle_t SecureContext_AllocateContext( uint32_t ulSecureStackSize,
                                                                                        uint32_t ulIsTaskPrivileged,
                                                                                        void * pvTaskHandle )
-#else /* configENABLE_MPU */
+#else /* configENABLE_MPU（条件编译结束） */
     secureportNON_SECURE_CALLABLE SecureContextHandle_t SecureContext_AllocateContext( uint32_t ulSecureStackSize,
                                                                                        void * pvTaskHandle )
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU（条件编译结束） */
 {
     uint8_t * pucStackMemory = NULL;
     uint8_t * pucStackLimit;
@@ -194,32 +196,35 @@ secureportNON_SECURE_CALLABLE void SecureContext_Init( void )
 
     #if ( configENABLE_MPU == 1 )
         uint32_t * pulCurrentStackPointer = NULL;
-    #endif /* configENABLE_MPU */
+    #endif /* configENABLE_MPU（条件编译结束） */
 
-    /* Read the Interrupt Program Status Register (IPSR) and Process Stack Limit
-     * Register (PSPLIM) value. */
+    /*
+     * 读取中断程序状态寄存器（IPSR）和进程栈限寄存器（PSPLIM）的值。
+     */
     secureportREAD_IPSR( ulIPSR );
     secureportREAD_PSPLIM( pucStackLimit );
 
-    /* Do nothing if the processor is running in the Thread Mode. IPSR is zero
-     * when the processor is running in the Thread Mode.
-     * Also do nothing, if a secure context us already loaded. PSPLIM is set to
-     * securecontextNO_STACK when no secure context is loaded. */
+    /*
+     * 若处理器运行在线程模式，则不做任何操作。处理器运行在线程模式时 IPSR 为零。
+     * 若已加载安全上下文，也不做任何操作。未加载安全上下文时，
+     * PSPLIM 被设置为 securecontextNO_STACK。
+     */
     if( ( ulIPSR != 0 ) && ( pucStackLimit == securecontextNO_STACK ) )
     {
-        /* Obtain a free secure context. */
+        /* 获取一个空闲的安全上下文。 */
         ulSecureContextIndex = ulGetSecureContext( pvTaskHandle );
 
-        /* Were we able to get a free context? */
+        /* 是否成功获取到空闲上下文？ */
         if( ulSecureContextIndex < secureconfigMAX_SECURE_CONTEXTS )
         {
-            /* Allocate the stack space if possible. */
+            /* 若可能，分配栈空间。 */
             if( ( ulSecureStackSize < securecontextSTACK_SEAL_SIZE ) ||
                 ( ulSecureStackSize > ( UINT32_MAX - securecontextSTACK_SEAL_SIZE ) ) )
             {
-                /* Reject stacks that are too small (the CONTROL word would be
-                 * written before the allocation, corrupting the secure heap)
-                 * and sizes that would overflow when the seal size is added. */
+                /*
+                 * 拒绝过小的栈（CONTROL 字会在分配之前被写入，从而破坏安全堆），
+                 * 以及加上封印值后会发生溢出的尺寸。
+                 */
                 pucStackMemory = NULL;
             }
             else
@@ -229,29 +234,31 @@ secureportNON_SECURE_CALLABLE void SecureContext_Init( void )
 
             if( pucStackMemory != NULL )
             {
-                /* Since stack grows down, the starting point will be the last
-                * location. Note that this location is next to the last
-                * allocated byte for stack (excluding the space for seal values)
-                * because the hardware decrements the stack pointer before
-                * writing i.e. if stack pointer is 0x2, a push operation will
-                * decrement the stack pointer to 0x1 and then write at 0x1. */
+                /*
+                 * 由于栈向下增长，起始点为最后一个位置。注意该位置紧邻栈最后
+                 * 分配的字节（不包括封印值占用的空间），因为硬件在写入之前
+                 * 会先递减栈指针；即若栈指针为 0x2，压栈操作会把栈指针
+                 * 递减到 0x1，然后写入 0x1。
+                 */
                 xSecureContexts[ ulSecureContextIndex ].pucStackStart = pucStackMemory + ulSecureStackSize;
 
-                /* Seal the created secure process stack. */
+                /* 对新创建的安全进程栈进行封印。 */
                 *( uint32_t * ) ( pucStackMemory + ulSecureStackSize ) = securecontextSTACK_SEAL_VALUE;
                 *( uint32_t * ) ( pucStackMemory + ulSecureStackSize + 4 ) = securecontextSTACK_SEAL_VALUE;
 
-                /* The stack cannot go beyond this location. This value is
-                 * programmed in the PSPLIM register on context switch.*/
+                /*
+                 * 栈不能超出此位置。该值在上下文切换时写入 PSPLIM 寄存器。
+                 */
                 xSecureContexts[ ulSecureContextIndex ].pucStackLimit = pucStackMemory;
 
                 xSecureContexts[ ulSecureContextIndex ].pvTaskHandle = pvTaskHandle;
 
                 #if ( configENABLE_MPU == 1 )
                 {
-                    /* Store the correct CONTROL value for the task on the stack.
-                     * This value is programmed in the CONTROL register on
-                     * context switch. */
+                    /*
+                     * 将任务正确的 CONTROL 值保存到栈中。该值在上下文切换时
+                     * 写入 CONTROL 寄存器。
+                     */
                     pulCurrentStackPointer = ( uint32_t * ) xSecureContexts[ ulSecureContextIndex ].pucStackStart;
                     pulCurrentStackPointer--;
 
@@ -264,19 +271,22 @@ secureportNON_SECURE_CALLABLE void SecureContext_Init( void )
                         *( pulCurrentStackPointer ) = securecontextCONTROL_VALUE_UNPRIVILEGED;
                     }
 
-                    /* Store the current stack pointer. This value is programmed in
-                     * the PSP register on context switch. */
+                    /*
+                     * 保存当前栈指针。该值在上下文切换时写入 PSP 寄存器。
+                     */
                     xSecureContexts[ ulSecureContextIndex ].pucCurrentStackPointer = ( uint8_t * ) pulCurrentStackPointer;
                 }
-                #else /* configENABLE_MPU */
+                #else /* configENABLE_MPU（条件编译结束） */
                 {
-                    /* Current SP is set to the starting of the stack. This
-                     * value programmed in the PSP register on context switch. */
+                    /*
+                     * 将当前 SP 设置为栈的起始位置。该值在上下文切换时
+                     * 写入 PSP 寄存器。
+                     */
                     xSecureContexts[ ulSecureContextIndex ].pucCurrentStackPointer = xSecureContexts[ ulSecureContextIndex ].pucStackStart;
                 }
-                #endif /* configENABLE_MPU */
+                #endif /* configENABLE_MPU（条件编译结束） */
 
-                /* Ensure to never return 0 as a valid context handle. */
+                /* 确保绝不将 0 作为有效的上下文句柄返回。 */
                 xSecureContextHandle = ulSecureContextIndex + 1UL;
             }
         }
@@ -292,34 +302,35 @@ secureportNON_SECURE_CALLABLE void SecureContext_FreeContext( SecureContextHandl
     uint32_t ulIPSR, ulSecureContextIndex;
     uint8_t * pucStackLimit;
 
-    /* Read the Interrupt Program Status Register (IPSR) and Process Stack Limit
-     * Register (PSPLIM) value. */
+    /*
+     * 读取中断程序状态寄存器（IPSR）和进程栈限寄存器（PSPLIM）的值。
+     */
     secureportREAD_IPSR( ulIPSR );
     secureportREAD_PSPLIM( pucStackLimit );
 
-    /* Do nothing if the processor is running in the Thread Mode. IPSR is zero
-     * when the processor is running in the Thread Mode. */
+    /*
+     * 若处理器运行在线程模式，则不做任何操作。处理器运行在线程模式时 IPSR 为零。
+     */
     if( ulIPSR != 0 )
     {
-        /* Only free if a valid context handle is passed. */
+        /* 仅在传入有效上下文句柄时才释放。 */
         if( ( xSecureContextHandle > 0UL ) && ( xSecureContextHandle <= secureconfigMAX_SECURE_CONTEXTS ) )
         {
             ulSecureContextIndex = xSecureContextHandle - 1UL;
 
-            /* Ensure that the secure context being deleted is associated with
-             * the task and is NOT the currently-loaded context. Freeing a
-             * context whose stack is currently loaded in PSPLIM would leave the
-             * running task referencing freed secure memory (use-after-free).
-             * pvTaskHandle is supplied by the non-secure side and is untrusted,
-             * so it is used only as an additional ownership match, not as
-             * authority. */
+            /*
+             * 确保待删除的安全上下文与该任务关联，且不是当前已加载的上下文。
+             * 释放其栈当前已加载到 PSPLIM 的上下文，会使正在运行的任务
+             * 引用已释放的安全内存（释放后使用）。pvTaskHandle 由非安全侧
+             * 提供且不可信，因此仅作为额外的所有权匹配条件，而不作为权限依据。
+             */
             if( ( xSecureContexts[ ulSecureContextIndex ].pvTaskHandle == pvTaskHandle ) &&
                 ( xSecureContexts[ ulSecureContextIndex ].pucStackLimit != pucStackLimit ) )
             {
-                /* Free the stack space. */
+                /* 释放栈空间。 */
                 vPortFree( xSecureContexts[ ulSecureContextIndex ].pucStackLimit );
 
-                /* Return the secure context back to the free secure contexts pool. */
+                /* 将安全上下文归还到空闲安全上下文池。 */
                 vReturnSecureContext( ulSecureContextIndex );
             }
         }
@@ -339,8 +350,9 @@ secureportNON_SECURE_CALLABLE void SecureContext_LoadContext( SecureContextHandl
 
         secureportREAD_PSPLIM( pucStackLimit );
 
-        /* Ensure that no secure context is loaded and the task is loading it's
-         * own context. */
+        /*
+         * 确保未加载任何安全上下文，且任务正在加载其自身的上下文。
+         */
         if( ( pucStackLimit == securecontextNO_STACK ) &&
             ( xSecureContexts[ ulSecureContextIndex ].pvTaskHandle == pvTaskHandle ) )
         {
@@ -362,8 +374,9 @@ secureportNON_SECURE_CALLABLE void SecureContext_SaveContext( SecureContextHandl
 
         secureportREAD_PSPLIM( pucStackLimit );
 
-        /* Ensure that task's context is loaded and the task is saving its own
-         * context. */
+        /*
+         * 确保任务已加载其上下文，且任务正在保存其自身的上下文。
+         */
         if( ( xSecureContexts[ ulSecureContextIndex ].pucStackLimit == pucStackLimit ) &&
             ( xSecureContexts[ ulSecureContextIndex ].pvTaskHandle == pvTaskHandle ) )
         {

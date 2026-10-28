@@ -28,16 +28,20 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the ARM CM3 MPU port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * ARM CM3 MPU 移植层中 portable.h 所定义函数的实现。
+ * ----------------------------------------------------------
+ */
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers.  That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 把
+ * 所有 API 函数重定义为使用 MPU 包装器的版本。仅当从应用程序文件
+ * 包含 task.h 时才应这样做。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/* Scheduler includes. */
+/* 调度器相关头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "mpu_syscall_numbers.h"
@@ -46,17 +50,19 @@
 
 #ifndef configSYSTICK_CLOCK_HZ
     #define configSYSTICK_CLOCK_HZ    configCPU_CLOCK_HZ
-    /* Ensure the SysTick is clocked at the same frequency as the core. */
+    /* 确保 SysTick 与内核使用相同频率的时钟。 */
     #define portNVIC_SYSTICK_CLK      ( 1UL << 2UL )
 #else
 
-/* The way the SysTick is clocked is not modified in case it is not the same
- * as the core. */
+/*
+ * 不修改 SysTick 的时钟方式，以防其与内核时钟不一致。
+ */
     #define portNVIC_SYSTICK_CLK    ( 0 )
 #endif
 
-/* Unprivileged critical sections are not supported when using MPU wrappers
- * version 2. Default the option to 0 and reject an explicit value of 1. */
+/*
+ * 使用 MPU 包装器版本 2 时不支持非特权临界区。将该选项默认设为 0，并拒绝显式设置为 1。
+ */
 #ifndef configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS
     #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
         #define configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS    0
@@ -70,10 +76,10 @@
     #endif
 #endif
 
-/* Prototype of all Interrupt Service Routines (ISRs). */
+/* 所有中断服务程序（ISR）的原型。 */
 typedef void ( * portISR_t )( void );
 
-/* Constants required to access and manipulate the NVIC. */
+/* 访问和操作 NVIC 所需的常量。 */
 #define portNVIC_SYSTICK_CTRL_REG                 ( *( ( volatile uint32_t * ) 0xe000e010 ) )
 #define portNVIC_SYSTICK_LOAD_REG                 ( *( ( volatile uint32_t * ) 0xe000e014 ) )
 #define portNVIC_SYSTICK_CURRENT_VALUE_REG        ( *( ( volatile uint32_t * ) 0xe000e018 ) )
@@ -82,12 +88,12 @@ typedef void ( * portISR_t )( void );
 #define portNVIC_SYS_CTRL_STATE_REG               ( *( ( volatile uint32_t * ) 0xe000ed24 ) )
 #define portNVIC_MEM_FAULT_ENABLE                 ( 1UL << 16UL )
 
-/* Constants required to access and manipulate the MPU. */
+/* 访问和操作 MPU 所需的常量。 */
 #define portMPU_TYPE_REG                          ( *( ( volatile uint32_t * ) 0xe000ed90 ) )
 #define portMPU_REGION_BASE_ADDRESS_REG           ( *( ( volatile uint32_t * ) 0xe000ed9C ) )
 #define portMPU_REGION_ATTRIBUTE_REG              ( *( ( volatile uint32_t * ) 0xe000edA0 ) )
 #define portMPU_CTRL_REG                          ( *( ( volatile uint32_t * ) 0xe000ed94 ) )
-#define portEXPECTED_MPU_TYPE_VALUE               ( 8UL << 8UL ) /* 8 regions, unified. */
+#define portEXPECTED_MPU_TYPE_VALUE               ( 8UL << 8UL ) /* 8 个区域，统一映射。 */
 #define portMPU_ENABLE                            ( 0x01UL )
 #define portMPU_BACKGROUND_ENABLE                 ( 1UL << 2UL )
 #define portPRIVILEGED_EXECUTION_START_ADDRESS    ( 0UL )
@@ -96,8 +102,9 @@ typedef void ( * portISR_t )( void );
 #define portPERIPHERALS_START_ADDRESS             0x40000000UL
 #define portPERIPHERALS_END_ADDRESS               0x5FFFFFFFUL
 
-/* Constants required to access and manipulate the SysTick and other FreeRTOS
- * interrupts. */
+/*
+ * 访问和操作 SysTick 及其他 FreeRTOS 中断所需的常量。
+ */
 #define portNVIC_SYSTICK_INT                      ( 0x00000002UL )
 #define portNVIC_SYSTICK_ENABLE                   ( 0x00000001UL )
 #define portMIN_INTERRUPT_PRIORITY                ( 255UL )
@@ -105,18 +112,18 @@ typedef void ( * portISR_t )( void );
 #define portNVIC_SYSTICK_PRI                      ( ( ( uint32_t ) portMIN_INTERRUPT_PRIORITY ) << 24UL )
 #define portNVIC_SVC_PRI                          ( ( ( uint32_t ) configMAX_SYSCALL_INTERRUPT_PRIORITY - 1UL ) << 24UL )
 
-/* Constants required to set up the initial stack. */
+/* 建立初始栈所需的常量。 */
 #define portINITIAL_XPSR                          ( 0x01000000 )
 #define portINITIAL_EXC_RETURN                    ( 0xfffffffdUL )
 #define portINITIAL_CONTROL_IF_UNPRIVILEGED       ( 0x03 )
 #define portINITIAL_CONTROL_IF_PRIVILEGED         ( 0x02 )
 
-/* Constants used to check the installation of the FreeRTOS interrupt handlers. */
+/* 用于检查 FreeRTOS 中断处理程序安装情况的常量。 */
 #define portSCB_VTOR_REG                          ( *( ( portISR_t ** ) 0xE000ED08 ) )
 #define portVECTOR_INDEX_SVC                      ( 11 )
 #define portVECTOR_INDEX_PENDSV                   ( 14 )
 
-/* Constants required to check the validity of an interrupt priority. */
+/* 用于检查中断优先级有效性的常量。 */
 #define portFIRST_USER_INTERRUPT_NUMBER           ( 16 )
 #define portNVIC_IP_REGISTERS_OFFSET_16           ( 0xE000E3F0 )
 #define portAIRCR_REG                             ( *( ( volatile uint32_t * ) 0xE000ED0C ) )
@@ -126,94 +133,91 @@ typedef void ( * portISR_t )( void );
 #define portPRIORITY_GROUP_MASK                   ( 0x07UL << 8UL )
 #define portPRIGROUP_SHIFT                        ( 8UL )
 
-/* Constants used during system call enter and exit. */
+/* 系统调用进入和退出期间使用的常量。 */
 #define portPSR_STACK_PADDING_MASK                ( 1UL << 9UL )
 
-/* Offsets in the stack to the parameters when inside the SVC handler. */
+/* 在 SVC 处理程序中时，栈中参数的偏移量。 */
 #define portOFFSET_TO_LR                          ( 5 )
 #define portOFFSET_TO_PC                          ( 6 )
 #define portOFFSET_TO_PSR                         ( 7 )
 
-/* For strict compliance with the Cortex-M spec the task start address should
- * have bit-0 clear, as it is loaded into the PC on exit from an ISR. */
+/*
+ * 为严格符合 Cortex-M 规范，任务起始地址的 bit0 应清零，
+ * 因为该地址在退出 ISR 时被加载到 PC。
+ */
 #define portSTART_ADDRESS_MASK                    ( ( StackType_t ) 0xfffffffeUL )
 
-/* Does addr lie within [start, end] address range? */
+/* addr 是否位于 [start, end] 地址范围内？ */
 #define portIS_ADDRESS_WITHIN_RANGE( addr, start, end ) \
     ( ( ( addr ) >= ( start ) ) && ( ( addr ) <= ( end ) ) )
 
-/* Is the access request satisfied by the available permissions? */
+/* 可用权限是否满足访问请求？ */
 #define portIS_AUTHORIZED( accessRequest, permissions ) \
     ( ( ( permissions ) & ( accessRequest ) ) == accessRequest )
 
-/* Max value that fits in a uint32_t type. */
+/* uint32_t 类型可容纳的最大值。 */
 #define portUINT32_MAX    ( ~( ( uint32_t ) 0 ) )
 
-/* Check if adding a and b will result in overflow. */
+/* 检查 a 与 b 相加是否会导致溢出。 */
 #define portADD_UINT32_WILL_OVERFLOW( a, b )    ( ( a ) > ( portUINT32_MAX - ( b ) ) )
 /*-----------------------------------------------------------*/
 
 /*
- * Configure a number of standard MPU regions that are used by all tasks.
+ * 配置所有任务共用的若干标准 MPU 区域。
  */
 static void prvSetupMPU( void ) PRIVILEGED_FUNCTION;
 
 /*
- * Return the smallest MPU region size that a given number of bytes will fit
- * into.  The region size is returned as the value that should be programmed
- * into the region attribute register for that region.
+ * 返回给定字节数能够容纳的最小 MPU 区域大小。区域大小以应写入该区域属性寄存器的值返回。
  */
 static uint32_t prvGetMPURegionSizeSetting( uint32_t ulActualSizeInBytes ) PRIVILEGED_FUNCTION;
 
 /*
- * Setup the timer to generate the tick interrupts.  The implementation in this
- * file is weak to allow application writers to change the timer used to
- * generate the tick interrupt.
+ * 配置定时器以产生时钟节拍中断。本文件中的实现为弱符号，
+ * 便于应用开发者更换产生节拍中断的定时器。
  */
 void vPortSetupTimerInterrupt( void );
 
 /*
- * Standard FreeRTOS exception handlers.
+ * 标准 FreeRTOS 异常处理程序。
  */
 void xPortPendSVHandler( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 void xPortSysTickHandler( void )  __attribute__( ( optimize( "3" ) ) ) PRIVILEGED_FUNCTION;
 void vPortSVCHandler( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /*
- * Starts the scheduler by restoring the context of the first task to run.
+ * 通过恢复第一个待运行任务的上下文来启动调度器。
  */
 static void prvRestoreContextOfFirstTask( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
 /*
- * C portion of the SVC handler.  The SVC handler is split between an asm entry
- * and a C wrapper for simplicity of coding and maintenance.
+ * SVC 处理程序的 C 部分。为便于编码和维护，SVC 处理程序分为汇编入口和 C 包装函数两部分。
  */
 void vSVCHandler_C( uint32_t * pulRegisters ) __attribute__( ( noinline ) ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Checks whether or not the processor is privileged.
+ * @brief 检查处理器当前是否处于特权状态。
  *
- * @return 1 if the processor is already privileged, 0 otherwise.
+ * @return 若处理器已处于特权状态则返回 1，否则返回 0。
  */
 BaseType_t xIsPrivileged( void ) __attribute__( ( naked ) );
 
 /**
- * @brief Lowers the privilege level by setting the bit 0 of the CONTROL
- * register.
+ * @brief 通过设置 CONTROL 寄存器的 bit 0 降低特权级别。
  *
- * Bit 0 of the CONTROL register defines the privilege level of Thread Mode.
- *  Bit[0] = 0 --> The processor is running privileged
- *  Bit[0] = 1 --> The processor is running unprivileged.
+ * CONTROL 寄存器的 bit 0 定义线程模式的特权级别。
+ *  Bit[0] = 0 --> 处理器以特权状态运行
+ *  Bit[0] = 1 --> 处理器以非特权状态运行。
  */
 void vResetPrivilege( void ) __attribute__( ( naked ) );
 
 /**
- * @brief Make a task unprivileged.
+ * @brief 将任务设置为非特权。
  */
 void vPortSwitchToUserMode( void );
 
 /**
- * @brief Enter critical section.
+ * @brief 进入临界区。
  */
 #if ( configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1 )
     void vPortEnterCritical( void ) FREERTOS_SYSTEM_CALL;
@@ -222,7 +226,7 @@ void vPortSwitchToUserMode( void );
 #endif
 
 /**
- * @brief Exit from critical section.
+ * @brief 退出临界区。
  */
 #if ( configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1 )
     void vPortExitCritical( void ) FREERTOS_SYSTEM_CALL;
@@ -233,74 +237,72 @@ void vPortSwitchToUserMode( void );
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
 /**
- * @brief Sets up the system call stack so that upon returning from
- * SVC, the system call stack is used.
+ * @brief 设置系统调用栈，使从 SVC 返回后使用系统调用栈。
  *
- * @param pulTaskStack The current SP when the SVC was raised.
- * @param ucSystemCallNumber The system call number of the system call.
+ * @param pulTaskStack 触发 SVC 时的当前 SP。
+ * @param ucSystemCallNumber 系统调用的编号。
  */
     void vSystemCallEnter( uint32_t * pulTaskStack,
                            uint8_t ucSystemCallNumber ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
 /**
- * @brief Raise SVC for exiting from a system call.
+ * @brief 触发 SVC 以退出系统调用。
  */
     void vRequestSystemCallExit( void ) __attribute__( ( naked ) ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
 /**
- * @brief Sets up the task stack so that upon returning from
- * SVC, the task stack is used again.
+ * @brief 设置任务栈，使从 SVC 返回后重新使用任务栈。
  *
- * @param pulSystemCallStack The current SP when the SVC was raised.
+ * @param pulSystemCallStack 触发 SVC 时的当前 SP。
  */
     void vSystemCallExit( uint32_t * pulSystemCallStack ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
 /**
- * @brief Checks whether or not the calling task is privileged.
+ * @brief 检查调用任务是否具有特权。
  *
- * @return pdTRUE if the calling task is privileged, pdFALSE otherwise.
+ * @return 若调用任务具有特权则返回 pdTRUE，否则返回 pdFALSE。
  */
 BaseType_t xPortIsTaskPrivileged( void ) PRIVILEGED_FUNCTION;
 /*-----------------------------------------------------------*/
 
-/* Each task maintains its own interrupt status in the critical nesting
- * variable.  Note this is not saved as part of the task context as context
- * switches can only occur when uxCriticalNesting is zero. */
+/*
+ * 每个任务在临界嵌套变量中维护各自的中断状态。注意该变量不作为任务上下文的一部分保存，因为上下文切换只能在 uxCriticalNesting 为零时发生。
+ */
 static UBaseType_t uxCriticalNesting = 0xaaaaaaaa;
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
 /*
- * This variable is set to pdTRUE when the scheduler is started.
+ * 调度器启动时该变量被设置为 pdTRUE。
  */
     PRIVILEGED_DATA static BaseType_t xSchedulerRunning = pdFALSE;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
 /*
- * Used by the portASSERT_IF_INTERRUPT_PRIORITY_INVALID() macro to ensure
- * FreeRTOS API functions are not called from interrupts that have been assigned
- * a priority above configMAX_SYSCALL_INTERRUPT_PRIORITY.
+ * 供 portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 宏使用，确保
+ * 不在优先级高于 configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断中
+ * 调用 FreeRTOS API 函数。
  */
 #if ( configASSERT_DEFINED == 1 )
     static uint8_t ucMaxSysCallPriority = 0;
     static uint32_t ulMaxPRIGROUPValue = 0;
     static const volatile uint8_t * const pcInterruptPriorityRegisters = ( const volatile uint8_t * const ) portNVIC_IP_REGISTERS_OFFSET_16;
-#endif /* configASSERT_DEFINED */
+#endif /* configASSERT_DEFINED 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 详见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
@@ -319,37 +321,37 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
         xMPUSettings->ulContext[ 0 ] = portINITIAL_CONTROL_IF_UNPRIVILEGED;
     }
 
-    xMPUSettings->ulContext[ 1 ] = 0x04040404;                                        /* r4. */
-    xMPUSettings->ulContext[ 2 ] = 0x05050505;                                        /* r5. */
-    xMPUSettings->ulContext[ 3 ] = 0x06060606;                                        /* r6. */
-    xMPUSettings->ulContext[ 4 ] = 0x07070707;                                        /* r7. */
-    xMPUSettings->ulContext[ 5 ] = 0x08080808;                                        /* r8. */
-    xMPUSettings->ulContext[ 6 ] = 0x09090909;                                        /* r9. */
-    xMPUSettings->ulContext[ 7 ] = 0x10101010;                                        /* r10. */
-    xMPUSettings->ulContext[ 8 ] = 0x11111111;                                        /* r11. */
-    xMPUSettings->ulContext[ 9 ] = portINITIAL_EXC_RETURN;                            /* EXC_RETURN. */
+    xMPUSettings->ulContext[ 1 ] = 0x04040404;                                        /* r4 寄存器。 */
+    xMPUSettings->ulContext[ 2 ] = 0x05050505;                                        /* r5 寄存器。 */
+    xMPUSettings->ulContext[ 3 ] = 0x06060606;                                        /* r6 寄存器。 */
+    xMPUSettings->ulContext[ 4 ] = 0x07070707;                                        /* r7 寄存器。 */
+    xMPUSettings->ulContext[ 5 ] = 0x08080808;                                        /* r8 寄存器。 */
+    xMPUSettings->ulContext[ 6 ] = 0x09090909;                                        /* r9 寄存器。 */
+    xMPUSettings->ulContext[ 7 ] = 0x10101010;                                        /* r10 寄存器。 */
+    xMPUSettings->ulContext[ 8 ] = 0x11111111;                                        /* r11 寄存器。 */
+    xMPUSettings->ulContext[ 9 ] = portINITIAL_EXC_RETURN;                            /* EXC_RETURN 值。 */
 
-    xMPUSettings->ulContext[ 10 ] = ( uint32_t ) ( pxTopOfStack - 8 );                /* PSP with the hardware saved stack. */
-    xMPUSettings->ulContext[ 11 ] = ( uint32_t ) pvParameters;                        /* r0. */
-    xMPUSettings->ulContext[ 12 ] = 0x01010101;                                       /* r1. */
-    xMPUSettings->ulContext[ 13 ] = 0x02020202;                                       /* r2. */
-    xMPUSettings->ulContext[ 14 ] = 0x03030303;                                       /* r3. */
-    xMPUSettings->ulContext[ 15 ] = 0x12121212;                                       /* r12. */
-    xMPUSettings->ulContext[ 16 ] = 0;                                                /* LR. */
-    xMPUSettings->ulContext[ 17 ] = ( ( uint32_t ) pxCode ) & portSTART_ADDRESS_MASK; /* PC. */
-    xMPUSettings->ulContext[ 18 ] = portINITIAL_XPSR;                                 /* xPSR. */
+    xMPUSettings->ulContext[ 10 ] = ( uint32_t ) ( pxTopOfStack - 8 );                /* PSP 指向硬件保存的栈帧。 */
+    xMPUSettings->ulContext[ 11 ] = ( uint32_t ) pvParameters;                        /* r0 寄存器。 */
+    xMPUSettings->ulContext[ 12 ] = 0x01010101;                                       /* r1 寄存器。 */
+    xMPUSettings->ulContext[ 13 ] = 0x02020202;                                       /* r2 寄存器。 */
+    xMPUSettings->ulContext[ 14 ] = 0x03030303;                                       /* r3 寄存器。 */
+    xMPUSettings->ulContext[ 15 ] = 0x12121212;                                       /* r12 寄存器。 */
+    xMPUSettings->ulContext[ 16 ] = 0;                                                /* LR 寄存器。 */
+    xMPUSettings->ulContext[ 17 ] = ( ( uint32_t ) pxCode ) & portSTART_ADDRESS_MASK; /* PC 寄存器。 */
+    xMPUSettings->ulContext[ 18 ] = portINITIAL_XPSR;                                 /* xPSR 寄存器。 */
 
     #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
     {
-        /* Ensure that the system call stack is double word aligned. */
+        /* 确保系统调用栈双字对齐。 */
         xMPUSettings->xSystemCallStackInfo.pulSystemCallStack = &( xMPUSettings->xSystemCallStackInfo.ulSystemCallStackBuffer[ configSYSTEM_CALL_STACK_SIZE - 1 ] );
         xMPUSettings->xSystemCallStackInfo.pulSystemCallStack = ( uint32_t * ) ( ( uint32_t ) ( xMPUSettings->xSystemCallStackInfo.pulSystemCallStack ) &
                                                                                  ( uint32_t ) ( ~( portBYTE_ALIGNMENT_MASK ) ) );
 
-        /* This is not NULL only for the duration of a system call. */
+        /* 仅在系统调用期间该值才非 NULL。 */
         xMPUSettings->xSystemCallStackInfo.pulTaskStack = NULL;
     }
-    #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+    #endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
     return &( xMPUSettings->ulContext[ 19 ] );
 }
@@ -357,7 +359,7 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
-    void vPortSVCHandler( void ) /* __attribute__( ( naked ) ) PRIVILEGED_FUNCTION */
+    void vPortSVCHandler( void ) /* __attribute__( ( naked ) ) PRIVILEGED_FUNCTION（裸函数，特权函数） */
     {
         __asm volatile
         (
@@ -379,20 +381,20 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
             "beq vSystemCallExit            \n"
             "b vSVCHandler_C                \n"
             "                               \n"
-            : /* No outputs. */
+            : /* 无输出。 */
             : "i" ( NUM_SYSTEM_CALLS ), "i" ( portSVC_SYSTEM_CALL_EXIT )
             : "r0", "r1", "r2", "memory"
         );
     }
 
-#else /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#else /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
-    void vPortSVCHandler( void ) /* __attribute__( ( naked ) ) PRIVILEGED_FUNCTION */
+    void vPortSVCHandler( void ) /* __attribute__( ( naked ) ) PRIVILEGED_FUNCTION（裸函数，特权函数） */
     {
-        /* Assumes psp was in use. */
+        /* 假定此前使用的是 PSP。 */
         __asm volatile
         (
-            #ifndef USE_PROCESS_STACK /* Code should not be required if a main() is using the process stack. */
+            #ifndef USE_PROCESS_STACK /* 若 main() 使用进程栈，则不需要此代码。 */
                 "   tst lr, #4                      \n"
                 "   ite eq                          \n"
                 "   mrseq r0, msp                   \n"
@@ -405,10 +407,10 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
         );
     }
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 /*-----------------------------------------------------------*/
 
-void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
+void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION（特权函数） */
 {
     uint8_t ucSVCNumber;
     uint32_t ulPC;
@@ -416,19 +418,21 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
     #if ( ( configUSE_MPU_WRAPPERS_V1 == 1 ) && ( configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1 ) )
         #if defined( __ARMCC_VERSION )
 
-            /* Declaration when these variable are defined in code instead of being
-             * exported from linker scripts. */
+            /*
+             * 当这些变量在代码中定义而非由链接脚本导出时的声明。
+             */
             extern uint32_t * __syscalls_flash_start__;
             extern uint32_t * __syscalls_flash_end__;
         #else
-            /* Declaration when these variable are exported from linker scripts. */
+            /* 当这些变量由链接脚本导出时的声明。 */
             extern uint32_t __syscalls_flash_start__[];
             extern uint32_t __syscalls_flash_end__[];
-        #endif /* #if defined( __ARMCC_VERSION ) */
-    #endif /* #if ( ( configUSE_MPU_WRAPPERS_V1 == 1 ) && ( configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1 ) ) */
+        #endif /* __ARMCC_VERSION 定义条件 */
+    #endif /* configUSE_MPU_WRAPPERS_V1 == 1 且 configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1（使用 V1 包装器且仅允许内核发起系统调用） */
 
-    /* The stack contains: r0, r1, r2, r3, r12, LR, PC and xPSR.  The first
-     * argument (r0) is pulParam[ 0 ]. */
+    /*
+     * 栈中包含：r0、r1、r2、r3、r12、LR、PC 和 xPSR。第一个参数（r0）为 pulParam[ 0 ]。
+     */
     ulPC = pulParam[ portOFFSET_TO_PC ];
     ucSVCNumber = ( ( uint8_t * ) ulPC )[ -2 ];
 
@@ -441,10 +445,11 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
         case portSVC_YIELD:
             portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
 
-            /* Barriers are normally not required
-             * but do ensure the code is completely
-             * within the specified behaviour for the
-             * architecture. */
+            /*
+             * 通常不需要屏障指令，
+             * 但需确保代码完全符合
+             * 该体系结构规定的行为。
+             */
             __asm volatile ( "dsb" ::: "memory" );
             __asm volatile ( "isb" );
 
@@ -452,37 +457,38 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
 
     #if ( configUSE_MPU_WRAPPERS_V1 == 1 )
         #if ( configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1 )
-            case portSVC_RAISE_PRIVILEGE: /* Only raise the privilege, if the
-                                           * svc was raised from any of the
-                                           * system calls. */
+            case portSVC_RAISE_PRIVILEGE: /*
+             * 仅当 SVC 由任一系统调用发起时，
+             * 才提升特权。
+             */
 
                 if( ( ulPC >= ( uint32_t ) __syscalls_flash_start__ ) &&
                     ( ulPC <= ( uint32_t ) __syscalls_flash_end__ ) )
                 {
                     __asm volatile
                     (
-                        "   mrs r1, control     \n" /* Obtain current control value. */
-                        "   bic r1, #1          \n" /* Set privilege bit. */
-                        "   msr control, r1     \n" /* Write back new control value. */
+                        "   mrs r1, control     \n" /* 获取当前 CONTROL 值。 */
+                        "   bic r1, #1          \n" /* 设置特权位。 */
+                        "   msr control, r1     \n" /* 写回新的 CONTROL 值。 */
                         ::: "r1", "memory"
                     );
                 }
 
                 break;
-        #else /* if ( configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1 ) */
+        #else /* configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1（仅允许内核发起系统调用） */
             case portSVC_RAISE_PRIVILEGE:
                 __asm volatile
                 (
-                    "   mrs r1, control     \n" /* Obtain current control value. */
-                    "   bic r1, #1          \n" /* Set privilege bit. */
-                    "   msr control, r1     \n" /* Write back new control value. */
+                    "   mrs r1, control     \n" /* 获取当前 CONTROL 值。 */
+                    "   bic r1, #1          \n" /* 设置特权位。 */
+                    "   msr control, r1     \n" /* 写回新的 CONTROL 值。 */
                     ::: "r1", "memory"
                 );
                 break;
-        #endif /* #if( configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1 ) */
-    #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+        #endif /* configENFORCE_SYSTEM_CALLS_FROM_KERNEL_ONLY == 1（仅允许内核发起系统调用） */
+    #endif /* configUSE_MPU_WRAPPERS_V1 == 1（使用 V1 包装器） */
 
-        default: /* Unknown SVC call. */
+        default: /* 未知的 SVC 调用。 */
             break;
     }
 }
@@ -491,43 +497,43 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
     void vSystemCallEnter( uint32_t * pulTaskStack,
-                           uint8_t ucSystemCallNumber ) /* PRIVILEGED_FUNCTION */
+                           uint8_t ucSystemCallNumber ) /* PRIVILEGED_FUNCTION（特权函数） */
     {
         extern TaskHandle_t pxCurrentTCB;
         extern UBaseType_t uxSystemCallImplementations[ NUM_SYSTEM_CALLS ];
         xMPU_SETTINGS * pxMpuSettings;
         uint32_t * pulSystemCallStack;
         uint32_t ulSystemCallLocation, i;
-        /* Hardware Saved Stack Frame Size upon Exception entry:
-         * Basic frame (R0-R3, R12, LR, PC, and xPSR) = 8 words.
+        /*
+         * 异常进入时硬件保存的栈帧大小：
+         * 基本帧（R0-R3、R12、LR、PC 和 xPSR）为 8 个字。
          */
         const uint32_t ulHardwareSavedExceptionFrameSize = 8;
 
         #if defined( __ARMCC_VERSION )
-            /* Declaration when these variable are defined in code instead of being
-             * exported from linker scripts. */
+            /*
+             * 当这些变量在代码中定义而非由链接脚本导出时的声明。
+             */
             extern uint32_t * __syscalls_flash_start__;
             extern uint32_t * __syscalls_flash_end__;
         #else
-            /* Declaration when these variable are exported from linker scripts. */
+            /* 当这些变量由链接脚本导出时的声明。 */
             extern uint32_t __syscalls_flash_start__[];
             extern uint32_t __syscalls_flash_end__[];
-        #endif /* #if defined( __ARMCC_VERSION ) */
+        #endif /* __ARMCC_VERSION 定义条件 */
 
         ulSystemCallLocation = pulTaskStack[ portOFFSET_TO_PC ];
         pxMpuSettings = xTaskGetMPUSettings( pxCurrentTCB );
 
-        /* Checks:
-         * 1. SVC is raised from the system call section (i.e. application is
-         *    not raising SVC directly).
-         * 2. pxMpuSettings->xSystemCallStackInfo.pulTaskStack must be NULL as
-         *    it is non-NULL only during the execution of a system call (i.e.
-         *    between system call enter and exit).
-         * 3. System call is not for a kernel API disabled by the configuration
-         *    in FreeRTOSConfig.h.
-         * 4. We do not need to check that ucSystemCallNumber is within range
-         *    because the assembly SVC handler checks that before calling
-         *    this function.
+        /*
+         * 检查：
+         * 1. SVC 是从系统调用代码段触发的（即应用程序没有直接触发 SVC）。
+         * 2. pxMpuSettings->xSystemCallStackInfo.pulTaskStack 必须为 NULL，
+         *    因为仅在系统调用执行期间（即系统调用进入和退出之间）
+         *    该值才非 NULL。
+         * 3. 系统调用对应的内核 API 未被 FreeRTOSConfig.h 中的配置禁用。
+         * 4. 无需检查 ucSystemCallNumber 是否在有效范围内，
+         *    因为汇编 SVC 处理程序在调用本函数前已经检查过。
          */
         if( ( ulSystemCallLocation >= ( uint32_t ) __syscalls_flash_start__ ) &&
             ( ulSystemCallLocation <= ( uint32_t ) __syscalls_flash_end__ ) &&
@@ -536,44 +542,48 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
         {
             pulSystemCallStack = pxMpuSettings->xSystemCallStackInfo.pulSystemCallStack;
 
-            /* Make space on the system call stack for the stack frame. */
+            /* 在系统调用栈上为栈帧分配空间。 */
             pulSystemCallStack = pulSystemCallStack - ulHardwareSavedExceptionFrameSize;
 
-            /* Copy the stack frame. */
+            /* 复制栈帧。 */
             for( i = 0; i < ulHardwareSavedExceptionFrameSize; i++ )
             {
                 pulSystemCallStack[ i ] = pulTaskStack[ i ];
             }
 
-            /* Use the pulSystemCallStack in thread mode. */
+            /* 在线程模式下使用 pulSystemCallStack。 */
             __asm volatile ( "msr psp, %0" : : "r" ( pulSystemCallStack ) );
 
-            /* Raise the privilege for the duration of the system call. */
+            /* 在系统调用执行期间提升特权。 */
             __asm volatile (
-                " mrs r1, control     \n" /* Obtain current control value. */
-                " bic r1, #1          \n" /* Clear nPRIV bit. */
-                " msr control, r1     \n" /* Write back new control value. */
+                " mrs r1, control     \n" /* 获取当前 CONTROL 值。 */
+                " bic r1, #1          \n" /* 清除 nPRIV 位。 */
+                " msr control, r1     \n" /* 写回新的 CONTROL 值。 */
                 ::: "r1", "memory"
                 );
 
-            /* Remember the location where we should copy the stack frame when we exit from
-             * the system call. */
+            /*
+             * 记住退出系统调用时应复制栈帧的位置。
+             */
             pxMpuSettings->xSystemCallStackInfo.pulTaskStack = pulTaskStack + ulHardwareSavedExceptionFrameSize;
 
-            /* Store the value of the Link Register before the SVC was raised.
-             * It contains the address of the caller of the System Call entry
-             * point (i.e. the caller of the MPU_<API>). We need to restore it
-             * when we exit from the system call. */
+            /*
+             * 保存触发 SVC 之前的链接寄存器值。
+             * 其中包含系统调用入口点的调用者地址（即 MPU_<API> 的调用者）。
+             * 退出系统调用时需要恢复该值。
+             */
             pxMpuSettings->xSystemCallStackInfo.ulLinkRegisterAtSystemCallEntry = pulTaskStack[ portOFFSET_TO_LR ];
 
-            /* Start executing the system call upon returning from this handler. */
+            /* 从本处理程序返回后开始执行系统调用。 */
             pulSystemCallStack[ portOFFSET_TO_PC ] = uxSystemCallImplementations[ ucSystemCallNumber ];
-            /* Raise a request to exit from the system call upon finishing the
-             * system call. */
+            /*
+             * 请求在系统调用完成后退出系统调用。
+             */
             pulSystemCallStack[ portOFFSET_TO_LR ] = ( uint32_t ) vRequestSystemCallExit;
 
-            /* Record if the hardware used padding to force the stack pointer
-             * to be double word aligned. */
+            /*
+             * 记录硬件是否使用填充强制栈指针双字对齐。
+             */
             if( ( pulTaskStack[ portOFFSET_TO_PSR ] & portPSR_STACK_PADDING_MASK ) == portPSR_STACK_PADDING_MASK )
             {
                 pxMpuSettings->ulTaskFlags |= portSTACK_FRAME_HAS_PADDING_FLAG;
@@ -583,61 +593,64 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
                 pxMpuSettings->ulTaskFlags &= ( ~portSTACK_FRAME_HAS_PADDING_FLAG );
             }
 
-            /* We ensure in pxPortInitialiseStack that the system call stack is
-             * double word aligned and therefore, there is no need of padding.
-             * Clear the bit[9] of stacked xPSR. */
+            /*
+             * 在 pxPortInitialiseStack 中已确保系统调用栈
+             * 双字对齐，因此无需填充。
+             * 清除已保存 xPSR 的 bit[9]。
+             */
             pulSystemCallStack[ portOFFSET_TO_PSR ] &= ( ~portPSR_STACK_PADDING_MASK );
         }
     }
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
-    void vRequestSystemCallExit( void ) /* __attribute__( ( naked ) ) PRIVILEGED_FUNCTION */
+    void vRequestSystemCallExit( void ) /* __attribute__( ( naked ) ) PRIVILEGED_FUNCTION（裸函数，特权函数） */
     {
         __asm volatile ( "svc %0 \n" ::"i" ( portSVC_SYSTEM_CALL_EXIT ) : "memory" );
     }
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
-    void vSystemCallExit( uint32_t * pulSystemCallStack ) /* PRIVILEGED_FUNCTION */
+    void vSystemCallExit( uint32_t * pulSystemCallStack ) /* PRIVILEGED_FUNCTION（特权函数） */
     {
         extern TaskHandle_t pxCurrentTCB;
         xMPU_SETTINGS * pxMpuSettings;
         uint32_t * pulTaskStack;
         uint32_t ulSystemCallLocation, i;
-        /* Hardware Saved Stack Frame Size upon Exception entry:
-         * Basic frame (R0-R3, R12, LR, PC, and xPSR) = 8 words.
+        /*
+         * 异常进入时硬件保存的栈帧大小：
+         * 基本帧（R0-R3、R12、LR、PC 和 xPSR）为 8 个字。
          */
         const uint32_t ulHardwareSavedExceptionFrameSize = 8;
 
         #if defined( __ARMCC_VERSION )
-            /* Declaration when these variable are defined in code instead of being
-             * exported from linker scripts. */
+            /*
+             * 当这些变量在代码中定义而非由链接脚本导出时的声明。
+             */
             extern uint32_t * __privileged_functions_start__;
             extern uint32_t * __privileged_functions_end__;
         #else
-            /* Declaration when these variable are exported from linker scripts. */
+            /* 当这些变量由链接脚本导出时的声明。 */
             extern uint32_t __privileged_functions_start__[];
             extern uint32_t __privileged_functions_end__[];
-        #endif /* #if defined( __ARMCC_VERSION ) */
+        #endif /* __ARMCC_VERSION 定义条件 */
 
         ulSystemCallLocation = pulSystemCallStack[ portOFFSET_TO_PC ];
         pxMpuSettings = xTaskGetMPUSettings( pxCurrentTCB );
 
-        /* Checks:
-         * 1. SVC is raised from the privileged code (i.e. application is not
-         *    raising SVC directly). This SVC is only raised from
-         *    vRequestSystemCallExit which is in the privileged code section.
-         * 2. pxMpuSettings->xSystemCallStackInfo.pulTaskStack must not be NULL -
-         *    this means that we previously entered a system call and the
-         *    application is not attempting to exit without entering a system
-         *    call.
+        /*
+         * 检查：
+         * 1. SVC 是从特权代码触发的（即应用程序没有直接触发 SVC）。
+         *    此 SVC 仅由位于特权代码段的 vRequestSystemCallExit 触发。
+         * 2. pxMpuSettings->xSystemCallStackInfo.pulTaskStack 必须非 NULL——
+         *    这表明此前已进入系统调用，应用程序没有在未进入系统调用
+         *    的情况下尝试退出。
          */
         if( ( ulSystemCallLocation >= ( uint32_t ) __privileged_functions_start__ ) &&
             ( ulSystemCallLocation <= ( uint32_t ) __privileged_functions_end__ ) &&
@@ -645,35 +658,37 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
         {
             pulTaskStack = pxMpuSettings->xSystemCallStackInfo.pulTaskStack;
 
-            /* Make space on the task stack for the stack frame. */
+            /* 在任务栈上为栈帧分配空间。 */
             pulTaskStack = pulTaskStack - ulHardwareSavedExceptionFrameSize;
 
-            /* Copy the stack frame. */
+            /* 复制栈帧。 */
             for( i = 0; i < ulHardwareSavedExceptionFrameSize; i++ )
             {
                 pulTaskStack[ i ] = pulSystemCallStack[ i ];
             }
 
-            /* Use the pulTaskStack in thread mode. */
+            /* 在线程模式下使用 pulTaskStack。 */
             __asm volatile ( "msr psp, %0" : : "r" ( pulTaskStack ) );
 
-            /* Drop the privilege before returning to the thread mode. */
+            /* 返回线程模式前降低特权。 */
             __asm volatile (
-                " mrs r1, control     \n" /* Obtain current control value. */
-                " orr r1, #1          \n" /* Set nPRIV bit. */
-                " msr control, r1     \n" /* Write back new control value. */
+                " mrs r1, control     \n" /* 获取当前 CONTROL 值。 */
+                " orr r1, #1          \n" /* 设置 nPRIV 位。 */
+                " msr control, r1     \n" /* 写回新的 CONTROL 值。 */
                 ::: "r1", "memory"
                 );
 
-            /* Return to the caller of the System Call entry point (i.e. the
-             * caller of the MPU_<API>). */
+            /*
+             * 返回系统调用入口点的调用者（即 MPU_<API> 的调用者）。
+             */
             pulTaskStack[ portOFFSET_TO_PC ] = pxMpuSettings->xSystemCallStackInfo.ulLinkRegisterAtSystemCallEntry;
-            /* Ensure that LR has a valid value.*/
+            /* 确保 LR 具有有效值。 */
             pulTaskStack[ portOFFSET_TO_LR ] = pxMpuSettings->xSystemCallStackInfo.ulLinkRegisterAtSystemCallEntry;
 
-            /* If the hardware used padding to force the stack pointer
-             * to be double word aligned, set the stacked xPSR bit[9],
-             * otherwise clear it. */
+            /*
+             * 若硬件使用了填充来强制栈指针双字对齐，
+             * 则置位已保存 xPSR 的 bit[9]，否则清除该位。
+             */
             if( ( pxMpuSettings->ulTaskFlags & portSTACK_FRAME_HAS_PADDING_FLAG ) == portSTACK_FRAME_HAS_PADDING_FLAG )
             {
                 pulTaskStack[ portOFFSET_TO_PSR ] |= portPSR_STACK_PADDING_MASK;
@@ -683,18 +698,18 @@ void vSVCHandler_C( uint32_t * pulParam ) /* PRIVILEGED_FUNCTION */
                 pulTaskStack[ portOFFSET_TO_PSR ] &= ( ~portPSR_STACK_PADDING_MASK );
             }
 
-            /* This is not NULL only for the duration of the system call. */
+            /* 仅在系统调用期间该值才非 NULL。 */
             pxMpuSettings->xSystemCallStackInfo.pulTaskStack = NULL;
         }
     }
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 /*-----------------------------------------------------------*/
 
-BaseType_t xPortIsTaskPrivileged( void ) /* PRIVILEGED_FUNCTION */
+BaseType_t xPortIsTaskPrivileged( void ) /* PRIVILEGED_FUNCTION（特权函数） */
 {
     BaseType_t xTaskIsPrivileged = pdFALSE;
-    const xMPU_SETTINGS * xTaskMpuSettings = xTaskGetMPUSettings( NULL ); /* Calling task's MPU settings. */
+    const xMPU_SETTINGS * xTaskMpuSettings = xTaskGetMPUSettings( NULL ); /* 调用任务的 MPU 设置。 */
 
     if( ( xTaskMpuSettings->ulTaskFlags & portTASK_IS_PRIVILEGED_FLAG ) == portTASK_IS_PRIVILEGED_FLAG )
     {
@@ -709,91 +724,92 @@ static void prvRestoreContextOfFirstTask( void )
 {
     __asm volatile
     (
-        " ldr r0, =0xE000ED08                   \n" /* Use the NVIC offset register to locate the stack. */
+        " ldr r0, =0xE000ED08                   \n" /* 使用 NVIC 偏移寄存器定位栈。 */
         " ldr r0, [r0]                          \n"
         " ldr r0, [r0]                          \n"
-        " msr msp, r0                           \n" /* Set the msp back to the start of the stack. */
+        " msr msp, r0                           \n" /* 将 MSP 重新设置为栈起始地址。 */
         "                                       \n"
-        /*------------ Program MPU. ------------ */
-        " ldr r3, =pxCurrentTCB                 \n" /* r3 = =pxCurrentTCB. */
-        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB. */
-        " add r2, r2, #4                        \n" /* r2 = Second item in the TCB which is xMPUSettings. */
+        /* ------------ 配置 MPU。------------ */
+        " ldr r3, =pxCurrentTCB                 \n" /* r3 = &pxCurrentTCB（当前 TCB 的地址）。 */
+        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB（当前任务的 TCB）。 */
+        " add r2, r2, #4                        \n" /* r2 = TCB 中的第二项，即 xMPUSettings。 */
         "                                       \n"
-        " dmb                                   \n" /* Complete outstanding transfers before disabling MPU. */
-        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL register. */
-        " ldr r3, [r0]                          \n" /* Read the value of MPU_CTRL. */
-        " bic r3, #1                            \n" /* r3 = r3 & ~1 i.e. Clear the bit 0 in r3. */
-        " str r3, [r0]                          \n" /* Disable MPU. */
+        " dmb                                   \n" /* 在禁用 MPU 前完成未完成的传输。 */
+        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL 寄存器。 */
+        " ldr r3, [r0]                          \n" /* 读取 MPU_CTRL 的值。 */
+        " bic r3, #1                            \n" /* r3 = r3 & ~1，即清除 r3 的 bit 0。 */
+        " str r3, [r0]                          \n" /* 禁用 MPU。 */
         "                                       \n"
-        " ldr r0, =0xe000ed9c                   \n" /* Region Base Address register. */
-        " ldmia r2!, {r4-r11}                   \n" /* Read 4 sets of MPU registers [MPU Region # 0 - 3]. */
-        " stmia r0, {r4-r11}                    \n" /* Write 4 sets of MPU registers [MPU Region # 0 - 3]. */
+        " ldr r0, =0xe000ed9c                   \n" /* 区域基地址寄存器（RBAR）。 */
+        " ldmia r2!, {r4-r11}                   \n" /* 读取 4 组 MPU 寄存器 [MPU 区域 #0 - 3]。 */
+        " stmia r0, {r4-r11}                    \n" /* 写入 4 组 MPU 寄存器 [MPU 区域 #0 - 3]。 */
         "                                       \n"
-        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL register. */
-        " ldr r3, [r0]                          \n" /* Read the value of MPU_CTRL. */
-        " orr r3, #1                            \n" /* r3 = r3 | 1 i.e. Set the bit 0 in r3. */
-        " str r3, [r0]                          \n" /* Enable MPU. */
-        " dsb                                   \n" /* Force memory writes before continuing. */
+        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL 寄存器。 */
+        " ldr r3, [r0]                          \n" /* 读取 MPU_CTRL 的值。 */
+        " orr r3, #1                            \n" /* r3 = r3 | 1，即设置 r3 的 bit 0。 */
+        " str r3, [r0]                          \n" /* 使能 MPU。 */
+        " dsb                                   \n" /* 继续执行前强制完成内存写入。 */
         "                                       \n"
-        /*---------- Restore Context. ---------- */
-        " ldr r3, =pxCurrentTCB                 \n" /* r3 = =pxCurrentTCB. */
-        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB. */
-        " ldr r1, [r2]                          \n" /* r1 = Location of saved context in TCB. */
+        /* ---------- 恢复上下文。---------- */
+        " ldr r3, =pxCurrentTCB                 \n" /* r3 = &pxCurrentTCB（当前 TCB 的地址）。 */
+        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB（当前任务的 TCB）。 */
+        " ldr r1, [r2]                          \n" /* r1 = TCB 中保存上下文的位置。 */
         "                                       \n"
-        " ldmdb r1!, {r0, r4-r11}               \n" /* r0 contains PSP after the hardware had saved context. r4-r11 contain hardware saved context. */
+        " ldmdb r1!, {r0, r4-r11}               \n" /* r0 包含硬件保存上下文之后的 PSP。r4-r11 包含硬件保存的上下文。 */
         " msr psp, r0                           \n"
-        " stmia r0, {r4-r11}                    \n" /* Copy the hardware saved context on the task stack. */
-        " ldmdb r1!, {r3-r11, lr}               \n" /* r3 contains CONTROL register. r4-r11 and LR restored. */
+        " stmia r0, {r4-r11}                    \n" /* 将硬件保存的上下文复制到任务栈上。 */
+        " ldmdb r1!, {r3-r11, lr}               \n" /* r3 包含 CONTROL 寄存器。r4-r11 和 LR 已恢复。 */
         " msr control, r3                       \n"
-        " str r1, [r2]                          \n" /* Save the location where the context should be saved next as the first member of TCB. */
+        " str r1, [r2]                          \n" /* 将下次保存上下文的位置作为 TCB 的第一个成员保存。 */
         "                                       \n"
         " mov r0, #0                            \n"
         " msr basepri, r0                       \n"
         " bx lr                                 \n"
         "                                       \n"
-        " .ltorg                                \n" /* Assemble current literal pool to avoid offset-out-of-bound errors with lto. */
+        " .ltorg                                \n" /* 汇编当前文字池（literal pool），以避免链接时优化（LTO）出现偏移越界错误。 */
     );
 }
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 详见头文件中的说明。
  */
 BaseType_t xPortStartScheduler( void )
 {
-    /* An application can install FreeRTOS interrupt handlers in one of the
-     * following ways:
-     * 1. Direct Routing - Install the functions vPortSVCHandler and
-     *    xPortPendSVHandler for SVCall and PendSV interrupts respectively.
-     * 2. Indirect Routing - Install separate handlers for SVCall and PendSV
-     *    interrupts and route program control from those handlers to
-     *    vPortSVCHandler and xPortPendSVHandler functions.
+    /*
+     * 应用可通过以下方式之一安装 FreeRTOS 中断处理程序：
+     * 1. 直接路由——分别为 SVCall 和 PendSV 中断安装 vPortSVCHandler
+     *    和 xPortPendSVHandler 函数。
+     * 2. 间接路由——为 SVCall 和 PendSV 中断安装独立的处理程序，
+     *    并将程序控制从这些处理程序转发到 vPortSVCHandler 和
+     *    xPortPendSVHandler 函数。
      *
-     * Applications that use Indirect Routing must set
-     * configCHECK_HANDLER_INSTALLATION to 0 in their FreeRTOSConfig.h. Direct
-     * routing, which is validated here when configCHECK_HANDLER_INSTALLATION
-     * is 1, should be preferred when possible. */
+     * 使用间接路由的应用必须在 FreeRTOSConfig.h 中将
+     * configCHECK_HANDLER_INSTALLATION 设为 0。当
+     * configCHECK_HANDLER_INSTALLATION 为 1 时，此处校验直接路由；
+     * 条件允许时应优先采用直接路由。
+     */
     #if ( configCHECK_HANDLER_INSTALLATION == 1 )
     {
         const portISR_t * const pxVectorTable = portSCB_VTOR_REG;
 
-        /* Validate that the application has correctly installed the FreeRTOS
-         * handlers for SVCall and PendSV interrupts. We do not check the
-         * installation of the SysTick handler because the application may
-         * choose to drive the RTOS tick using a timer other than the SysTick
-         * timer by overriding the weak function vPortSetupTimerInterrupt().
+        /*
+         * 校验应用已正确安装 SVCall 和 PendSV 中断的 FreeRTOS
+         * 处理程序。此处不检查 SysTick 处理程序的安装情况，因为应用可能
+         * 通过重写弱函数 vPortSetupTimerInterrupt()，改用 SysTick 之外的
+         * 定时器驱动 RTOS 时钟节拍。
          *
-         * Assertion failures here indicate incorrect installation of the
-         * FreeRTOS handlers. For help installing the FreeRTOS handlers, see
-         * https://www.freertos.org/Why-FreeRTOS/FAQs.
+         * 此处断言失败表明 FreeRTOS 处理程序安装不正确。有关安装
+         * FreeRTOS 处理程序的帮助，请参见
+         * https://www.freertos.org/Why-FreeRTOS/FAQs。
          *
-         * Systems with a configurable address for the interrupt vector table
-         * can also encounter assertion failures or even system faults here if
-         * VTOR is not set correctly to point to the application's vector table. */
+         * 对于中断向量表地址可配置的系统，若 VTOR 未正确指向
+         * 应用的向量表，此处也可能出现断言失败甚至系统故障。
+         */
         configASSERT( pxVectorTable[ portVECTOR_INDEX_SVC ] == vPortSVCHandler );
         configASSERT( pxVectorTable[ portVECTOR_INDEX_PENDSV ] == xPortPendSVHandler );
     }
-    #endif /* configCHECK_HANDLER_INSTALLATION */
+    #endif /* configCHECK_HANDLER_INSTALLATION 条件编译结束 */
 
     #if ( configASSERT_DEFINED == 1 )
     {
@@ -802,38 +818,43 @@ BaseType_t xPortStartScheduler( void )
         volatile uint8_t * const pucFirstUserPriorityRegister = ( volatile uint8_t * const ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );
         volatile uint8_t ucMaxPriorityValue;
 
-        /* Determine the maximum priority from which ISR safe FreeRTOS API
-         * functions can be called.  ISR safe functions are those that end in
-         * "FromISR".  FreeRTOS maintains separate thread and ISR API functions
-         * to ensure interrupt entry is as fast and simple as possible.
+        /*
+         * 确定可从哪些最高优先级的中断服务程序中调用 ISR 安全的 FreeRTOS API
+         * 函数。ISR 安全函数是以“FromISR”结尾的函数。FreeRTOS 维护独立的
+         * 线程和 ISR API 函数，以确保中断进入尽可能快速、简单。
          *
-         * Save the interrupt priority value that is about to be clobbered. */
+         * 保存即将被覆盖的中断优先级值。
+         */
         ucOriginalPriority = *pucFirstUserPriorityRegister;
 
-        /* Determine the number of priority bits available.  First write to all
-         * possible bits. */
+        /*
+         * 确定可用的优先级位数。先向所有可能的位写入 1。
+         */
         *pucFirstUserPriorityRegister = portMAX_8_BIT_VALUE;
 
-        /* Read the value back to see how many bits stuck. */
+        /* 回读该值，查看哪些位保持为 1。 */
         ucMaxPriorityValue = *pucFirstUserPriorityRegister;
 
-        /* Use the same mask on the maximum system call priority. */
+        /* 对最大系统调用优先级施加相同的掩码。 */
         ucMaxSysCallPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY & ucMaxPriorityValue;
 
-        /* Check that the maximum system call priority is nonzero after
-         * accounting for the number of priority bits supported by the
-         * hardware. A priority of 0 is invalid because setting the BASEPRI
-         * register to 0 unmasks all interrupts, and interrupts with priority 0
-         * cannot be masked using BASEPRI.
-         * See https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
+        /*
+         * 检查在考虑硬件支持的优先级位数后，最大系统调用优先级非零。
+         * 优先级 0 无效，因为将 BASEPRI 寄存器设为 0 会使所有中断解除屏蔽，
+         * 且优先级为 0 的中断无法使用 BASEPRI 屏蔽。
+         * 参见 https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+         */
         configASSERT( ucMaxSysCallPriority );
 
-        /* Check that the bits not implemented in hardware are zero in
-         * configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+        /*
+         * 检查 configMAX_SYSCALL_INTERRUPT_PRIORITY 中
+         * 硬件未实现的位为 0。
+         */
         configASSERT( ( configMAX_SYSCALL_INTERRUPT_PRIORITY & ( ~ucMaxPriorityValue ) ) == 0U );
 
-        /* Calculate the maximum acceptable priority group value for the number
-         * of bits read back. */
+        /*
+         * 根据回读的位数计算可接受的最大优先级分组值。
+         */
 
         while( ( ucMaxPriorityValue & portTOP_BIT_OF_BYTE ) == portTOP_BIT_OF_BYTE )
         {
@@ -843,23 +864,22 @@ BaseType_t xPortStartScheduler( void )
 
         if( ulImplementedPrioBits == 8 )
         {
-            /* When the hardware implements 8 priority bits, there is no way for
-             * the software to configure PRIGROUP to not have sub-priorities. As
-             * a result, the least significant bit is always used for sub-priority
-             * and there are 128 preemption priorities and 2 sub-priorities.
+            /*
+             * 当硬件实现 8 个优先级位时，软件无法将 PRIGROUP 配置为
+             * 不存在子优先级。因此最低有效位始终用于子优先级，
+             * 共有 128 个抢占优先级和 2 个子优先级。
              *
-             * This may cause some confusion in some cases - for example, if
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY is set to 5, both 5 and 4
-             * priority interrupts will be masked in Critical Sections as those
-             * are at the same preemption priority. This may appear confusing as
-             * 4 is higher (numerically lower) priority than
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY and therefore, should not
-             * have been masked. Instead, if we set configMAX_SYSCALL_INTERRUPT_PRIORITY
-             * to 4, this confusion does not happen and the behaviour remains the same.
+             * 这在某些情况下可能引起困惑——例如，若
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY 设为 5，则优先级 5 和 4
+             * 的中断都会在临界区中被屏蔽，因为它们处于同一抢占优先级。
+             * 这可能显得费解，因为 4 的优先级高于（数值上小于）
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY，本不应被屏蔽。
+             * 反之，若将 configMAX_SYSCALL_INTERRUPT_PRIORITY 设为 4，
+             * 这种困惑便不会发生，而行为保持不变。
              *
-             * The following assert ensures that the sub-priority bit in the
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY is clear to avoid the above mentioned
-             * confusion. */
+             * 以下断言确保 configMAX_SYSCALL_INTERRUPT_PRIORITY 中的
+             * 子优先级位为 0，以避免上述困惑。
+             */
             configASSERT( ( configMAX_SYSCALL_INTERRUPT_PRIORITY & 0x1U ) == 0U );
             ulMaxPRIGROUPValue = 0;
         }
@@ -868,63 +888,69 @@ BaseType_t xPortStartScheduler( void )
             ulMaxPRIGROUPValue = portMAX_PRIGROUP_BITS - ulImplementedPrioBits;
         }
 
-        /* Shift the priority group value back to its position within the AIRCR
-         * register. */
+        /*
+         * 将优先级分组值移回其在 AIRCR 寄存器中的位置。
+         */
         ulMaxPRIGROUPValue <<= portPRIGROUP_SHIFT;
         ulMaxPRIGROUPValue &= portPRIORITY_GROUP_MASK;
 
-        /* Restore the clobbered interrupt priority register to its original
-         * value. */
+        /*
+         * 将先前被改写的中断优先级寄存器恢复为原值。
+         */
         *pucFirstUserPriorityRegister = ucOriginalPriority;
     }
-    #endif /* configASSERT_DEFINED */
+    #endif /* configASSERT_DEFINED 条件编译结束 */
 
-    /* Make PendSV and SysTick the lowest priority interrupts, and configure
-     * SVCall for sufficient preemption priority. */
+    /*
+     * 将 PendSV 和 SysTick 配置为最低优先级中断，并为 SVCall 配置足够的抢占优先级。
+     */
     portNVIC_SHPR3_REG |= portNVIC_PENDSV_PRI;
     portNVIC_SHPR3_REG |= portNVIC_SYSTICK_PRI;
     portNVIC_SHPR2_REG = portNVIC_SVC_PRI;
 
-    /* Configure the regions in the MPU that are common to all tasks. */
+    /* 配置 MPU 中所有任务共用的区域。 */
     prvSetupMPU();
 
-    /* Start the timer that generates the tick ISR.  Interrupts are disabled
-     * here already. */
+    /*
+     * 启动产生时钟节拍 ISR 的定时器。此处中断已处于禁用状态。
+     */
     vPortSetupTimerInterrupt();
 
-    /* Initialise the critical nesting count ready for the first task. */
+    /* 初始化临界区嵌套计数，为第一个任务做好准备。 */
     uxCriticalNesting = 0;
 
     #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
     {
         xSchedulerRunning = pdTRUE;
     }
-    #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+    #endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 
-    /* Start the first task. */
+    /* 启动第一个任务。 */
     __asm volatile (
-        " ldr r0, =0xE000ED08   \n" /* Use the NVIC offset register to locate the stack. */
+        " ldr r0, =0xE000ED08   \n" /* 使用 NVIC 偏移寄存器定位栈。 */
         " ldr r0, [r0]          \n"
         " ldr r0, [r0]          \n"
-        " msr msp, r0           \n" /* Set the msp back to the start of the stack. */
-        " cpsie i               \n" /* Globally enable interrupts. */
+        " msr msp, r0           \n" /* 将 MSP 重新设置为栈起始地址。 */
+        " cpsie i               \n" /* 全局使能中断。 */
         " cpsie f               \n"
         " dsb                   \n"
         " isb                   \n"
-        " svc %0                \n" /* System call to start first task. */
+        " svc %0                \n" /* 通过系统调用启动首个任务。 */
         " nop                   \n"
         " .ltorg                \n"
         ::"i" ( portSVC_START_SCHEDULER ) : "memory" );
 
-    /* Should not get here! */
+    /* 不应到达此处！ */
     return 0;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented in ports where there is nothing to return to.
-     * Artificially force an assert. */
+    /*
+     * 在无返回目标的移植层中不实现该函数。
+     * 人为触发断言。
+     */
     configASSERT( uxCriticalNesting == 1000UL );
 }
 /*-----------------------------------------------------------*/
@@ -949,10 +975,10 @@ void vPortEnterCritical( void )
             portDISABLE_INTERRUPTS();
             uxCriticalNesting++;
         }
-    #else /* if ( configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1 ) */
+    #else /* configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1（允许非特权临界区） */
         portDISABLE_INTERRUPTS();
         uxCriticalNesting++;
-    #endif /* if ( configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1 ) */
+    #endif /* configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1（允许非特权临界区） */
 }
 /*-----------------------------------------------------------*/
 
@@ -987,7 +1013,7 @@ void vPortExitCritical( void )
                 portENABLE_INTERRUPTS();
             }
         }
-    #else /* if ( configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1 ) */
+    #else /* configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1（允许非特权临界区） */
         configASSERT( uxCriticalNesting );
         uxCriticalNesting--;
 
@@ -995,31 +1021,31 @@ void vPortExitCritical( void )
         {
             portENABLE_INTERRUPTS();
         }
-    #endif /* if ( configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1 ) */
+    #endif /* configALLOW_UNPRIVILEGED_CRITICAL_SECTIONS == 1（允许非特权临界区） */
 }
 /*-----------------------------------------------------------*/
 
 void xPortPendSVHandler( void )
 {
-    /* This is a naked function. */
+    /* 这是一个裸函数。 */
 
     __asm volatile
     (
-        " ldr r3, =pxCurrentTCB                 \n" /* r3 = =pxCurrentTCB. */
-        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB. */
-        " ldr r1, [r2]                          \n" /* r1 = Location where the context should be saved. */
+        " ldr r3, =pxCurrentTCB                 \n" /* r3 = &pxCurrentTCB（当前 TCB 的地址）。 */
+        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB（当前任务的 TCB）。 */
+        " ldr r1, [r2]                          \n" /* r1 = 保存上下文的位置。 */
         "                                       \n"
-        /*------------ Save Context. ----------- */
+        /* ------------ 保存上下文。----------- */
         " mrs r3, control                       \n"
         " mrs r0, psp                           \n"
         " isb                                   \n"
         "                                       \n"
-        " stmia r1!, {r3-r11, lr}               \n" /* Store CONTROL register, r4-r11 and LR. */
-        " ldmia r0, {r4-r11}                    \n" /* Copy hardware saved context into r4-r11. */
-        " stmia r1!, {r0, r4-r11}               \n" /* Store original PSP (after hardware has saved context) and the hardware saved context. */
-        " str r1, [r2]                          \n" /* Save the location from where the context should be restored as the first member of TCB. */
+        " stmia r1!, {r3-r11, lr}               \n" /* 保存 CONTROL 寄存器、r4-r11 和 LR。 */
+        " ldmia r0, {r4-r11}                    \n" /* 将硬件保存的上下文复制到 r4-r11。 */
+        " stmia r1!, {r0, r4-r11}               \n" /* 保存原始 PSP（硬件保存上下文之后）以及硬件保存的上下文。 */
+        " str r1, [r2]                          \n" /* 将恢复上下文的位置作为 TCB 的第一个成员保存。 */
         "                                       \n"
-        /*---------- Select next task. --------- */
+        /* ---------- 选择下一个任务。--------- */
         " mov r0, %0                            \n"
         " msr basepri, r0                       \n"
         " dsb                                   \n"
@@ -1028,42 +1054,42 @@ void xPortPendSVHandler( void )
         " mov r0, #0                            \n"
         " msr basepri, r0                       \n"
         "                                       \n"
-        /*------------ Program MPU. ------------ */
-        " ldr r3, =pxCurrentTCB                 \n" /* r3 = =pxCurrentTCB. */
-        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB. */
-        " add r2, r2, #4                        \n" /* r2 = Second item in the TCB which is xMPUSettings. */
+        /* ------------ 配置 MPU。------------ */
+        " ldr r3, =pxCurrentTCB                 \n" /* r3 = &pxCurrentTCB（当前 TCB 的地址）。 */
+        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB（当前任务的 TCB）。 */
+        " add r2, r2, #4                        \n" /* r2 = TCB 中的第二项，即 xMPUSettings。 */
         "                                       \n"
-        " dmb                                   \n" /* Complete outstanding transfers before disabling MPU. */
-        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL register. */
-        " ldr r3, [r0]                          \n" /* Read the value of MPU_CTRL. */
-        " bic r3, #1                            \n" /* r3 = r3 & ~1 i.e. Clear the bit 0 in r3. */
-        " str r3, [r0]                          \n" /* Disable MPU. */
+        " dmb                                   \n" /* 在禁用 MPU 前完成未完成的传输。 */
+        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL 寄存器。 */
+        " ldr r3, [r0]                          \n" /* 读取 MPU_CTRL 的值。 */
+        " bic r3, #1                            \n" /* r3 = r3 & ~1，即清除 r3 的 bit 0。 */
+        " str r3, [r0]                          \n" /* 禁用 MPU。 */
         "                                       \n"
-        " ldr r0, =0xe000ed9c                   \n" /* Region Base Address register. */
-        " ldmia r2!, {r4-r11}                   \n" /* Read 4 sets of MPU registers [MPU Region # 0 - 3]. */
-        " stmia r0, {r4-r11}                    \n" /* Write 4 sets of MPU registers [MPU Region # 0 - 3]. */
+        " ldr r0, =0xe000ed9c                   \n" /* 区域基地址寄存器（RBAR）。 */
+        " ldmia r2!, {r4-r11}                   \n" /* 读取 4 组 MPU 寄存器 [MPU 区域 #0 - 3]。 */
+        " stmia r0, {r4-r11}                    \n" /* 写入 4 组 MPU 寄存器 [MPU 区域 #0 - 3]。 */
         "                                       \n"
-        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL register. */
-        " ldr r3, [r0]                          \n" /* Read the value of MPU_CTRL. */
-        " orr r3, #1                            \n" /* r3 = r3 | 1 i.e. Set the bit 0 in r3. */
-        " str r3, [r0]                          \n" /* Enable MPU. */
-        " dsb                                   \n" /* Force memory writes before continuing. */
+        " ldr r0, =0xe000ed94                   \n" /* MPU_CTRL 寄存器。 */
+        " ldr r3, [r0]                          \n" /* 读取 MPU_CTRL 的值。 */
+        " orr r3, #1                            \n" /* r3 = r3 | 1，即设置 r3 的 bit 0。 */
+        " str r3, [r0]                          \n" /* 使能 MPU。 */
+        " dsb                                   \n" /* 继续执行前强制完成内存写入。 */
         "                                       \n"
-        /*---------- Restore Context. ---------- */
-        " ldr r3, =pxCurrentTCB                 \n" /* r3 = =pxCurrentTCB. */
-        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB. */
-        " ldr r1, [r2]                          \n" /* r1 = Location of saved context in TCB. */
+        /* ---------- 恢复上下文。---------- */
+        " ldr r3, =pxCurrentTCB                 \n" /* r3 = &pxCurrentTCB（当前 TCB 的地址）。 */
+        " ldr r2, [r3]                          \n" /* r2 = pxCurrentTCB（当前任务的 TCB）。 */
+        " ldr r1, [r2]                          \n" /* r1 = TCB 中保存上下文的位置。 */
         "                                       \n"
-        " ldmdb r1!, {r0, r4-r11}               \n" /* r0 contains PSP after the hardware had saved context. r4-r11 contain hardware saved context. */
+        " ldmdb r1!, {r0, r4-r11}               \n" /* r0 包含硬件保存上下文之后的 PSP。r4-r11 包含硬件保存的上下文。 */
         " msr psp, r0                           \n"
-        " stmia r0, {r4-r11}                    \n" /* Copy the hardware saved context on the task stack. */
-        " ldmdb r1!, {r3-r11, lr}               \n" /* r3 contains CONTROL register. r4-r11 and LR restored. */
+        " stmia r0, {r4-r11}                    \n" /* 将硬件保存的上下文复制到任务栈上。 */
+        " ldmdb r1!, {r3-r11, lr}               \n" /* r3 包含 CONTROL 寄存器。r4-r11 和 LR 已恢复。 */
         " msr control, r3                       \n"
         "                                       \n"
-        " str r1, [r2]                          \n" /* Save the location where the context should be saved next as the first member of TCB. */
+        " str r1, [r2]                          \n" /* 将下次保存上下文的位置作为 TCB 的第一个成员保存。 */
         " bx lr                                 \n"
         "                                       \n"
-        " .ltorg                                \n" /* Assemble current literal pool to avoid offset-out-of-bound errors with lto. */
+        " .ltorg                                \n" /* 汇编当前文字池（literal pool），以避免链接时优化（LTO）出现偏移越界错误。 */
         ::"i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY )
     );
 }
@@ -1076,11 +1102,11 @@ void xPortSysTickHandler( void )
     ulDummy = portSET_INTERRUPT_MASK_FROM_ISR();
     traceISR_ENTER();
     {
-        /* Increment the RTOS tick. */
+        /* 递增 RTOS 时钟节拍。 */
         if( xTaskIncrementTick() != pdFALSE )
         {
             traceISR_EXIT_TO_SCHEDULER();
-            /* Pend a context switch. */
+            /* 挂起一次上下文切换。 */
             portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
         }
         else
@@ -1093,16 +1119,15 @@ void xPortSysTickHandler( void )
 /*-----------------------------------------------------------*/
 
 /*
- * Setup the systick timer to generate the tick interrupts at the required
- * frequency.
+ * 配置 SysTick 定时器，以所需频率产生时钟节拍中断。
  */
 __attribute__( ( weak ) ) void vPortSetupTimerInterrupt( void )
 {
-    /* Stop and clear the SysTick. */
+    /* 停止并清除 SysTick。 */
     portNVIC_SYSTICK_CTRL_REG = 0UL;
     portNVIC_SYSTICK_CURRENT_VALUE_REG = 0UL;
 
-    /* Configure SysTick to interrupt at the requested rate. */
+    /* 配置 SysTick 以按请求的速率产生中断。 */
     portNVIC_SYSTICK_LOAD_REG = ( configSYSTICK_CLOCK_HZ / configTICK_RATE_HZ ) - 1UL;
     portNVIC_SYSTICK_CTRL_REG = ( portNVIC_SYSTICK_CLK | portNVIC_SYSTICK_INT | portNVIC_SYSTICK_ENABLE );
 }
@@ -1112,8 +1137,9 @@ static void prvSetupMPU( void )
 {
     #if defined( __ARMCC_VERSION )
 
-        /* Declaration when these variable are defined in code instead of being
-         * exported from linker scripts. */
+        /*
+         * 当这些变量在代码中定义而非由链接脚本导出时的声明。
+         */
         extern uint32_t * __privileged_functions_start__;
         extern uint32_t * __privileged_functions_end__;
         extern uint32_t * __FLASH_segment_start__;
@@ -1121,23 +1147,23 @@ static void prvSetupMPU( void )
         extern uint32_t * __privileged_data_start__;
         extern uint32_t * __privileged_data_end__;
     #else
-        /* Declaration when these variable are exported from linker scripts. */
+        /* 当这些变量由链接脚本导出时的声明。 */
         extern uint32_t __privileged_functions_start__[];
         extern uint32_t __privileged_functions_end__[];
         extern uint32_t __FLASH_segment_start__[];
         extern uint32_t __FLASH_segment_end__[];
         extern uint32_t __privileged_data_start__[];
         extern uint32_t __privileged_data_end__[];
-    #endif /* if defined( __ARMCC_VERSION ) */
+    #endif /* __ARMCC_VERSION 定义条件 */
 
-    /* Ensure that the device has the expected MPU type */
+    /* 确保器件具有预期的 MPU 类型。 */
     configASSERT( portMPU_TYPE_REG == portEXPECTED_MPU_TYPE_VALUE );
 
-    /* Check the expected MPU is present. */
+    /* 检查预期的 MPU 是否存在。 */
     if( portMPU_TYPE_REG == portEXPECTED_MPU_TYPE_VALUE )
     {
-        /* First setup the unprivileged flash for unprivileged read only access. */
-        portMPU_REGION_BASE_ADDRESS_REG = ( ( uint32_t ) __FLASH_segment_start__ ) | /* Base address. */
+        /* 首先配置非特权 Flash 区域，使非特权代码只能只读访问。 */
+        portMPU_REGION_BASE_ADDRESS_REG = ( ( uint32_t ) __FLASH_segment_start__ ) | /* 基地址。 */
                                           ( portMPU_REGION_VALID ) |
                                           ( portUNPRIVILEGED_FLASH_REGION );
 
@@ -1146,9 +1172,10 @@ static void prvSetupMPU( void )
                                        ( prvGetMPURegionSizeSetting( ( uint32_t ) __FLASH_segment_end__ - ( uint32_t ) __FLASH_segment_start__ ) ) |
                                        ( portMPU_REGION_ENABLE );
 
-        /* Setup the privileged flash for privileged only access.  This is where
-         * the kernel code is * placed. */
-        portMPU_REGION_BASE_ADDRESS_REG = ( ( uint32_t ) __privileged_functions_start__ ) | /* Base address. */
+        /*
+         * 配置特权 Flash 区域，仅允许特权访问。内核代码就放置在这里。
+         */
+        portMPU_REGION_BASE_ADDRESS_REG = ( ( uint32_t ) __privileged_functions_start__ ) | /* 基地址。 */
                                           ( portMPU_REGION_VALID ) |
                                           ( portPRIVILEGED_FLASH_REGION );
 
@@ -1157,9 +1184,10 @@ static void prvSetupMPU( void )
                                        ( prvGetMPURegionSizeSetting( ( uint32_t ) __privileged_functions_end__ - ( uint32_t ) __privileged_functions_start__ ) ) |
                                        ( portMPU_REGION_ENABLE );
 
-        /* Setup the privileged data RAM region.  This is where the kernel data
-         * is placed. */
-        portMPU_REGION_BASE_ADDRESS_REG = ( ( uint32_t ) __privileged_data_start__ ) | /* Base address. */
+        /*
+         * 配置特权数据 RAM 区域。内核数据放置在这里。
+         */
+        portMPU_REGION_BASE_ADDRESS_REG = ( ( uint32_t ) __privileged_data_start__ ) | /* 基地址。 */
                                           ( portMPU_REGION_VALID ) |
                                           ( portPRIVILEGED_RAM_REGION );
 
@@ -1169,8 +1197,9 @@ static void prvSetupMPU( void )
                                        prvGetMPURegionSizeSetting( ( uint32_t ) __privileged_data_end__ - ( uint32_t ) __privileged_data_start__ ) |
                                        ( portMPU_REGION_ENABLE );
 
-        /* By default allow everything to access the general peripherals.  The
-         * system peripherals and registers are protected. */
+        /*
+         * 默认允许所有代码访问通用外设。系统外设和寄存器受到保护。
+         */
         portMPU_REGION_BASE_ADDRESS_REG = ( portPERIPHERALS_START_ADDRESS ) |
                                           ( portMPU_REGION_VALID ) |
                                           ( portGENERAL_PERIPHERALS_REGION );
@@ -1179,10 +1208,10 @@ static void prvSetupMPU( void )
                                        ( prvGetMPURegionSizeSetting( portPERIPHERALS_END_ADDRESS - portPERIPHERALS_START_ADDRESS ) ) |
                                        ( portMPU_REGION_ENABLE );
 
-        /* Enable the memory fault exception. */
+        /* 使能存储器故障异常。 */
         portNVIC_SYS_CTRL_STATE_REG |= portNVIC_MEM_FAULT_ENABLE;
 
-        /* Enable the MPU with the background region configured. */
+        /* 使能 MPU，并配置背景区域（background region）。 */
         portMPU_CTRL_REG |= ( portMPU_ENABLE | portMPU_BACKGROUND_ENABLE );
     }
 }
@@ -1192,8 +1221,9 @@ static uint32_t prvGetMPURegionSizeSetting( uint32_t ulActualSizeInBytes )
 {
     uint32_t ulRegionSize, ulReturnValue = 4;
 
-    /* 32 is the smallest region size, 31 is the largest valid value for
-     * ulReturnValue. */
+    /*
+     * 32 是最小的区域大小，31 是 ulReturnValue 的最大有效值。
+     */
     for( ulRegionSize = 32UL; ulReturnValue < 31UL; ( ulRegionSize <<= 1UL ) )
     {
         if( ulActualSizeInBytes <= ulRegionSize )
@@ -1206,35 +1236,36 @@ static uint32_t prvGetMPURegionSizeSetting( uint32_t ulActualSizeInBytes )
         }
     }
 
-    /* Shift the code by one before returning so it can be written directly
-     * into the correct bit position of the attribute register. */
+    /*
+     * 返回前将编码左移一位，使其可以直接写入属性寄存器的正确位位置。
+     */
     return( ulReturnValue << 1UL );
 }
 /*-----------------------------------------------------------*/
 
-BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked )) */
+BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked ))（裸函数） */
 {
     __asm volatile
     (
-        "   mrs r0, control                         \n" /* r0 = CONTROL. */
-        "   tst r0, #1                              \n" /* Perform r0 & 1 (bitwise AND) and update the conditions flag. */
+        "   mrs r0, control                         \n" /* r0 置为 CONTROL。 */
+        "   tst r0, #1                              \n" /* 执行 r0 & 1（按位与）并更新条件标志。 */
         "   ite ne                                  \n"
-        "   movne r0, #0                            \n" /* CONTROL[0]!=0. Return false to indicate that the processor is not privileged. */
-        "   moveq r0, #1                            \n" /* CONTROL[0]==0. Return true to indicate that the processor is privileged. */
-        "   bx lr                                   \n" /* Return. */
+        "   movne r0, #0                            \n" /* CONTROL[0]!=0。返回 false 表示处理器当前不处于特权状态。 */
+        "   moveq r0, #1                            \n" /* CONTROL[0]==0。返回 true 表示处理器当前处于特权状态。 */
+        "   bx lr                                   \n" /* 返回。 */
         ::: "r0", "memory"
     );
 }
 /*-----------------------------------------------------------*/
 
-void vResetPrivilege( void ) /* __attribute__ (( naked )) */
+void vResetPrivilege( void ) /* __attribute__ (( naked ))（裸函数） */
 {
     __asm volatile
     (
-        "   mrs r0, control                         \n" /* r0 = CONTROL. */
-        "   orr r0, #1                              \n" /* r0 = r0 | 1. */
-        "   msr control, r0                         \n" /* CONTROL = r0. */
-        "   bx lr                                   \n" /* Return to the caller. */
+        "   mrs r0, control                         \n" /* r0 置为 CONTROL。 */
+        "   orr r0, #1                              \n" /* r0 = r0 | 1（设置 bit 0）。 */
+        "   msr control, r0                         \n" /* CONTROL 置为 r0。 */
+        "   bx lr                                   \n" /* 返回调用者。 */
         ::: "r0", "memory"
     );
 }
@@ -1242,13 +1273,13 @@ void vResetPrivilege( void ) /* __attribute__ (( naked )) */
 
 void vPortSwitchToUserMode( void )
 {
-    /* Load the current task's MPU settings from its TCB. */
+    /* 从当前任务的 TCB 中加载其 MPU 设置。 */
     xMPU_SETTINGS * xTaskMpuSettings = xTaskGetMPUSettings( NULL );
 
-    /* Mark the task as unprivileged. */
+    /* 将该任务标记为非特权。 */
     xTaskMpuSettings->ulTaskFlags &= ( ~( portTASK_IS_PRIVILEGED_FLAG ) );
 
-    /* Lower the processor's privilege level. */
+    /* 降低处理器的特权级别。 */
     vResetPrivilege();
 }
 /*-----------------------------------------------------------*/
@@ -1260,30 +1291,31 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
 {
     #if defined( __ARMCC_VERSION )
 
-        /* Declaration when these variable are defined in code instead of being
-         * exported from linker scripts. */
+        /*
+         * 当这些变量在代码中定义而非由链接脚本导出时的声明。
+         */
         extern uint32_t * __SRAM_segment_start__;
         extern uint32_t * __SRAM_segment_end__;
         extern uint32_t * __privileged_data_start__;
         extern uint32_t * __privileged_data_end__;
     #else
-        /* Declaration when these variable are exported from linker scripts. */
+        /* 当这些变量由链接脚本导出时的声明。 */
         extern uint32_t __SRAM_segment_start__[];
         extern uint32_t __SRAM_segment_end__[];
         extern uint32_t __privileged_data_start__[];
         extern uint32_t __privileged_data_end__[];
-    #endif /* if defined( __ARMCC_VERSION ) */
+    #endif /* __ARMCC_VERSION 定义条件 */
 
     int32_t lIndex;
     uint32_t ul;
 
     if( xRegions == NULL )
     {
-        /* No MPU regions are specified so allow access to all RAM. */
+        /* 未指定任何 MPU 区域，因此允许访问所有 RAM。 */
         xMPUSettings->xRegion[ 0 ].ulRegionBaseAddress =
-            ( ( uint32_t ) __SRAM_segment_start__ ) | /* Base address. */
+            ( ( uint32_t ) __SRAM_segment_start__ ) | /* 基地址。 */
             ( portMPU_REGION_VALID ) |
-            ( portSTACK_REGION );                     /* Region number. */
+            ( portSTACK_REGION );                     /* 区域编号。 */
 
         xMPUSettings->xRegion[ 0 ].ulRegionAttribute =
             ( portMPU_REGION_READ_WRITE ) |
@@ -1297,7 +1329,7 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
         xMPUSettings->xRegionSettings[ 0 ].ulRegionPermissions = ( tskMPU_READ_PERMISSION |
                                                                    tskMPU_WRITE_PERMISSION );
 
-        /* Invalidate user configurable regions. */
+        /* 使用户可配置区域失效。 */
         for( ul = 1UL; ul <= portNUM_CONFIGURABLE_REGIONS; ul++ )
         {
             xMPUSettings->xRegion[ ul ].ulRegionBaseAddress = ( ( ul - 1UL ) | portMPU_REGION_VALID );
@@ -1309,17 +1341,17 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
     }
     else
     {
-        /* This function is called automatically when the task is created - in
-         * which case the stack region parameters will be valid.  At all other
-         * times the stack parameters will not be valid and it is assumed that the
-         * stack region has already been configured. */
+        /*
+         * 创建任务时会自动调用该函数——此时栈区域参数有效。其他
+         * 时候栈参数无效，并假定栈区域已经配置好。
+         */
         if( uxStackDepth > 0 )
         {
-            /* Define the region that allows access to the stack. */
+            /* 定义允许访问栈的区域。 */
             xMPUSettings->xRegion[ 0 ].ulRegionBaseAddress =
                 ( ( uint32_t ) pxBottomOfStack ) |
                 ( portMPU_REGION_VALID ) |
-                ( portSTACK_REGION ); /* Region number. */
+                ( portSTACK_REGION ); /* 区域编号。 */
 
             xMPUSettings->xRegion[ 0 ].ulRegionAttribute =
                 ( portMPU_REGION_READ_WRITE ) |
@@ -1340,13 +1372,15 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
         {
             if( ( xRegions[ lIndex ] ).ulLengthInBytes > 0UL )
             {
-                /* Translate the generic region definition contained in
-                 * xRegions into the CM3 specific MPU settings that are then
-                 * stored in xMPUSettings. */
+                /*
+                 * 将由 xRegions 给出的通用区域定义转换为
+                 * CM3 专用的 MPU 设置，然后存入
+                 * xMPUSettings。
+                 */
                 xMPUSettings->xRegion[ ul ].ulRegionBaseAddress =
                     ( ( uint32_t ) xRegions[ lIndex ].pvBaseAddress ) |
                     ( portMPU_REGION_VALID ) |
-                    ( ul - 1UL ); /* Region number. */
+                    ( ul - 1UL ); /* 区域编号。 */
 
                 xMPUSettings->xRegion[ ul ].ulRegionAttribute =
                     ( prvGetMPURegionSizeSetting( xRegions[ lIndex ].ulLengthInBytes ) ) |
@@ -1370,7 +1404,7 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
             }
             else
             {
-                /* Invalidate the region. */
+                /* 使该区域失效。 */
                 xMPUSettings->xRegion[ ul ].ulRegionBaseAddress = ( ( ul - 1UL ) | portMPU_REGION_VALID );
                 xMPUSettings->xRegion[ ul ].ulRegionAttribute = 0UL;
                 xMPUSettings->xRegionSettings[ ul ].ulRegionStartAddress = 0UL;
@@ -1388,19 +1422,19 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
 
     BaseType_t xPortIsAuthorizedToAccessBuffer( const void * pvBuffer,
                                                 uint32_t ulBufferLength,
-                                                uint32_t ulAccessRequested ) /* PRIVILEGED_FUNCTION */
+                                                uint32_t ulAccessRequested ) /* PRIVILEGED_FUNCTION（特权函数） */
 
     {
         uint32_t i, ulBufferStartAddress, ulBufferEndAddress;
         BaseType_t xAccessGranted = pdFALSE;
-        const xMPU_SETTINGS * xTaskMpuSettings = xTaskGetMPUSettings( NULL ); /* Calling task's MPU settings. */
+        const xMPU_SETTINGS * xTaskMpuSettings = xTaskGetMPUSettings( NULL ); /* 调用任务的 MPU 设置。 */
 
         if( xSchedulerRunning == pdFALSE )
         {
-            /* Grant access to all the kernel objects before the scheduler
-             * is started. It is necessary because there is no task running
-             * yet and therefore, we cannot use the permissions of any
-             * task. */
+            /*
+             * 在调度器启动前授予对所有内核对象的访问权限。这是必要的，
+             * 因为此时尚无任务运行，无法使用任何任务的权限。
+             */
             xAccessGranted = pdTRUE;
         }
         else if( ( xTaskMpuSettings->ulTaskFlags & portTASK_IS_PRIVILEGED_FLAG ) == portTASK_IS_PRIVILEGED_FLAG )
@@ -1434,7 +1468,7 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
         return xAccessGranted;
     }
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 /*-----------------------------------------------------------*/
 
 #if ( configASSERT_DEFINED == 1 )
@@ -1444,64 +1478,61 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
         uint32_t ulCurrentInterrupt;
         uint8_t ucCurrentPriority;
 
-        /* Obtain the number of the currently executing interrupt. */
+        /* 获取当前正在执行的中断编号。 */
         __asm volatile ( "mrs %0, ipsr" : "=r" ( ulCurrentInterrupt )::"memory" );
 
-        /* Is the interrupt number a user defined interrupt? */
+        /* 该中断编号是否为用户定义的中断？ */
         if( ulCurrentInterrupt >= portFIRST_USER_INTERRUPT_NUMBER )
         {
-            /* Look up the interrupt's priority. */
+            /* 查询该中断的优先级。 */
             ucCurrentPriority = pcInterruptPriorityRegisters[ ulCurrentInterrupt ];
 
-            /* The following assertion will fail if a service routine (ISR) for
-             * an interrupt that has been assigned a priority above
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY calls an ISR safe FreeRTOS API
-             * function.  ISR safe FreeRTOS API functions must *only* be called
-             * from interrupts that have been assigned a priority at or below
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY.
+            /*
+             * 若某中断已被分配的优先级高于
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY，而其中断服务程序（ISR）
+             * 调用了 ISR 安全的 FreeRTOS API 函数，则以下断言将失败。
+             * ISR 安全的 FreeRTOS API 函数*只能*在优先级等于或低于
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断中调用。
              *
-             * Numerically low interrupt priority numbers represent logically high
-             * interrupt priorities, therefore the priority of the interrupt must
-             * be set to a value equal to or numerically *higher* than
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY.
+             * 数值较小的中断优先级编号表示逻辑上较高的中断优先级，
+             * 因此中断的优先级必须设置为等于或数值*大于*
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY 的值。
              *
-             * Interrupts that  use the FreeRTOS API must not be left at their
-             * default priority of  zero as that is the highest possible priority,
-             * which is guaranteed to be above configMAX_SYSCALL_INTERRUPT_PRIORITY,
-             * and  therefore also guaranteed to be invalid.
+             * 使用 FreeRTOS API 的中断不得保持默认优先级 0，
+             * 因为 0 是可能的最高优先级，必然高于
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY，因此也必然是无效的。
              *
-             * FreeRTOS maintains separate thread and ISR API functions to ensure
-             * interrupt entry is as fast and simple as possible.
+             * FreeRTOS 维护独立的线程和 ISR API 函数，以确保
+             * 中断进入尽可能快速、简单。
              *
-             * The following links provide detailed information:
+             * 以下链接提供详细信息：
              * https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
-             * https://www.freertos.org/Why-FreeRTOS/FAQs */
+             * https://www.freertos.org/Why-FreeRTOS/FAQs
+             */
             configASSERT( ucCurrentPriority >= ucMaxSysCallPriority );
         }
 
-        /* Priority grouping:  The interrupt controller (NVIC) allows the bits
-         * that define each interrupt's priority to be split between bits that
-         * define the interrupt's pre-emption priority bits and bits that define
-         * the interrupt's sub-priority.  For simplicity all bits must be defined
-         * to be pre-emption priority bits.  The following assertion will fail if
-         * this is not the case (if some bits represent a sub-priority).
+        /*
+         * 优先级分组：中断控制器（NVIC）允许将定义每个中断优先级的位
+         * 划分为定义中断抢占优先级的位和定义子优先级的位。为简化起见，
+         * 所有位都必须定义为抢占优先级位。若情况并非如此
+         * （某些位表示子优先级），则以下断言将失败。
          *
-         * If the application only uses CMSIS libraries for interrupt
-         * configuration then the correct setting can be achieved on all Cortex-M
-         * devices by calling NVIC_SetPriorityGrouping( 0 ); before starting the
-         * scheduler.  Note however that some vendor specific peripheral libraries
-         * assume a non-zero priority group setting, in which cases using a value
-         * of zero will result in unpredictable behaviour. */
+         * 若应用仅使用 CMSIS 库配置中断，则可在启动调度器前调用
+         * NVIC_SetPriorityGrouping( 0 );，从而在所有 Cortex-M 器件上
+         * 获得正确设置。但请注意，某些厂商特定的外设库假定优先级
+         * 分组设置为非零值，此时使用 0 会导致不可预测的行为。
+         */
         configASSERT( ( portAIRCR_REG & portPRIORITY_GROUP_MASK ) <= ulMaxPRIGROUPValue );
     }
 
-#endif /* configASSERT_DEFINED */
+#endif /* configASSERT_DEFINED 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) )
 
     void vPortGrantAccessToKernelObject( TaskHandle_t xInternalTaskHandle,
-                                         int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION */
+                                         int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION（特权函数） */
     {
         uint32_t ulAccessControlListEntryIndex, ulAccessControlListEntryBit;
         xMPU_SETTINGS * xTaskMpuSettings;
@@ -1514,13 +1545,13 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
         xTaskMpuSettings->ulAccessControlList[ ulAccessControlListEntryIndex ] |= ( 1U << ulAccessControlListEntryBit );
     }
 
-#endif /* #if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0 且 configENABLE_ACCESS_CONTROL_LIST == 1（不使用 V1 包装器并启用访问控制列表） */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) )
 
     void vPortRevokeAccessToKernelObject( TaskHandle_t xInternalTaskHandle,
-                                          int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION */
+                                          int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION（特权函数） */
     {
         uint32_t ulAccessControlListEntryIndex, ulAccessControlListEntryBit;
         xMPU_SETTINGS * xTaskMpuSettings;
@@ -1533,14 +1564,14 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
         xTaskMpuSettings->ulAccessControlList[ ulAccessControlListEntryIndex ] &= ~( 1U << ulAccessControlListEntryBit );
     }
 
-#endif /* #if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0 且 configENABLE_ACCESS_CONTROL_LIST == 1（不使用 V1 包装器并启用访问控制列表） */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
 
     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
 
-        BaseType_t xPortIsAuthorizedToAccessKernelObject( int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION */
+        BaseType_t xPortIsAuthorizedToAccessKernelObject( int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION（特权函数） */
         {
             uint32_t ulAccessControlListEntryIndex, ulAccessControlListEntryBit;
             BaseType_t xAccessGranted = pdFALSE;
@@ -1548,15 +1579,15 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
 
             if( xSchedulerRunning == pdFALSE )
             {
-                /* Grant access to all the kernel objects before the scheduler
-                 * is started. It is necessary because there is no task running
-                 * yet and therefore, we cannot use the permissions of any
-                 * task. */
+                /*
+                 * 在调度器启动前授予对所有内核对象的访问权限。这是必要的，
+                 * 因为此时尚无任务运行，无法使用任何任务的权限。
+                 */
                 xAccessGranted = pdTRUE;
             }
             else
             {
-                xTaskMpuSettings = xTaskGetMPUSettings( NULL ); /* Calling task's MPU settings. */
+                xTaskMpuSettings = xTaskGetMPUSettings( NULL ); /* 调用任务的 MPU 设置。 */
 
                 ulAccessControlListEntryIndex = ( ( uint32_t ) lInternalIndexOfKernelObject / portACL_ENTRY_SIZE_BITS );
                 ulAccessControlListEntryBit = ( ( uint32_t ) lInternalIndexOfKernelObject % portACL_ENTRY_SIZE_BITS );
@@ -1577,18 +1608,19 @@ void vPortStoreTaskMPUSettings( xMPU_SETTINGS * xMPUSettings,
             return xAccessGranted;
         }
 
-    #else /* #if ( configENABLE_ACCESS_CONTROL_LIST == 1 ) */
+    #else /* configENABLE_ACCESS_CONTROL_LIST == 1（启用访问控制列表） */
 
-        BaseType_t xPortIsAuthorizedToAccessKernelObject( int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION */
+        BaseType_t xPortIsAuthorizedToAccessKernelObject( int32_t lInternalIndexOfKernelObject ) /* PRIVILEGED_FUNCTION（特权函数） */
         {
             ( void ) lInternalIndexOfKernelObject;
 
-            /* If Access Control List feature is not used, all the tasks have
-             * access to all the kernel objects. */
+            /*
+             * 若不使用访问控制列表功能，所有任务均可访问所有内核对象。
+             */
             return pdTRUE;
         }
 
-    #endif /* #if ( configENABLE_ACCESS_CONTROL_LIST == 1 ) */
+    #endif /* configENABLE_ACCESS_CONTROL_LIST == 1（启用访问控制列表） */
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* configUSE_MPU_WRAPPERS_V1 == 0（不使用 V1 包装器） */
 /*-----------------------------------------------------------*/

@@ -29,23 +29,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -61,22 +61,24 @@ typedef unsigned long    UBaseType_t;
 typedef uint32_t         TickType_t;
 #define portMAX_DELAY    ( TickType_t ) 0xffffffffUL
 
-/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 32 位架构上使用 32 位时钟节拍类型，因此读取节拍计数
+ * 无需用临界区保护。
+ */
 #define portTICK_TYPE_IS_ATOMIC    1
 
 /*-----------------------------------------------------------*/
 
-/* Hardware specifics. */
+/* 硬件相关定义。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    8
 
 /*-----------------------------------------------------------*/
 
-/* Task utilities. */
+/* 任务相关工具宏。 */
 
-/* Called at the end of an ISR that can cause a context switch. */
+/* 在可能引发上下文切换的中断服务程序（ISR）末尾调用。 */
 #define portEND_SWITCHING_ISR( xSwitchRequired )      \
     {                                                 \
         extern volatile uint32_t ulPortYieldRequired; \
@@ -96,7 +98,7 @@ void vPortYield( void );
 /*-----------------------------------------------------------*/
 
 /*
- * Critical section management.
+ * 临界区管理。
  */
 
 extern void vPortEnterCritical( void );
@@ -105,8 +107,10 @@ extern void vPortEnableInterrupts( void );
 extern void vPortDisableInterrupts( void );
 extern uint32_t ulPortSetInterruptMaskFromISR( void );
 
-/* In the absence of a priority mask register, these functions and macros
- * globally enable and disable interrupts. */
+/*
+ * 在没有优先级屏蔽寄存器的情况下，这些函数和宏
+ * 通过全局使能/禁止中断来实现临界区。
+ */
 #define portENTER_CRITICAL()                    vPortEnterCritical();
 #define portEXIT_CRITICAL()                     vPortExitCritical();
 #define portENABLE_INTERRUPTS()                 vPortEnableInterrupts();
@@ -116,41 +120,47 @@ extern uint32_t ulPortSetInterruptMaskFromISR( void );
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site.  These are
- * not required for this port but included in case common demo code that uses these
- * macros is used. */
+/*
+ * FreeRTOS.org 网站上所述的任务函数宏。本移植层并不需要它们，
+ * 但保留下来以便使用这些宏的通用示例代码仍可编译。
+ */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 
-/* Tickless idle/low power functionality. */
+/* 低功耗无节拍空闲（Tickless Idle）功能。 */
 #ifndef portSUPPRESS_TICKS_AND_SLEEP
     extern void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime );
     #define portSUPPRESS_TICKS_AND_SLEEP( xExpectedIdleTime )    vPortSuppressTicksAndSleep( xExpectedIdleTime )
 #endif
 
-/* Prototype of the FreeRTOS tick handler.  This must be installed as the
- * handler for whichever peripheral is used to generate the RTOS tick. */
+/*
+ * FreeRTOS 时钟节拍处理程序的原型。必须将该处理程序安装为产生
+ * RTOS 节拍的外设所对应的中断处理程序。
+ */
 void FreeRTOS_Tick_Handler( void );
 
 /**
- * @brief Returns the number of leading zeros in a 32 bit variable.
+ * @brief 返回 32 位变量中前导零的个数。
  *
- * @param[in] ulBitmap 32-Bit number to count leading zeros in.
+ * @param[in] ulBitmap 要统计前导零个数的 32 位数。
  *
- * @return The number of leading zeros in ulBitmap.
+ * @return ulBitmap 中前导零的个数。
  */
 UBaseType_t ulPortCountLeadingZeros( UBaseType_t ulBitmap );
 
-/* If configUSE_TASK_FPU_SUPPORT is set to 1 (or left undefined) then tasks are
- * created without an FPU context and must call vPortTaskUsesFPU() to give
- * themselves an FPU context before using any FPU instructions.  If
- * configUSE_TASK_FPU_SUPPORT is set to 2 then all tasks will have an FPU
- * context by default. */
+/*
+ * 若 configUSE_TASK_FPU_SUPPORT 设为 1（或未定义），任务创建时
+ * 不带 FPU 上下文，必须先调用 vPortTaskUsesFPU() 获得 FPU 上下文，
+ * 才能使用任何 FPU 指令。若 configUSE_TASK_FPU_SUPPORT 设为 2，
+ * 则所有任务默认都具有 FPU 上下文。
+ */
 #if ( configUSE_TASK_FPU_SUPPORT != 2 )
     void vPortTaskUsesFPU( void );
 #else
-    /* Each task has an FPU context already, so define this function as a
-     * no-op. */
+    /*
+     * 每个任务都已具有 FPU 上下文，因此将该函数定义为
+     * 空操作。
+     */
     #define vPortTaskUsesFPU()
 #endif
 #define portTASK_USES_FLOATING_POINT()    vPortTaskUsesFPU()
@@ -158,28 +168,28 @@ UBaseType_t ulPortCountLeadingZeros( UBaseType_t ulBitmap );
 #define portLOWEST_INTERRUPT_PRIORITY           ( ( ( uint32_t ) configUNIQUE_INTERRUPT_PRIORITIES ) - 1UL )
 #define portLOWEST_USABLE_INTERRUPT_PRIORITY    ( portLOWEST_INTERRUPT_PRIORITY - 1UL )
 
-/* Architecture specific optimisations. */
+/* 体系结构相关的优化。 */
 #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
     #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #endif
 
 #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
 
-    /* Store, clear and get the ready priorities in a bit map. */
+    /* 在位图中存储、清除和获取就绪优先级。 */
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )    ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )     ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities )  uxTopPriority = ( 31UL - ulPortCountLeadingZeros( ( uxTopReadyPriority ) ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION 条件编译结束 */
 
 #define portNOP()               __asm volatile ( "NOP" )
 #define portINLINE              __inline
 #define portMEMORY_BARRIER()    __asm volatile ( "" ::: "memory" )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* 头文件保护：PORTMACRO_H */

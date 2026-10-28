@@ -30,23 +30,23 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*-----------------------------------------------------------
- * Port specific definitions.
+/*
+ * -----------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the
- * given hardware and compiler.
+ * 本文件中的设置使 FreeRTOS 针对给定硬件和编译器正确配置。
  *
- * These settings should not be altered.
- *-----------------------------------------------------------
+ * 不应修改这些设置。
+ * -----------------------------------------------------------
  */
 
-/* Type definitions. */
+/* 类型定义。 */
 #define portCHAR          char
 #define portFLOAT         float
 #define portDOUBLE        double
@@ -66,15 +66,17 @@ typedef unsigned long    UBaseType_t;
     typedef uint32_t     TickType_t;
     #define portMAX_DELAY              ( TickType_t ) 0xffffffffUL
 
-/* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
- * not need to be guarded with a critical section. */
+/*
+ * 32 位架构上使用 32 位时钟节拍类型，因此读取节拍计数
+ * 无需用临界区保护。
+ */
     #define portTICK_TYPE_IS_ATOMIC    1
 #else
     #error configTICK_TYPE_WIDTH_IN_BITS set to unsupported tick type width.
 #endif
 /*-----------------------------------------------------------*/
 
-/* MPU specific constants. */
+/* MPU 专用常量。 */
 #define portUSING_MPU_WRAPPERS                                   1
 #define portPRIVILEGE_BIT                                        ( 0x80000000UL )
 
@@ -94,7 +96,7 @@ typedef unsigned long    UBaseType_t;
 #define portFIRST_CONFIGURABLE_REGION                            ( 0UL )
 #define portLAST_CONFIGURABLE_REGION                             ( 2UL )
 #define portNUM_CONFIGURABLE_REGIONS                             ( ( portLAST_CONFIGURABLE_REGION - portFIRST_CONFIGURABLE_REGION ) + 1 )
-#define portTOTAL_NUM_REGIONS_IN_TCB                             ( portNUM_CONFIGURABLE_REGIONS + 1 )     /* Plus one to make space for the stack region. */
+#define portTOTAL_NUM_REGIONS_IN_TCB                             ( portNUM_CONFIGURABLE_REGIONS + 1 )     /* 加一，为栈区域留出空间。 */
 
 typedef struct MPU_REGION_REGISTERS
 {
@@ -123,9 +125,10 @@ typedef struct MPU_REGION_SETTINGS
         uint32_t ulLinkRegisterAtSystemCallEntry;
     } xSYSTEM_CALL_STACK_INFO;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 )（条件结束） */
 
 /*
+ * 任务上下文栈帧布局：
  * +------------------------------+-------------------------------+-----+
  * |  CONTROL, r4-r11, EXC_RETURN | PSP, r0-r3, r12, LR, PC, xPSR |     |
  * +------------------------------+-------------------------------+-----+
@@ -135,10 +138,10 @@ typedef struct MPU_REGION_SETTINGS
  */
 #define MAX_CONTEXT_SIZE                    ( 20 )
 
-/* Size of an Access Control List (ACL) entry in bits. */
+/* 访问控制列表（ACL）表项的位宽。 */
 #define portACL_ENTRY_SIZE_BITS             ( 32U )
 
-/* Flags used for xMPU_SETTINGS.ulTaskFlags member. */
+/* xMPU_SETTINGS.ulTaskFlags 成员使用的标志位。 */
 #define portSTACK_FRAME_HAS_PADDING_FLAG    ( 1UL << 0UL )
 #define portTASK_IS_PRIVILEGED_FLAG         ( 1UL << 1UL )
 
@@ -157,20 +160,20 @@ typedef struct MPU_SETTINGS
     #endif
 } xMPU_SETTINGS;
 
-/* Architecture specifics. */
+/* 体系结构相关定义。 */
 #define portSTACK_GROWTH      ( -1 )
 #define portTICK_PERIOD_MS    ( ( TickType_t ) 1000 / configTICK_RATE_HZ )
 #define portBYTE_ALIGNMENT    8
 #define portDONT_DISCARD      __attribute__( ( used ) )
 /*-----------------------------------------------------------*/
 
-/* SVC numbers for various services. */
+/* 各种服务使用的 SVC 编号。 */
 #define portSVC_START_SCHEDULER        100
 #define portSVC_YIELD                  101
 #define portSVC_RAISE_PRIVILEGE        102
 #define portSVC_SYSTEM_CALL_EXIT       103
 
-/* Scheduler utilities. */
+/* 调度器工具。 */
 
 #define portYIELD()    __asm volatile ( "   SVC %0  \n" ::"i" ( portSVC_YIELD ) : "memory" )
 #define portYIELD_WITHIN_API()                          \
@@ -202,7 +205,7 @@ typedef struct MPU_SETTINGS
 #define portYIELD_FROM_ISR( x )    portEND_SWITCHING_ISR( x )
 /*-----------------------------------------------------------*/
 
-/* Critical section management. */
+/* 临界区管理。 */
 extern void vPortEnterCritical( void );
 extern void vPortExitCritical( void );
 #define portSET_INTERRUPT_MASK_FROM_ISR()         ulPortRaiseBASEPRI()
@@ -214,21 +217,23 @@ extern void vPortExitCritical( void );
 
 /*-----------------------------------------------------------*/
 
-/* Task function macros as described on the FreeRTOS.org WEB site.  These are
- * not necessary for to use this port.  They are defined so the common demo files
- * (which build with all the ports) will build. */
+/*
+ * 如 FreeRTOS.org 网站所述的任务函数宏。
+ * 本移植层并不需要使用它们。定义它们是为了让
+ * 通用示例文件（可在所有移植层上构建）能够编译。
+ */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
 /*-----------------------------------------------------------*/
 
-/* Architecture specific optimisations. */
+/* 体系结构相关优化。 */
 #ifndef configUSE_PORT_OPTIMISED_TASK_SELECTION
     #define configUSE_PORT_OPTIMISED_TASK_SELECTION    1
 #endif
 
 #if configUSE_PORT_OPTIMISED_TASK_SELECTION == 1
 
-/* Generic helper function. */
+/* 通用辅助函数。 */
     __attribute__( ( always_inline ) ) static inline uint8_t ucPortCountLeadingZeros( uint32_t ulBitmap )
     {
         uint8_t ucReturn;
@@ -238,12 +243,12 @@ extern void vPortExitCritical( void );
         return ucReturn;
     }
 
-/* Check the configuration. */
+/* 检查配置。 */
     #if ( configMAX_PRIORITIES > 32 )
         #error configUSE_PORT_OPTIMISED_TASK_SELECTION can only be set to 1 when configMAX_PRIORITIES is less than or equal to 32.  It is very rare that a system requires more than 10 to 15 difference priorities as tasks that share a priority will time slice.
     #endif
 
-/* Store/clear the ready priorities in a bit map. */
+/* 在位图中记录/清除就绪优先级。 */
     #define portRECORD_READY_PRIORITY( uxPriority, uxReadyPriorities )    ( uxReadyPriorities ) |= ( 1UL << ( uxPriority ) )
     #define portRESET_READY_PRIORITY( uxPriority, uxReadyPriorities )     ( uxReadyPriorities ) &= ~( 1UL << ( uxPriority ) )
 
@@ -251,7 +256,7 @@ extern void vPortExitCritical( void );
 
     #define portGET_HIGHEST_PRIORITY( uxTopPriority, uxReadyPriorities )    uxTopPriority = ( 31UL - ( uint32_t ) ucPortCountLeadingZeros( ( uxReadyPriorities ) ) )
 
-#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION */
+#endif /* configUSE_PORT_OPTIMISED_TASK_SELECTION 条件编译结束 */
 
 /*-----------------------------------------------------------*/
 
@@ -260,7 +265,7 @@ extern void vPortExitCritical( void );
     #define portASSERT_IF_INTERRUPT_PRIORITY_INVALID()    vPortValidateInterruptPriority()
 #endif
 
-/* portNOP() is not required by this port. */
+/* 本移植层不需要 portNOP()。 */
 #define portNOP()
 
 #define portINLINE              __inline
@@ -275,28 +280,27 @@ extern void vResetPrivilege( void );
 extern void vPortSwitchToUserMode( void );
 
 /**
- * @brief Checks whether or not the processor is privileged.
+ * @brief 检查处理器当前是否处于特权状态。
  *
- * @return 1 if the processor is already privileged, 0 otherwise.
+ * @return 若处理器已处于特权状态则返回 1，否则返回 0。
  */
 #define portIS_PRIVILEGED()          xIsPrivileged()
 
 /**
- * @brief Raise an SVC request to raise privilege.
+ * @brief 触发 SVC 请求以提升特权。
  */
 #define portRAISE_PRIVILEGE()        __asm volatile ( "svc %0 \n" ::"i" ( portSVC_RAISE_PRIVILEGE ) : "memory" );
 
 /**
- * @brief Lowers the privilege level by setting the bit 0 of the CONTROL
- * register.
+ * @brief 通过设置 CONTROL 寄存器的 bit 0 降低特权级别。
  */
 #define portRESET_PRIVILEGE()        vResetPrivilege()
 
 /**
- * @brief Make a task unprivileged.
+ * @brief 将任务设置为非特权。
  *
- * It must be called from privileged tasks only. Calling it from unprivileged
- * task will result in a memory protection fault.
+ * 只能从特权任务中调用。从非特权任务调用将导致内存保护错误
+ * （Memory Protection Fault）。
  */
 #define portSWITCH_TO_USER_MODE()    vPortSwitchToUserMode()
 /*-----------------------------------------------------------*/
@@ -304,9 +308,9 @@ extern void vPortSwitchToUserMode( void );
 extern BaseType_t xPortIsTaskPrivileged( void );
 
 /**
- * @brief Checks whether or not the calling task is privileged.
+ * @brief 检查调用任务是否具有特权。
  *
- * @return pdTRUE if the calling task is privileged, pdFALSE otherwise.
+ * @return 若调用任务具有特权则返回 pdTRUE，否则返回 pdFALSE。
  */
 #define portIS_TASK_PRIVILEGED()    xPortIsTaskPrivileged()
 /*-----------------------------------------------------------*/
@@ -316,7 +320,7 @@ portFORCE_INLINE static BaseType_t xPortIsInsideInterrupt( void )
     uint32_t ulCurrentInterrupt;
     BaseType_t xReturn;
 
-    /* Obtain the number of the currently executing interrupt. */
+    /* 获取当前正在执行的中断编号。 */
     __asm volatile ( "mrs %0, ipsr" : "=r" ( ulCurrentInterrupt )::"memory" );
 
     if( ulCurrentInterrupt == 0 )
@@ -363,8 +367,10 @@ portFORCE_INLINE static uint32_t ulPortRaiseBASEPRI( void )
         : "=r" ( ulOriginalBASEPRI ), "=r" ( ulNewBASEPRI ) : "i" ( configMAX_SYSCALL_INTERRUPT_PRIORITY ) : "memory"
     );
 
-    /* This return will not be reached but is necessary to prevent compiler
-     * warnings. */
+    /*
+     * 此返回语句不会被执行，但为消除编译器
+     * 警告而保留。
+     */
     return ulOriginalBASEPRI;
 }
 /*-----------------------------------------------------------*/
@@ -386,10 +392,10 @@ portFORCE_INLINE static void vPortSetBASEPRI( uint32_t ulNewMaskValue )
 #endif
 /*-----------------------------------------------------------*/
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* 头文件保护：PORTMACRO_H */
