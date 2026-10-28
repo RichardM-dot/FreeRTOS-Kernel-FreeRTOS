@@ -42,30 +42,33 @@
 
 #include "list.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
-
-/*-----------------------------------------------------------
-* MACROS AND DEFINITIONS
-*----------------------------------------------------------*/
+/* *INDENT-ON* 恢复自动缩进 */
 
 /*
- * If tskKERNEL_VERSION_NUMBER ends with + it represents the version in development
- * after the numbered release.
+ * -----------------------------------------------------------
+ * 宏与定义
+ * ----------------------------------------------------------
+ */
+
+/*
+ * 如果 tskKERNEL_VERSION_NUMBER 以 + 结尾，则表示这是编号版本发布之后
+ * 仍在开发中的版本。
  *
- * The tskKERNEL_VERSION_MAJOR, tskKERNEL_VERSION_MINOR, tskKERNEL_VERSION_BUILD
- * values will reflect the last released version number.
+ * tskKERNEL_VERSION_MAJOR、tskKERNEL_VERSION_MINOR、tskKERNEL_VERSION_BUILD
+ * 的值反映最近一次发布的版本号。
  */
 #define tskKERNEL_VERSION_NUMBER                      "V11.1.0+"
 #define tskKERNEL_VERSION_MAJOR                       11
 #define tskKERNEL_VERSION_MINOR                       1
 #define tskKERNEL_VERSION_BUILD                       0
 
-/* MPU region parameters passed in ulParameters
- * of MemoryRegion_t struct. */
+/*
+ * 通过 MemoryRegion_t 结构体的 ulParameters 传入的 MPU 区域参数。
+ */
 #define tskMPU_REGION_READ_ONLY                       ( 1U << 0U )
 #define tskMPU_REGION_READ_WRITE                      ( 1U << 1U )
 #define tskMPU_REGION_EXECUTE_NEVER                   ( 1U << 2U )
@@ -73,66 +76,66 @@
 #define tskMPU_REGION_DEVICE_MEMORY                   ( 1U << 4U )
 #if defined( portARMV8M_MINOR_VERSION ) && ( portARMV8M_MINOR_VERSION >= 1 )
     #define tskMPU_REGION_PRIVILEGED_EXECUTE_NEVER    ( 1U << 5U )
-#endif /* portARMV8M_MINOR_VERSION >= 1 */
+#endif /* portARMV8M_MINOR_VERSION >= 1（ARMv8-M 次版本号大于等于 1） */
 #define tskMPU_REGION_NON_SHAREABLE                   ( 1U << 6U )
 #define tskMPU_REGION_OUTER_SHAREABLE                 ( 1U << 7U )
 #define tskMPU_REGION_INNER_SHAREABLE                 ( 1U << 8U )
 
-/* MPU region permissions stored in MPU settings to
- * authorize access requests. */
+/*
+ * 存储在 MPU 设置中的 MPU 区域权限，
+ * 用于授权访问请求。
+ */
 #define tskMPU_READ_PERMISSION                        ( 1U << 0U )
 #define tskMPU_WRITE_PERMISSION                       ( 1U << 1U )
 
-/* The direct to task notification feature used to have only a single notification
- * per task.  Now there is an array of notifications per task that is dimensioned by
- * configTASK_NOTIFICATION_ARRAY_ENTRIES.  For backward compatibility, any use of the
- * original direct to task notification defaults to using the first index in the
- * array. */
+/*
+ * 任务通知功能过去每个任务只有一个通知值。现在每个任务拥有一个通知值数组，
+ * 数组大小由 configTASK_NOTIFICATION_ARRAY_ENTRIES 决定。为保持向后兼容，
+ * 所有使用原任务通知接口的代码默认使用数组中的第一个索引。
+ */
 #define tskDEFAULT_INDEX_TO_NOTIFY                    ( 0 )
 
 /**
  * task. h
  *
- * Type by which tasks are referenced.  For example, a call to xTaskCreate
- * returns (via a pointer parameter) a TaskHandle_t variable that can then
- * be used as a parameter to vTaskDelete to delete the task.
+ * 任务引用所使用的类型。例如，调用 xTaskCreate 会通过指针参数返回一个
+ * TaskHandle_t 变量，该变量随后可作为 vTaskDelete 的参数用于删除任务。
  *
  * \defgroup TaskHandle_t TaskHandle_t
  * \ingroup Tasks
  */
-struct tskTaskControlBlock; /* The old naming convention is used to prevent breaking kernel aware debuggers. */
+struct tskTaskControlBlock; /* 沿用旧的命名约定，以免破坏能够识别内核的调试器。 */
 typedef struct tskTaskControlBlock         * TaskHandle_t;
 typedef const struct tskTaskControlBlock   * ConstTaskHandle_t;
 
 /*
- * Defines the prototype to which the application task hook function must
- * conform.
+ * 定义应用程序任务钩子函数必须遵循的原型。
  */
 typedef BaseType_t (* TaskHookFunction_t)( void * arg );
 
-/* Task states returned by eTaskGetState. */
+/* eTaskGetState 返回的任务状态。 */
 typedef enum
 {
-    eRunning = 0, /* A task is querying the state of itself, so must be running. */
-    eReady,       /* The task being queried is in a ready or pending ready list. */
-    eBlocked,     /* The task being queried is in the Blocked state. */
-    eSuspended,   /* The task being queried is in the Suspended state, or is in the Blocked state with an infinite time out. */
-    eDeleted,     /* The task being queried has been deleted, but its TCB has not yet been freed. */
-    eInvalid      /* Used as an 'invalid state' value. */
+    eRunning = 0, /* 任务正在查询自身状态，因此必定处于运行态。 */
+    eReady,       /* 被查询的任务位于就绪链表或待处理就绪链表中。 */
+    eBlocked,     /* 被查询的任务处于阻塞态。 */
+    eSuspended,   /* 被查询的任务处于挂起态，或处于带无限超时的阻塞态。 */
+    eDeleted,     /* 被查询的任务已被删除，但其 TCB 尚未释放。 */
+    eInvalid      /* 用作“无效状态”值。 */
 } eTaskState;
 
-/* Actions that can be performed when vTaskNotify() is called. */
+/* 调用 vTaskNotify() 时可执行的操作。 */
 typedef enum
 {
-    eNoAction = 0,            /* Notify the task without updating its notify value. */
-    eSetBits,                 /* Set bits in the task's notification value. */
-    eIncrement,               /* Increment the task's notification value. */
-    eSetValueWithOverwrite,   /* Set the task's notification value to a specific value even if the previous value has not yet been read by the task. */
-    eSetValueWithoutOverwrite /* Set the task's notification value if the previous value has been read by the task. */
+    eNoAction = 0,            /* 通知任务，但不更新其通知值。 */
+    eSetBits,                 /* 设置任务通知值中的位。 */
+    eIncrement,               /* 递增任务的通知值。 */
+    eSetValueWithOverwrite,   /* 将任务的通知值设置为指定值，即使任务尚未读取先前值。 */
+    eSetValueWithoutOverwrite /* 仅在任务已读取先前值的情况下设置任务的通知值。 */
 } eNotifyAction;
 
 /*
- * Used internally only.
+ * 仅供内部使用。
  */
 typedef struct xTIME_OUT
 {
@@ -141,7 +144,7 @@ typedef struct xTIME_OUT
 } TimeOut_t;
 
 /*
- * Defines the memory ranges allocated to the task when an MPU is used.
+ * 定义使用 MPU 时分配给任务的内存区域。
  */
 typedef struct xMEMORY_REGION
 {
@@ -151,7 +154,7 @@ typedef struct xMEMORY_REGION
 } MemoryRegion_t;
 
 /*
- * Parameters required to create an MPU protected task.
+ * 创建受 MPU 保护的任务所需的参数。
  */
 typedef struct xTASK_PARAMETERS
 {
@@ -167,55 +170,57 @@ typedef struct xTASK_PARAMETERS
     #endif
 } TaskParameters_t;
 
-/* Used with the uxTaskGetSystemState() function to return the state of each task
- * in the system. */
+/*
+ * 与 uxTaskGetSystemState() 函数配合使用，返回系统中每个任务的状态。
+ */
 typedef struct xTASK_STATUS
 {
-    TaskHandle_t xHandle;                         /* The handle of the task to which the rest of the information in the structure relates. */
-    const char * pcTaskName;                      /* A pointer to the task's name.  This value will be invalid if the task was deleted since the structure was populated! */
-    UBaseType_t xTaskNumber;                      /* A number unique to the task. Note that this is not the task number that may be modified using vTaskSetTaskNumber() and uxTaskGetTaskNumber(), but a separate TCB-specific and unique identifier automatically assigned on task generation. */
-    eTaskState eCurrentState;                     /* The state in which the task existed when the structure was populated. */
-    UBaseType_t uxCurrentPriority;                /* The priority at which the task was running (may be inherited) when the structure was populated. */
-    UBaseType_t uxBasePriority;                   /* The priority to which the task will return if the task's current priority has been inherited to avoid unbounded priority inversion when obtaining a mutex.  Only valid if configUSE_MUTEXES is defined as 1 in FreeRTOSConfig.h. */
-    configRUN_TIME_COUNTER_TYPE ulRunTimeCounter; /* The total run time allocated to the task so far, as defined by the run time stats clock.  See https://www.FreeRTOS.org/rtos-run-time-stats.html.  Only valid when configGENERATE_RUN_TIME_STATS is defined as 1 in FreeRTOSConfig.h. */
-    StackType_t * pxStackBase;                    /* Points to the lowest address of the task's stack area. */
+    TaskHandle_t xHandle;                         /* 结构体中其余信息所对应任务的句柄。 */
+    const char * pcTaskName;                      /* 指向任务名称的指针。如果任务在结构体填充后被删除，该值将无效！ */
+    UBaseType_t xTaskNumber;                      /* 任务唯一的编号。注意，这不是可通过 vTaskSetTaskNumber() 和 uxTaskGetTaskNumber() 修改的任务编号，而是创建任务时自动分配的、TCB 特有的唯一标识符。 */
+    eTaskState eCurrentState;                     /* 填充结构体时任务所处的状态。 */
+    UBaseType_t uxCurrentPriority;                /* 填充结构体时任务运行所用的优先级（可能为继承的优先级）。 */
+    UBaseType_t uxBasePriority;                   /* 若任务当前优先级是通过继承得到的（用于在获取互斥量时避免无界优先级翻转），则此值为任务将恢复到的优先级。仅当 FreeRTOSConfig.h 中 configUSE_MUTEXES 定义为 1 时有效。 */
+    configRUN_TIME_COUNTER_TYPE ulRunTimeCounter; /* 按运行时统计时钟定义，截至当前分配给该任务的总运行时间。参见 https://www.FreeRTOS.org/rtos-run-time-stats.html。仅当 FreeRTOSConfig.h 中 configGENERATE_RUN_TIME_STATS 定义为 1 时有效。 */
+    StackType_t * pxStackBase;                    /* 指向任务栈区域的最低地址。 */
     #if ( ( portSTACK_GROWTH > 0 ) || ( configRECORD_STACK_HIGH_ADDRESS == 1 ) )
-        StackType_t * pxTopOfStack;               /* Points to the top address of the task's stack area. */
-        StackType_t * pxEndOfStack;               /* Points to the end address of the task's stack area. */
+        StackType_t * pxTopOfStack;               /* 指向任务栈区域的顶部地址。 */
+        StackType_t * pxEndOfStack;               /* 指向任务栈区域的结束地址。 */
     #endif
-    configSTACK_DEPTH_TYPE usStackHighWaterMark;  /* The minimum amount of stack space that has remained for the task since the task was created.  The closer this value is to zero the closer the task has come to overflowing its stack. */
+    configSTACK_DEPTH_TYPE usStackHighWaterMark;  /* 自任务创建以来其栈空间的最小剩余量。该值越接近零，说明任务越接近栈溢出。 */
     #if ( ( configUSE_CORE_AFFINITY == 1 ) && ( configNUMBER_OF_CORES > 1 ) )
-        UBaseType_t uxCoreAffinityMask;           /* The core affinity mask for the task */
+        UBaseType_t uxCoreAffinityMask;           /* 任务的核心亲和性掩码。 */
     #endif
 } TaskStatus_t;
 
-/* Callback type used by uxTaskCallForEachTask(). The callback receives one
- * task handle and state at a time, plus an opaque caller-supplied context
- * pointer. The callback may call vTaskGetInfo() if it needs a TaskStatus_t. */
+/*
+ * uxTaskCallForEachTask() 使用的回调类型。回调每次接收一个任务句柄和状态，
+ * 以及调用方提供的不透明上下文指针。若回调需要 TaskStatus_t，可调用 vTaskGetInfo()。
+ */
 typedef void (* TaskStatusCallbackFunction_t)( TaskHandle_t xTask,
                                                eTaskState eState,
                                                void * pvCallbackContext );
 
-/* Possible return values for eTaskConfirmSleepModeStatus(). */
+/* eTaskConfirmSleepModeStatus() 的可能返回值。 */
 typedef enum
 {
-    eAbortSleep = 0, /* A task has been made ready or a context switch pended since portSUPPRESS_TICKS_AND_SLEEP() was called - abort entering a sleep mode. */
-    eStandardSleep   /* Enter a sleep mode that will not last any longer than the expected idle time. */
+    eAbortSleep = 0, /* 自调用 portSUPPRESS_TICKS_AND_SLEEP() 以来，已有任务进入就绪态或挂起了上下文切换——中止进入睡眠模式。 */
+    eStandardSleep   /* 进入睡眠模式，但睡眠时间不超过预期的空闲时间。 */
     #if ( INCLUDE_vTaskSuspend == 1 )
         ,
-        eNoTasksWaitingTimeout /* No tasks are waiting for a timeout so it is safe to enter a sleep mode that can only be exited by an external interrupt. */
-    #endif /* INCLUDE_vTaskSuspend */
+        eNoTasksWaitingTimeout /* 没有任务在等待超时，因此可以安全地进入只能由外部中断退出的睡眠模式。 */
+    #endif /* INCLUDE_vTaskSuspend（挂起功能使能条件） */
 } eSleepModeStatus;
 
 /**
- * Defines the priority used by the idle task.  This must not be modified.
+ * 定义空闲任务使用的优先级。不得修改该值。
  *
  * \ingroup TaskUtils
  */
 #define tskIDLE_PRIORITY    ( ( UBaseType_t ) 0U )
 
 /**
- * Defines affinity to all available cores.
+ * 定义对全部可用核心的亲和性。
  *
  * \ingroup TaskUtils
  */
@@ -224,7 +229,7 @@ typedef enum
 /**
  * task. h
  *
- * Macro for forcing a context switch.
+ * 强制进行上下文切换的宏。
  *
  * \defgroup taskYIELD taskYIELD
  * \ingroup SchedulerControl
@@ -234,11 +239,10 @@ typedef enum
 /**
  * task. h
  *
- * Macro to mark the start of a critical code region.  Preemptive context
- * switches cannot occur when in a critical region.
+ * 标记临界区代码段开始的宏。进入临界区后不会发生抢占式上下文切换。
  *
- * NOTE: This may alter the stack (depending on the portable implementation)
- * so must be used with care!
+ * 注意：根据移植层的具体实现，这可能改变栈内容，
+ * 因此必须谨慎使用！
  *
  * \defgroup taskENTER_CRITICAL taskENTER_CRITICAL
  * \ingroup SchedulerControl
@@ -253,11 +257,10 @@ typedef enum
 /**
  * task. h
  *
- * Macro to mark the end of a critical code region.  Preemptive context
- * switches cannot occur when in a critical region.
+ * 标记临界区代码段结束的宏。进入临界区后不会发生抢占式上下文切换。
  *
- * NOTE: This may alter the stack (depending on the portable implementation)
- * so must be used with care!
+ * 注意：根据移植层的具体实现，这可能改变栈内容，
+ * 因此必须谨慎使用！
  *
  * \defgroup taskEXIT_CRITICAL taskEXIT_CRITICAL
  * \ingroup SchedulerControl
@@ -272,7 +275,7 @@ typedef enum
 /**
  * task. h
  *
- * Macro to disable all maskable interrupts.
+ * 禁用所有可屏蔽中断的宏。
  *
  * \defgroup taskDISABLE_INTERRUPTS taskDISABLE_INTERRUPTS
  * \ingroup SchedulerControl
@@ -282,26 +285,30 @@ typedef enum
 /**
  * task. h
  *
- * Macro to enable microcontroller interrupts.
+ * 使能微控制器中断的宏。
  *
  * \defgroup taskENABLE_INTERRUPTS taskENABLE_INTERRUPTS
  * \ingroup SchedulerControl
  */
 #define taskENABLE_INTERRUPTS()     portENABLE_INTERRUPTS()
 
-/* Definitions returned by xTaskGetSchedulerState().  taskSCHEDULER_SUSPENDED is
- * 0 to generate more optimal code when configASSERT() is defined as the constant
- * is used in assert() statements. */
+/*
+ * xTaskGetSchedulerState() 返回的定义。taskSCHEDULER_SUSPENDED 为 0，
+ * 以便在 configASSERT() 定义为常量时生成更优化的代码，
+ * 因为该常量会用于 assert() 语句。
+ */
 #define taskSCHEDULER_SUSPENDED      ( ( BaseType_t ) 0 )
 #define taskSCHEDULER_NOT_STARTED    ( ( BaseType_t ) 1 )
 #define taskSCHEDULER_RUNNING        ( ( BaseType_t ) 2 )
 
-/* Checks if core ID is valid. */
+/* 检查核心 ID 是否有效。 */
 #define taskVALID_CORE_ID( xCoreID )    ( ( ( ( ( BaseType_t ) 0 <= ( xCoreID ) ) && ( ( xCoreID ) < ( BaseType_t ) configNUMBER_OF_CORES ) ) ) ? ( pdTRUE ) : ( pdFALSE ) )
 
-/*-----------------------------------------------------------
-* TASK CREATION API
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 任务创建 API
+ * ----------------------------------------------------------
+ */
 
 /**
  * task. h
@@ -316,78 +323,67 @@ typedef enum
  *                        );
  * @endcode
  *
- * Create a new task and add it to the list of tasks that are ready to run.
+ * 创建新任务，并将其加入就绪任务链表。
  *
- * Internally, within the FreeRTOS implementation, tasks use two blocks of
- * memory.  The first block is used to hold the task's data structures.  The
- * second block is used by the task as its stack.  If a task is created using
- * xTaskCreate() then both blocks of memory are automatically dynamically
- * allocated inside the xTaskCreate() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a task is created using
- * xTaskCreateStatic() then the application writer must provide the required
- * memory.  xTaskCreateStatic() therefore allows a task to be created without
- * using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，任务使用两块内存。第一块用于保存任务的数据结构，
+ * 第二块由任务用作栈。若使用 xTaskCreate() 创建任务，则这两块内存都在
+ * xTaskCreate() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xTaskCreateStatic() 创建任务，
+ * 则应用程序编写者必须提供所需内存。因此，xTaskCreateStatic() 允许在不使用
+ * 任何动态内存分配的情况下创建任务。
  *
- * See xTaskCreateStatic() for a version that does not use any dynamic memory
- * allocation.
+ * 若需不使用任何动态内存分配的版本，请参见 xTaskCreateStatic()。
  *
- * xTaskCreate() can only be used to create a task that has unrestricted
- * access to the entire microcontroller memory map.  Systems that include MPU
- * support can alternatively create an MPU constrained task using
- * xTaskCreateRestricted().
+ * xTaskCreate() 只能用于创建可不受限制地访问整个微控制器内存映射的任务。
+ * 支持 MPU 的系统也可以使用 xTaskCreateRestricted() 创建受 MPU 约束的任务。
  *
- * @param pxTaskCode Pointer to the task entry function.  Tasks
- * must be implemented to never return (i.e. continuous loop).
+ * @param pxTaskCode 指向任务入口函数的指针。任务函数必须实现为
+ * 永不返回（即无限循环）。
  *
- * @param pcName A descriptive name for the task.  This is mainly used to
- * facilitate debugging.  Max length defined by configMAX_TASK_NAME_LEN - default
- * is 16.
+ * @param pcName 任务的描述性名称。主要用于方便调试。
+ * 最大长度由 configMAX_TASK_NAME_LEN 定义，默认值为 16。
  *
- * @param uxStackDepth The size of the task stack specified as the number of
- * variables the stack can hold - not the number of bytes.  For example, if
- * the stack is 16 bits wide and uxStackDepth is defined as 100, 200 bytes
- * will be allocated for stack storage.
+ * @param uxStackDepth 任务栈的大小，以栈可容纳的变量个数表示，
+ * 而不是字节数。例如，若栈宽度为 16 位且 uxStackDepth 定义为 100，
+ * 则将为栈存储分配 200 字节。
  *
- * @param pvParameters Pointer that will be used as the parameter for the task
- * being created.
+ * @param pvParameters 将作为所创建任务参数的指针。
  *
- * @param uxPriority The priority at which the task should run.  Systems that
- * include MPU support can optionally create tasks in a privileged (system)
- * mode by setting bit portPRIVILEGE_BIT of the priority parameter.  For
- * example, to create a privileged task at priority 2 the uxPriority parameter
- * should be set to ( 2 | portPRIVILEGE_BIT ).
+ * @param uxPriority 任务应运行的优先级。支持 MPU 的系统可以通过
+ * 设置优先级参数的 portPRIVILEGE_BIT 位，选择以特权（系统）模式创建任务。
+ * 例如，要以优先级 2 创建特权任务，uxPriority 参数应设置为
+ * ( 2 | portPRIVILEGE_BIT )。
  *
- * @param pxCreatedTask Used to pass back a handle by which the created task
- * can be referenced.
+ * @param pxCreatedTask 用于回传句柄，以便引用所创建的任务。
  *
- * @return pdPASS if the task was successfully created and added to a ready
- * list, otherwise an error code defined in the file projdefs.h
+ * @return 若任务创建成功并加入就绪链表，返回 pdPASS；
+ * 否则返回 projdefs.h 文件中定义的错误码。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
- * // Task to be created.
+ * // 待创建的任务。
  * void vTaskCode( void * pvParameters )
  * {
  *   for( ;; )
  *   {
- *       // Task code goes here.
+ *       // 任务代码写在这里。
  *   }
  * }
  *
- * // Function that creates a task.
+ * // 创建任务的函数。
  * void vOtherFunction( void )
  * {
  * static uint8_t ucParameterToPass;
  * TaskHandle_t xHandle = NULL;
  *
- *   // Create the task, storing the handle.  Note that the passed parameter ucParameterToPass
- *   // must exist for the lifetime of the task, so in this case is declared static.  If it was just an
- *   // an automatic stack variable it might no longer exist, or at least have been corrupted, by the time
- *   // the new task attempts to access it.
+ *   // 创建任务并保存句柄。注意，传入的参数 ucParameterToPass
+ *   // 必须在任务整个生命期内有效，因此这里声明为 static。如果它只是
+ *   // 一个自动栈变量，那么到新任务尝试访问它时，它可能已不存在，
+ *   // 或者至少已被破坏。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, &ucParameterToPass, tskIDLE_PRIORITY, &xHandle );
  *   configASSERT( xHandle );
  *
- *   // Use the handle to delete the task.
+ *   // 使用句柄删除任务。
  *   if( xHandle != NULL )
  *   {
  *      vTaskDelete( xHandle );
@@ -428,96 +424,87 @@ typedef enum
  *                               StaticTask_t *pxTaskBuffer );
  * @endcode
  *
- * Create a new task and add it to the list of tasks that are ready to run.
+ * 创建新任务，并将其加入就绪任务链表。
  *
- * Internally, within the FreeRTOS implementation, tasks use two blocks of
- * memory.  The first block is used to hold the task's data structures.  The
- * second block is used by the task as its stack.  If a task is created using
- * xTaskCreate() then both blocks of memory are automatically dynamically
- * allocated inside the xTaskCreate() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a task is created using
- * xTaskCreateStatic() then the application writer must provide the required
- * memory.  xTaskCreateStatic() therefore allows a task to be created without
- * using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，任务使用两块内存。第一块用于保存任务的数据结构，
+ * 第二块由任务用作栈。若使用 xTaskCreate() 创建任务，则这两块内存都在
+ * xTaskCreate() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xTaskCreateStatic() 创建任务，
+ * 则应用程序编写者必须提供所需内存。因此，xTaskCreateStatic() 允许在不使用
+ * 任何动态内存分配的情况下创建任务。
  *
- * @param pxTaskCode Pointer to the task entry function.  Tasks
- * must be implemented to never return (i.e. continuous loop).
+ * @param pxTaskCode 指向任务入口函数的指针。任务函数必须实现为
+ * 永不返回（即无限循环）。
  *
- * @param pcName A descriptive name for the task.  This is mainly used to
- * facilitate debugging.  The maximum length of the string is defined by
- * configMAX_TASK_NAME_LEN in FreeRTOSConfig.h.
+ * @param pcName 任务的描述性名称。主要用于方便调试。
+ * 字符串的最大长度由 FreeRTOSConfig.h 中的 configMAX_TASK_NAME_LEN 定义。
  *
- * @param uxStackDepth The size of the task stack specified as the number of
- * variables the stack can hold - not the number of bytes.  For example, if
- * the stack is 32-bits wide and uxStackDepth is defined as 100 then 400 bytes
- * will be allocated for stack storage.
+ * @param uxStackDepth 任务栈的大小，以栈可容纳的变量个数表示，
+ * 而不是字节数。例如，若栈宽度为 32 位且 uxStackDepth 定义为 100，
+ * 则将为栈存储分配 400 字节。
  *
- * @param pvParameters Pointer that will be used as the parameter for the task
- * being created.
+ * @param pvParameters 将作为所创建任务参数的指针。
  *
- * @param uxPriority The priority at which the task will run.
+ * @param uxPriority 任务将运行的优先级。
  *
- * @param puxStackBuffer Must point to a StackType_t array that has at least
- * uxStackDepth indexes - the array will then be used as the task's stack,
- * removing the need for the stack to be allocated dynamically.
+ * @param puxStackBuffer 必须指向一个至少有 uxStackDepth 个元素的
+ * StackType_t 数组——该数组随后用作任务的栈，从而无需动态分配栈。
  *
- * @param pxTaskBuffer Must point to a variable of type StaticTask_t, which will
- * then be used to hold the task's data structures, removing the need for the
- * memory to be allocated dynamically.
+ * @param pxTaskBuffer 必须指向一个 StaticTask_t 类型的变量，
+ * 该变量随后用于保存任务的数据结构，从而无需动态分配内存。
  *
- * @return If neither puxStackBuffer nor pxTaskBuffer are NULL, then the task
- * will be created and a handle to the created task is returned.  If either
- * puxStackBuffer or pxTaskBuffer are NULL then the task will not be created and
- * NULL is returned.
+ * @return 若 puxStackBuffer 和 pxTaskBuffer 均不为 NULL，则任务将被创建，
+ * 并返回所创建任务的句柄。若 puxStackBuffer 或 pxTaskBuffer 任一为 NULL，
+ * 则任务不会创建，返回 NULL。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  *
- *  // Dimensions of the buffer that the task being created will use as its stack.
- *  // NOTE:  This is the number of words the stack will hold, not the number of
- *  // bytes.  For example, if each stack item is 32-bits, and this is set to 100,
- *  // then 400 bytes (100 * 32-bits) will be allocated.
- #define STACK_SIZE 200
+ *  // 所创建任务用作栈的缓冲区大小。
+ *  // 注意：这是栈可容纳的字数，而不是字节数。
+ *  // 例如，若每个栈项为 32 位，且此值设为 100，
+ *  // 则将分配 400 字节（100 * 32 位）。
+ * #define STACK_SIZE 200
  *
- *  // Structure that will hold the TCB of the task being created.
+ *  // 用于保存所创建任务 TCB 的结构体。
  *  StaticTask_t xTaskBuffer;
  *
- *  // Buffer that the task being created will use as its stack.  Note this is
- *  // an array of StackType_t variables.  The size of StackType_t is dependent on
- *  // the RTOS port.
+ *  // 所创建任务用作栈的缓冲区。注意，这是一个
+ *  // StackType_t 变量数组。StackType_t 的大小取决于
+ *  // RTOS 移植层。
  *  StackType_t xStack[ STACK_SIZE ];
  *
- *  // Function that implements the task being created.
+ *  // 实现所创建任务的函数。
  *  void vTaskCode( void * pvParameters )
  *  {
- *      // The parameter value is expected to be 1 as 1 is passed in the
- *      // pvParameters value in the call to xTaskCreateStatic().
+ *      // 预期参数值为 1，因为在调用 xTaskCreateStatic() 时
+ *      // 向 pvParameters 传入了 1。
  *      configASSERT( ( uint32_t ) pvParameters == 1U );
  *
  *      for( ;; )
  *      {
- *          // Task code goes here.
+ *          // 任务代码写在这里。
  *      }
  *  }
  *
- *  // Function that creates a task.
+ *  // 创建任务的函数。
  *  void vOtherFunction( void )
  *  {
  *      TaskHandle_t xHandle = NULL;
  *
- *      // Create the task without using any dynamic memory allocation.
+ *      // 创建任务，不使用任何动态内存分配。
  *      xHandle = xTaskCreateStatic(
- *                    vTaskCode,       // Function that implements the task.
- *                    "NAME",          // Text name for the task.
- *                    STACK_SIZE,      // Stack size in words, not bytes.
- *                    ( void * ) 1,    // Parameter passed into the task.
- *                    tskIDLE_PRIORITY,// Priority at which the task is created.
- *                    xStack,          // Array to use as the task's stack.
- *                    &xTaskBuffer );  // Variable to hold the task's data structure.
+ *                    vTaskCode,       // 实现任务的函数。
+ *                    "NAME",          // 任务的文本名称。
+ *                    STACK_SIZE,      // 栈大小，以字为单位，而不是字节。
+ *                    ( void * ) 1,    // 传入任务的参数。
+ *                    tskIDLE_PRIORITY,// 创建任务时使用的优先级。
+ *                    xStack,          // 用作任务栈的数组。
+ *                    &xTaskBuffer );  // 用于保存任务数据结构的变量。
  *
- *      // puxStackBuffer and pxTaskBuffer were not NULL, so the task will have
- *      // been created, and xHandle will be the task's handle.  Use the handle
- *      // to suspend the task.
+ *      // puxStackBuffer 和 pxTaskBuffer 均不为 NULL，因此任务已
+ *      // 创建成功，xHandle 将是该任务的句柄。使用该句柄
+ *      // 挂起任务。
  *      vTaskSuspend( xHandle );
  *  }
  * @endcode
@@ -532,7 +519,7 @@ typedef enum
                                     UBaseType_t uxPriority,
                                     StackType_t * const puxStackBuffer,
                                     StaticTask_t * const pxTaskBuffer ) PRIVILEGED_FUNCTION;
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION（静态分配支持） */
 
 #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) )
     TaskHandle_t xTaskCreateStaticAffinitySet( TaskFunction_t pxTaskCode,
@@ -551,55 +538,47 @@ typedef enum
  * BaseType_t xTaskCreateRestricted( TaskParameters_t *pxTaskDefinition, TaskHandle_t *pxCreatedTask );
  * @endcode
  *
- * Only available when configSUPPORT_DYNAMIC_ALLOCATION is set to 1.
+ * 仅当 configSUPPORT_DYNAMIC_ALLOCATION 设置为 1 时可用。
  *
- * xTaskCreateRestricted() should only be used in systems that include an MPU
- * implementation.
+ * xTaskCreateRestricted() 只应在包含 MPU 实现的系统中使用。
  *
- * Create a new task and add it to the list of tasks that are ready to run.
- * The function parameters define the memory regions and associated access
- * permissions allocated to the task.
+ * 创建新任务，并将其加入就绪任务链表。函数参数定义分配给任务的内存区域
+ * 及相关访问权限。
  *
- * The parameter macros used in MemoryRegion_t.ulParameters are port specific.
- * Some ports, including the Cortex-M3/4 MPU ports, use the portMPU_REGION_*
- * values shown below.
- * ARMv8-M MPU ports, such as CM23, CM33, CM52, CM55, CM85 and STAR_MC3, use
- * the tskMPU_REGION_* values defined in this header; the port translates them
- * into MPU register settings. Check the selected port's headers before selecting
- * the region parameter macros.
+ * MemoryRegion_t.ulParameters 中使用的参数宏与移植层相关。
+ * 部分移植层（包括 Cortex-M3/4 MPU 移植层）使用下文列出的 portMPU_REGION_* 值。
+ * ARMv8-M MPU 移植层（如 CM23、CM33、CM52、CM55、CM85 和 STAR_MC3）使用
+ * 本头文件中定义的 tskMPU_REGION_* 值；移植层会将其转换为 MPU 寄存器设置。
+ * 选择区域参数宏之前，请先查看所选移植层的头文件。
  *
- * See xTaskCreateRestrictedStatic() for a version that does not use any
- * dynamic memory allocation.
+ * 若需不使用任何动态内存分配的版本，请参见 xTaskCreateRestrictedStatic()。
  *
- * @param pxTaskDefinition Pointer to a structure that contains a member
- * for each of the normal xTaskCreate() parameters (see the xTaskCreate() API
- * documentation) plus an optional stack buffer and the memory region
- * definitions.
+ * @param pxTaskDefinition 指向一个结构体的指针，该结构体为每个常规
+ * xTaskCreate() 参数（参见 xTaskCreate() API 文档）包含一个成员，
+ * 并额外包含可选的栈缓冲区和内存区域定义。
  *
- * @param pxCreatedTask Used to pass back a handle by which the created task
- * can be referenced.
+ * @param pxCreatedTask 用于回传句柄，以便引用所创建的任务。
  *
- * @return pdPASS if the task was successfully created and added to a ready
- * list, otherwise an error code defined in the file projdefs.h
+ * @return 若任务创建成功并加入就绪链表，返回 pdPASS；
+ * 否则返回 projdefs.h 文件中定义的错误码。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
- * // Create a TaskParameters_t structure that defines the task to be created.
+ * // 创建定义待创建任务的 TaskParameters_t 结构体。
  * static const TaskParameters_t xCheckTaskParameters =
  * {
- *  vATask,     // pvTaskCode - the function that implements the task.
- *  "ATask",    // pcName - just a text name for the task to assist debugging.
- *  100,        // uxStackDepth - the stack size DEFINED IN WORDS.
- *  NULL,       // pvParameters - passed into the task function as the function parameters.
- *  ( 1U | portPRIVILEGE_BIT ),// uxPriority - task priority, set the portPRIVILEGE_BIT if the task should run in a privileged state.
- *  cStackBuffer,// puxStackBuffer - the buffer to be used as the task stack.
+ *  vATask,     // pvTaskCode —— 实现任务的函数。
+ *  "ATask",    // pcName —— 仅用于辅助调试的任务文本名称。
+ *  100,        // uxStackDepth —— 以字为单位定义的栈大小。
+ *  NULL,       // pvParameters —— 作为函数参数传入任务函数。
+ *  ( 1U | portPRIVILEGE_BIT ),// uxPriority —— 任务优先级；若任务应以特权态运行，则设置 portPRIVILEGE_BIT。
+ *  cStackBuffer,// puxStackBuffer —— 用作任务栈的缓冲区。
  *
- *  // xRegions - Allocate up to three separate memory regions for access by
- *  // the task, with appropriate access permissions.  Different processors have
- *  // different memory alignment requirements - refer to the FreeRTOS documentation
- *  // for full information.
+ *  // xRegions —— 最多分配三个独立的内存区域供任务访问，并赋予
+ *  // 相应访问权限。不同处理器有不同的内存对齐要求——完整信息
+ *  // 请参阅 FreeRTOS 文档。
  *  {
- *      // Base address                 Length  Parameters
+ *      // 基地址                       长度    参数
  *      { cReadWriteArray,              32,     portMPU_REGION_READ_WRITE },
  *      { cReadOnlyArray,               32,     portMPU_REGION_READ_ONLY },
  *      { cPrivilegedOnlyAccessArray,   128,    portMPU_REGION_PRIVILEGED_READ_WRITE }
@@ -610,16 +589,14 @@ typedef enum
  * {
  * TaskHandle_t xHandle;
  *
- *  // Create a task from the const structure defined above.  The task handle
- *  // is requested (the second parameter is not NULL) but in this case just for
- *  // demonstration purposes as its not actually used.
+ *  // 根据上面定义的 const 结构体创建任务。请求了任务句柄
+ *  // （第二个参数不为 NULL），但这里仅作演示，实际并未使用。
  *  xTaskCreateRestricted( &xRegTest1Parameters, &xHandle );
  *
- *  // Start the scheduler.
+ *  // 启动调度器。
  *  vTaskStartScheduler();
  *
- *  // Will only get here if there was insufficient memory to create the idle
- *  // and/or timer task.
+ *  // 只有内存不足、无法创建空闲任务和/或定时器任务时才会执行到这里。
  *  for( ;; );
  * }
  * @endcode
@@ -643,87 +620,76 @@ typedef enum
  * BaseType_t xTaskCreateRestrictedStatic( TaskParameters_t *pxTaskDefinition, TaskHandle_t *pxCreatedTask );
  * @endcode
  *
- * Only available when configSUPPORT_STATIC_ALLOCATION is set to 1.
+ * 仅当 configSUPPORT_STATIC_ALLOCATION 设置为 1 时可用。
  *
- * xTaskCreateRestrictedStatic() should only be used in systems that include an
- * MPU implementation.
+ * xTaskCreateRestrictedStatic() 只应在包含 MPU 实现的系统中使用。
  *
- * Internally, within the FreeRTOS implementation, tasks use two blocks of
- * memory.  The first block is used to hold the task's data structures.  The
- * second block is used by the task as its stack.  If a task is created using
- * xTaskCreateRestricted() then the stack is provided by the application writer,
- * and the memory used to hold the task's data structure is automatically
- * dynamically allocated inside the xTaskCreateRestricted() function.  If a task
- * is created using xTaskCreateRestrictedStatic() then the application writer
- * must provide the memory used to hold the task's data structures too.
- * xTaskCreateRestrictedStatic() therefore allows a memory protected task to be
- * created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，任务使用两块内存。第一块用于保存任务的数据结构，
+ * 第二块由任务用作栈。若使用 xTaskCreateRestricted() 创建任务，则栈由
+ * 应用程序编写者提供，而保存任务数据结构所需的内存则在
+ * xTaskCreateRestricted() 函数内部自动动态分配。若使用
+ * xTaskCreateRestrictedStatic() 创建任务，则应用程序编写者还必须提供
+ * 保存任务数据结构所需的内存。因此，xTaskCreateRestrictedStatic() 允许在
+ * 不使用任何动态内存分配的情况下创建受内存保护的任务。
  *
- * The parameter macros used in MemoryRegion_t.ulParameters are port specific.
- * Some ports, including the Cortex-M3/4 MPU ports, use the portMPU_REGION_*
- * values shown below.
- * ARMv8-M MPU ports, such as CM23, CM33, CM52, CM55, CM85 and STAR_MC3, use
- * the tskMPU_REGION_* values defined in this header; the port translates them
- * into MPU register settings. Check the selected port's headers before selecting
- * the region parameter macros.
+ * MemoryRegion_t.ulParameters 中使用的参数宏与移植层相关。
+ * 部分移植层（包括 Cortex-M3/4 MPU 移植层）使用下文列出的 portMPU_REGION_* 值。
+ * ARMv8-M MPU 移植层（如 CM23、CM33、CM52、CM55、CM85 和 STAR_MC3）使用
+ * 本头文件中定义的 tskMPU_REGION_* 值；移植层会将其转换为 MPU 寄存器设置。
+ * 选择区域参数宏之前，请先查看所选移植层的头文件。
  *
- * @param pxTaskDefinition Pointer to a structure that contains a member
- * for each of the normal xTaskCreate() parameters (see the xTaskCreate() API
- * documentation) plus an optional stack buffer and the memory region
- * definitions.  If configSUPPORT_STATIC_ALLOCATION is set to 1 the structure
- * contains an additional member, which is used to point to a variable of type
- * StaticTask_t - which is then used to hold the task's data structure.
+ * @param pxTaskDefinition 指向一个结构体的指针，该结构体为每个常规
+ * xTaskCreate() 参数（参见 xTaskCreate() API 文档）包含一个成员，
+ * 并额外包含可选的栈缓冲区和内存区域定义。若 configSUPPORT_STATIC_ALLOCATION
+ * 设置为 1，该结构体还包含一个附加成员，用于指向 StaticTask_t 类型的变量，
+ * 该变量随后用于保存任务的数据结构。
  *
- * @param pxCreatedTask Used to pass back a handle by which the created task
- * can be referenced.
+ * @param pxCreatedTask 用于回传句柄，以便引用所创建的任务。
  *
- * @return pdPASS if the task was successfully created and added to a ready
- * list, otherwise an error code defined in the file projdefs.h
+ * @return 若任务创建成功并加入就绪链表，返回 pdPASS；
+ * 否则返回 projdefs.h 文件中定义的错误码。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
- * // Create a TaskParameters_t structure that defines the task to be created.
- * // The StaticTask_t variable is only included in the structure when
- * // configSUPPORT_STATIC_ALLOCATION is set to 1.  The PRIVILEGED_DATA macro can
- * // be used to force the variable into the RTOS kernel's privileged data area.
+ * // 创建定义待创建任务的 TaskParameters_t 结构体。
+ * // 仅当 configSUPPORT_STATIC_ALLOCATION 设置为 1 时，
+ * // 结构体中才包含 StaticTask_t 变量。可使用 PRIVILEGED_DATA 宏
+ * // 强制将该变量放入 RTOS 内核的特权数据区。
  * static PRIVILEGED_DATA StaticTask_t xTaskBuffer;
  * static const TaskParameters_t xCheckTaskParameters =
  * {
- *  vATask,     // pvTaskCode - the function that implements the task.
- *  "ATask",    // pcName - just a text name for the task to assist debugging.
- *  100,        // uxStackDepth - the stack size DEFINED IN WORDS.
- *  NULL,       // pvParameters - passed into the task function as the function parameters.
- *  ( 1U | portPRIVILEGE_BIT ),// uxPriority - task priority, set the portPRIVILEGE_BIT if the task should run in a privileged state.
- *  cStackBuffer,// puxStackBuffer - the buffer to be used as the task stack.
+ *  vATask,     // pvTaskCode —— 实现任务的函数。
+ *  "ATask",    // pcName —— 仅用于辅助调试的任务文本名称。
+ *  100,        // uxStackDepth —— 以字为单位定义的栈大小。
+ *  NULL,       // pvParameters —— 作为函数参数传入任务函数。
+ *  ( 1U | portPRIVILEGE_BIT ),// uxPriority —— 任务优先级；若任务应以特权态运行，则设置 portPRIVILEGE_BIT。
+ *  cStackBuffer,// puxStackBuffer —— 用作任务栈的缓冲区。
  *
- *  // xRegions - Allocate up to three separate memory regions for access by
- *  // the task, with appropriate access permissions.  Different processors have
- *  // different memory alignment requirements - refer to the FreeRTOS documentation
- *  // for full information.
+ *  // xRegions —— 最多分配三个独立的内存区域供任务访问，并赋予
+ *  // 相应访问权限。不同处理器有不同的内存对齐要求——完整信息
+ *  // 请参阅 FreeRTOS 文档。
  *  {
- *      // Base address                 Length  Parameters
+ *      // 基地址                       长度    参数
  *      { cReadWriteArray,              32,     portMPU_REGION_READ_WRITE },
  *      { cReadOnlyArray,               32,     portMPU_REGION_READ_ONLY },
  *      { cPrivilegedOnlyAccessArray,   128,    portMPU_REGION_PRIVILEGED_READ_WRITE }
  *  }
  *
- *  &xTaskBuffer; // Holds the task's data structure.
+ *  &xTaskBuffer; // 保存任务的数据结构。
  * };
  *
  * int main( void )
  * {
  * TaskHandle_t xHandle;
  *
- *  // Create a task from the const structure defined above.  The task handle
- *  // is requested (the second parameter is not NULL) but in this case just for
- *  // demonstration purposes as its not actually used.
+ *  // 根据上面定义的 const 结构体创建任务。请求了任务句柄
+ *  // （第二个参数不为 NULL），但这里仅作演示，实际并未使用。
  *  xTaskCreateRestrictedStatic( &xRegTest1Parameters, &xHandle );
  *
- *  // Start the scheduler.
+ *  // 启动调度器。
  *  vTaskStartScheduler();
  *
- *  // Will only get here if there was insufficient memory to create the idle
- *  // and/or timer task.
+ *  // 只有内存不足、无法创建空闲任务和/或定时器任务时才会执行到这里。
  *  for( ;; );
  * }
  * @endcode
@@ -747,32 +713,27 @@ typedef enum
  * void vTaskAllocateMPURegions( TaskHandle_t xTask, const MemoryRegion_t * const pxRegions );
  * @endcode
  *
- * Memory regions are assigned to a restricted task when the task is created by
- * a call to xTaskCreateRestricted().  These regions can be redefined using
- * vTaskAllocateMPURegions().
+ * 受限任务通过调用 xTaskCreateRestricted() 创建时会被分配内存区域。
+ * 这些区域可以使用 vTaskAllocateMPURegions() 重新定义。
  *
- * @param xTaskToModify The handle of the task being updated.
+ * @param xTaskToModify 正在更新的任务句柄。
  *
- * @param[in] pxRegions A pointer to a MemoryRegion_t structure that contains the
- * new memory region definitions.
+ * @param[in] pxRegions 指向包含新内存区域定义的 MemoryRegion_t 结构体的指针。
  *
- * The parameter macros used in MemoryRegion_t.ulParameters are port specific.
- * Some ports, including the Cortex-M3/4 MPU ports, use the portMPU_REGION_*
- * values shown below.
- * ARMv8-M MPU ports, such as CM23, CM33, CM52, CM55, CM85 and STAR_MC3, use
- * the tskMPU_REGION_* values defined in this header; the port translates them
- * into MPU register settings. Check the selected port's headers before selecting
- * the region parameter macros.
+ * MemoryRegion_t.ulParameters 中使用的参数宏与移植层相关。
+ * 部分移植层（包括 Cortex-M3/4 MPU 移植层）使用下文列出的 portMPU_REGION_* 值。
+ * ARMv8-M MPU 移植层（如 CM23、CM33、CM52、CM55、CM85 和 STAR_MC3）使用
+ * 本头文件中定义的 tskMPU_REGION_* 值；移植层会将其转换为 MPU 寄存器设置。
+ * 选择区域参数宏之前，请先查看所选移植层的头文件。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
- * // Define an array of MemoryRegion_t structures that configures an MPU region
- * // allowing read/write access for 1024 bytes starting at the beginning of the
- * // ucOneKByte array.  The other two of the maximum 3 definable regions are
- * // unused so set to zero.
+ * // 定义一个 MemoryRegion_t 结构体数组，配置一个 MPU 区域，
+ * // 允许从 ucOneKByte 数组起始处开始的 1024 字节进行读写访问。
+ * // 最多可定义 3 个区域，其余两个未使用，因此设为 0。
  * static const MemoryRegion_t xAltRegions[ portNUM_CONFIGURABLE_REGIONS ] =
  * {
- *  // Base address     Length      Parameters
+ *  // 基地址            长度        参数
  *  { ucOneKByte,       1024,       portMPU_REGION_READ_WRITE },
  *  { 0,                0,          0 },
  *  { 0,                0,          0 }
@@ -780,17 +741,14 @@ typedef enum
  *
  * void vATask( void *pvParameters )
  * {
- *  // This task was created such that it has access to certain regions of
- *  // memory as defined by the MPU configuration.  At some point it is
- *  // desired that these MPU regions are replaced with that defined in the
- *  // xAltRegions const struct above.  Use a call to vTaskAllocateMPURegions()
- *  // for this purpose.  NULL is used as the task handle to indicate that this
- *  // function should modify the MPU regions of the calling task.
+ *  // 此任务在创建时被配置为可访问 MPU 配置所定义的某些内存区域。
+ *  // 在某一时刻，需要将这些 MPU 区域替换为上面 const 结构体
+ *  // xAltRegions 中定义的区域。为此可调用 vTaskAllocateMPURegions()。
+ *  // 任务句柄传入 NULL，表示此函数应修改调用任务的 MPU 区域。
  *  vTaskAllocateMPURegions( NULL, xAltRegions );
  *
- *  // Now the task can continue its function, but from this point on can only
- *  // access its stack and the ucOneKByte array (unless any other statically
- *  // defined or shared regions have been declared elsewhere).
+ *  // 现在任务可以继续执行，但从此刻起只能访问其栈和 ucOneKByte
+ *  // 数组（除非在其他地方声明了其他静态定义或共享的区域）。
  * }
  * @endcode
  * \defgroup vTaskAllocateMPURegions vTaskAllocateMPURegions
@@ -807,35 +765,31 @@ typedef enum
  * void vTaskDelete( TaskHandle_t xTaskToDelete );
  * @endcode
  *
- * INCLUDE_vTaskDelete must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_vTaskDelete 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Remove a task from the RTOS real time kernel's management.  The task being
- * deleted will be removed from all ready, blocked, suspended and event lists.
+ * 将任务从 RTOS 实时内核的管理中移除。被删除的任务将从所有就绪、
+ * 阻塞、挂起和事件链表中移除。
  *
- * NOTE:  The idle task is responsible for freeing the kernel allocated
- * memory from tasks that have been deleted.  It is therefore important that
- * the idle task is not starved of microcontroller processing time if your
- * application makes any calls to vTaskDelete ().  Memory allocated by the
- * task code is not automatically freed, and should be freed before the task
- * is deleted.
+ * 注意：空闲任务负责释放已删除任务所占用的、由内核分配的内存。
+ * 因此，如果应用程序调用了 vTaskDelete()，务必确保空闲任务不会
+ * 缺少微控制器处理时间。任务代码分配的内存不会自动释放，
+ * 应在删除任务之前释放。
  *
- * See the demo application file death.c for sample code that utilises
- * vTaskDelete ().
+ * 有关使用 vTaskDelete() 的示例代码，请参见演示应用程序文件 death.c。
  *
- * @param xTaskToDelete The handle of the task to be deleted.  Passing NULL will
- * cause the calling task to be deleted.
+ * @param xTaskToDelete 要删除的任务句柄。传入 NULL 将删除调用任务。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vOtherFunction( void )
  * {
  * TaskHandle_t xHandle;
  *
- *   // Create the task, storing the handle.
+ *   // 创建任务并保存句柄。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandle );
  *
- *   // Use the handle to delete the task.
+ *   // 使用句柄删除任务。
  *   vTaskDelete( xHandle );
  * }
  * @endcode
@@ -844,9 +798,11 @@ typedef enum
  */
 void vTaskDelete( TaskHandle_t xTaskToDelete ) PRIVILEGED_FUNCTION;
 
-/*-----------------------------------------------------------
-* TASK CONTROL API
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 任务控制 API
+ * ----------------------------------------------------------
+ */
 
 /**
  * task. h
@@ -854,40 +810,34 @@ void vTaskDelete( TaskHandle_t xTaskToDelete ) PRIVILEGED_FUNCTION;
  * void vTaskDelay( const TickType_t xTicksToDelay );
  * @endcode
  *
- * Delay a task for a given number of ticks.  The actual time that the
- * task remains blocked depends on the tick rate.  The constant
- * portTICK_PERIOD_MS can be used to calculate real time from the tick
- * rate - with the resolution of one tick period.
+ * 按指定的时钟节拍数延迟任务。任务实际保持阻塞的时间取决于时钟节拍频率。
+ * 可以使用常量 portTICK_PERIOD_MS 将节拍频率换算为实际时间，
+ * 分辨率为一个节拍周期。
  *
- * INCLUDE_vTaskDelay must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_vTaskDelay 定义为 1。
+ * 更多信息请参见配置章节。
  *
  *
- * vTaskDelay() specifies a time at which the task wishes to unblock relative to
- * the time at which vTaskDelay() is called.  For example, specifying a block
- * period of 100 ticks will cause the task to unblock 100 ticks after
- * vTaskDelay() is called.  vTaskDelay() does not therefore provide a good method
- * of controlling the frequency of a periodic task as the path taken through the
- * code, as well as other task and interrupt activity, will affect the frequency
- * at which vTaskDelay() gets called and therefore the time at which the task
- * next executes.  See xTaskDelayUntil() for an alternative API function designed
- * to facilitate fixed frequency execution.  It does this by specifying an
- * absolute time (rather than a relative time) at which the calling task should
- * unblock.
+ * vTaskDelay() 指定的是相对于调用 vTaskDelay() 时刻的解除阻塞时间。
+ * 例如，指定 100 个节拍的阻塞时间，任务将在调用 vTaskDelay() 之后
+ * 100 个节拍时解除阻塞。因此，vTaskDelay() 并不是控制周期性任务频率的
+ * 好方法，因为代码的执行路径以及其他任务和中断活动，都会影响
+ * vTaskDelay() 的调用频率，进而影响任务下次执行的时间。
+ * 若需固定频率执行，请参见 xTaskDelayUntil()；该 API 通过指定
+ * 调用任务应解除阻塞的绝对时间（而非相对时间）来实现固定频率。
  *
- * @param xTicksToDelay The amount of time, in tick periods, that
- * the calling task should block.
+ * @param xTicksToDelay 调用任务应阻塞的时间，以节拍周期为单位。
  *
- * Example usage:
+ * 用法示例：
  *
  * void vTaskFunction( void * pvParameters )
  * {
- * // Block for 500ms.
+ * // 阻塞 500ms。
  * const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
  *
  *   for( ;; )
  *   {
- *       // Simply toggle the LED every 500ms, blocking between each toggle.
+ *       // 每 500ms 翻转一次 LED，每次翻转之间进入阻塞。
  *       vToggleLED();
  *       vTaskDelay( xDelay );
  *   }
@@ -904,30 +854,27 @@ void vTaskDelay( const TickType_t xTicksToDelay ) PRIVILEGED_FUNCTION;
  * TickType_t xTaskPeriodicDelay( TickType_t *pxPreviousWakeTime, const TickType_t xTimeIncrement );
  * @endcode
  *
- * INCLUDE_xTaskDelayUntil must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_xTaskDelayUntil 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Periodic task delay to ensure a constant execution frequency.
+ * 周期性任务延迟，用于确保恒定的执行频率。
  *
- * This function is similar to xTaskDelayUntil () with a few important differences:
- * - pxPreviousWakeTime contains the last past wake time, so it never runs away
- * - if you suspend the task, when you resume it pxPreviousWakeTime will instantly
- *   catch up all skipped increments
- * - it returns the number of increments added to pxPreviosWakeTime
+ * 此函数与 xTaskDelayUntil() 类似，但有以下几处重要区别：
+ * - pxPreviousWakeTime 保存上一次的唤醒时间，因此不会无限漂移
+ * - 若挂起任务，则恢复时 pxPreviousWakeTime 会立即
+ *   补上所有被跳过的增量
+ * - 返回添加到 pxPreviosWakeTime 的增量次数
  *
- * @param pxPreviousWakeTime Pointer to a variable that holds the time at which the
- * task was last unblocked.  The variable must be initialised with the current time
- * prior to its first use.  Following this the variable is automatically updated.
+ * @param pxPreviousWakeTime 指向保存任务上次解除阻塞时间的变量的指针。
+ * 首次使用前，该变量必须用当前时间初始化。此后该变量会自动更新。
  *
- * @param xTimeIncrement The cycle time period.  The task will be unblocked at
- * time *pxPreviousWakeTime + xTimeIncrement.  Passing the same xTimeIncrement
- * parameter value will cause the task to execute with a fixed interval.
+ * @param xTimeIncrement 周期时间。任务将在 *pxPreviousWakeTime + xTimeIncrement
+ * 时刻解除阻塞。传入相同的 xTimeIncrement 参数值，将使任务以固定间隔执行。
  *
- * @return Number of times xTimeIncrement has been added to pxPreviousWakeTime.
- * It is 0 on the first call or if not enough ticks have been elapsed since the
- * last call, 1 in normal circumstances or more than 1 if some period has been
- * skipped for some reason (e.g. when the caller task is suspended for more than
- * xTimeIncrement ticks).
+ * @return xTimeIncrement 被添加到 pxPreviousWakeTime 的次数。
+ * 首次调用时，或自上次调用以来经过的节拍不足时，返回 0；正常情况返回 1；
+ * 若由于某种原因跳过了某些周期（例如调用任务被挂起的时间超过
+ * xTimeIncrement 个节拍），则返回值大于 1。
  *
  * \defgroup xTaskPeriodicDelay xTaskPeriodicDelay
  * \ingroup TaskCtrl
@@ -941,60 +888,54 @@ TickType_t xTaskPeriodicDelay( TickType_t * const pxPreviousWakeTime,
  * BaseType_t xTaskDelayUntil( TickType_t *pxPreviousWakeTime, const TickType_t xTimeIncrement );
  * @endcode
  *
- * INCLUDE_xTaskDelayUntil must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_xTaskDelayUntil 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Delay a task until a specified time.  This function can be used by periodic
- * tasks to ensure a constant execution frequency.
+ * 将任务延迟到指定时间。此函数可供周期性任务使用，以确保恒定的执行频率。
  *
- * This function differs from vTaskDelay () in one important aspect:  vTaskDelay () will
- * cause a task to block for the specified number of ticks from the time vTaskDelay () is
- * called.  It is therefore difficult to use vTaskDelay () by itself to generate a fixed
- * execution frequency as the time between a task starting to execute and that task
- * calling vTaskDelay () may not be fixed [the task may take a different path though the
- * code between calls, or may get interrupted or preempted a different number of times
- * each time it executes].
+ * 此函数与 vTaskDelay() 有一个重要区别：vTaskDelay() 会使任务从调用
+ * vTaskDelay() 的时刻起阻塞指定的节拍数。因此，仅使用 vTaskDelay() 很难
+ * 产生固定的执行频率，因为任务开始执行到调用 vTaskDelay() 之间的时间
+ * 可能并不固定［任务在两次调用之间可能走不同的代码路径，或者每次执行时
+ * 被中断或抢占的次数不同］。
  *
- * Whereas vTaskDelay () specifies a wake time relative to the time at which the function
- * is called, xTaskDelayUntil () specifies the absolute (exact) time at which it wishes to
- * unblock.
+ * vTaskDelay() 指定的是相对于函数调用时刻的唤醒时间，而 xTaskDelayUntil()
+ * 指定的是任务希望解除阻塞的绝对（精确）时间。
  *
- * The macro pdMS_TO_TICKS() can be used to calculate the number of ticks from a
- * time specified in milliseconds with a resolution of one tick period.
+ * 可以使用宏 pdMS_TO_TICKS() 将以毫秒指定的时间换算为节拍数，
+ * 分辨率为一个节拍周期。
  *
- * @param pxPreviousWakeTime Pointer to a variable that holds the time at which the
- * task was last unblocked.  The variable must be initialised with the current time
- * prior to its first use (see the example below).  Following this the variable is
- * automatically updated within xTaskDelayUntil ().
+ * @param pxPreviousWakeTime 指向保存任务上次解除阻塞时间的变量的指针。
+ * 首次使用前，该变量必须用当前时间初始化（参见下面的示例）。此后该变量
+ * 会在 xTaskDelayUntil() 内部自动更新。
  *
- * @param xTimeIncrement The cycle time period.  The task will be unblocked at
- * time *pxPreviousWakeTime + xTimeIncrement.  Calling xTaskDelayUntil with the
- * same xTimeIncrement parameter value will cause the task to execute with
- * a fixed interface period.
+ * @param xTimeIncrement 周期时间。任务将在 *pxPreviousWakeTime + xTimeIncrement
+ * 时刻解除阻塞。以相同的 xTimeIncrement 参数值调用 xTaskDelayUntil，
+ * 将使任务以固定的周期执行。
  *
- * @return Value which can be used to check whether the task was actually delayed.
- * Will be pdTRUE if the task way delayed and pdFALSE otherwise.  A task will not
- * be delayed if the next expected wake time is in the past. This prevents periodic
- * tasks from accumulating delays and allows them to resume their regular timing pattern.
+ * @return 可用于检查任务是否实际被延迟的值。
+ * 若任务被延迟则返回 pdTRUE，否则返回 pdFALSE。若下一个预期唤醒时间
+ * 已过，则任务不会被延迟。这可防止周期性任务累积延迟，使其能够恢复
+ * 正常的定时节奏。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
- * // Perform an action every 10 ticks.
+ * // 每 10 个节拍执行一次操作。
  * void vTaskFunction( void * pvParameters )
  * {
  * TickType_t xLastWakeTime;
  * const TickType_t xFrequency = 10;
  * BaseType_t xWasDelayed;
  *
- *     // Initialise the xLastWakeTime variable with the current time.
+ *     // 用当前时间初始化 xLastWakeTime 变量。
  *     xLastWakeTime = xTaskGetTickCount ();
  *     for( ;; )
  *     {
- *         // Wait for the next cycle.
+ *         // 等待下一个周期。
  *         xWasDelayed = xTaskDelayUntil( &xLastWakeTime, xFrequency );
  *
- *         // Perform action here. xWasDelayed value can be used to determine
- *         // whether a deadline was missed if the code here took too long.
+ *         // 在此执行操作。若此处的代码耗时过长，可用 xWasDelayed
+ *         // 的值判断是否错过了截止时间。
  *     }
  * }
  * @endcode
@@ -1005,8 +946,7 @@ BaseType_t xTaskDelayUntil( TickType_t * const pxPreviousWakeTime,
                             const TickType_t xTimeIncrement ) PRIVILEGED_FUNCTION;
 
 /*
- * vTaskDelayUntil() is the older version of xTaskDelayUntil() and does not
- * return a value.
+ * vTaskDelayUntil() 是 xTaskDelayUntil() 的旧版本，不返回值。
  */
 #define vTaskDelayUntil( pxPreviousWakeTime, xTimeIncrement )                   \
     do {                                                                        \
@@ -1020,26 +960,22 @@ BaseType_t xTaskDelayUntil( TickType_t * const pxPreviousWakeTime,
  * BaseType_t xTaskAbortDelay( TaskHandle_t xTask );
  * @endcode
  *
- * INCLUDE_xTaskAbortDelay must be defined as 1 in FreeRTOSConfig.h for this
- * function to be available.
+ * 要使此函数可用，必须在 FreeRTOSConfig.h 中将 INCLUDE_xTaskAbortDelay 定义为 1。
  *
- * A task will enter the Blocked state when it is waiting for an event.  The
- * event it is waiting for can be a temporal event (waiting for a time), such
- * as when vTaskDelay() is called, or an event on an object, such as when
- * xQueueReceive() or ulTaskNotifyTake() is called.  If the handle of a task
- * that is in the Blocked state is used in a call to xTaskAbortDelay() then the
- * task will leave the Blocked state, and return from whichever function call
- * placed the task into the Blocked state.
+ * 任务在等待事件时会进入阻塞态。所等待的事件可以是时间事件（等待一段时间），
+ * 例如调用 vTaskDelay() 时，也可以是对象上的事件，例如调用
+ * xQueueReceive() 或 ulTaskNotifyTake() 时。若在调用 xTaskAbortDelay() 时
+ * 传入处于阻塞态任务的句柄，则该任务将离开阻塞态，并从使其进入阻塞态的
+ * 那个函数调用中返回。
  *
- * There is no 'FromISR' version of this function as an interrupt would need to
- * know which object a task was blocked on in order to know which actions to
- * take.  For example, if the task was blocked on a queue the interrupt handler
- * would then need to know if the queue was locked.
+ * 此函数没有 'FromISR' 版本，因为中断需要知道任务阻塞在哪个对象上，
+ * 才能确定应采取哪些操作。例如，若任务阻塞在队列上，中断处理程序
+ * 还需要知道该队列是否已被锁定。
  *
- * @param xTask The handle of the task to remove from the Blocked state.
+ * @param xTask 要移出阻塞态的任务句柄。
  *
- * @return If the task referenced by xTask was not in the Blocked state then
- * pdFAIL is returned.  Otherwise pdPASS is returned.
+ * @return 若 xTask 引用的任务未处于阻塞态，则返回 pdFAIL；
+ * 否则返回 pdPASS。
  *
  * \defgroup xTaskAbortDelay xTaskAbortDelay
  * \ingroup TaskCtrl
@@ -1054,41 +990,39 @@ BaseType_t xTaskDelayUntil( TickType_t * const pxPreviousWakeTime,
  * UBaseType_t uxTaskPriorityGet( const TaskHandle_t xTask );
  * @endcode
  *
- * INCLUDE_uxTaskPriorityGet must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_uxTaskPriorityGet 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Obtain the priority of any task.
+ * 获取任意任务的优先级。
  *
- * @param xTask Handle of the task to be queried.  Passing a NULL
- * handle results in the priority of the calling task being returned.
+ * @param xTask 要查询的任务句柄。传入 NULL 句柄将返回调用任务的优先级。
  *
- * @return The priority of xTask.
+ * @return xTask 的优先级。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vAFunction( void )
  * {
  * TaskHandle_t xHandle;
  *
- *   // Create a task, storing the handle.
+ *   // 创建任务并保存句柄。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandle );
  *
  *   // ...
  *
- *   // Use the handle to obtain the priority of the created task.
- *   // It was created with tskIDLE_PRIORITY, but may have changed
- *   // it itself.
+ *   // 使用句柄获取所创建任务的优先级。
+ *   // 创建时使用的是 tskIDLE_PRIORITY，但任务可能自行修改过。
  *   if( uxTaskPriorityGet( xHandle ) != tskIDLE_PRIORITY )
  *   {
- *       // The task has changed its priority.
+ *       // 任务已修改其优先级。
  *   }
  *
  *   // ...
  *
- *   // Is our priority higher than the created task?
+ *   // 我们的优先级是否高于所创建的任务？
  *   if( uxTaskPriorityGet( xHandle ) < uxTaskPriorityGet( NULL ) )
  *   {
- *       // Our priority (obtained using NULL handle) is higher.
+ *       // 我们的优先级（通过 NULL 句柄获取）更高。
  *   }
  * }
  * @endcode
@@ -1103,7 +1037,7 @@ UBaseType_t uxTaskPriorityGet( const TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
  * UBaseType_t uxTaskPriorityGetFromISR( const TaskHandle_t xTask );
  * @endcode
  *
- * A version of uxTaskPriorityGet() that can be used from an ISR.
+ * 可在 ISR 中使用的 uxTaskPriorityGet() 版本。
  */
 UBaseType_t uxTaskPriorityGetFromISR( const TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
@@ -1113,15 +1047,14 @@ UBaseType_t uxTaskPriorityGetFromISR( const TaskHandle_t xTask ) PRIVILEGED_FUNC
  * UBaseType_t uxTaskBasePriorityGet( const TaskHandle_t xTask );
  * @endcode
  *
- * INCLUDE_uxTaskPriorityGet and configUSE_MUTEXES must be defined as 1 for this
- * function to be available. See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_uxTaskPriorityGet 和 configUSE_MUTEXES 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Obtain the base priority of any task.
+ * 获取任意任务的基础优先级。
  *
- * @param xTask Handle of the task to be queried.  Passing a NULL
- * handle results in the base priority of the calling task being returned.
+ * @param xTask 要查询的任务句柄。传入 NULL 句柄将返回调用任务的基础优先级。
  *
- * @return The base priority of xTask.
+ * @return xTask 的基础优先级。
  *
  * \defgroup uxTaskBasePriorityGet uxTaskBasePriorityGet
  * \ingroup TaskCtrl
@@ -1134,7 +1067,7 @@ UBaseType_t uxTaskBasePriorityGet( const TaskHandle_t xTask ) PRIVILEGED_FUNCTIO
  * UBaseType_t uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask );
  * @endcode
  *
- * A version of uxTaskBasePriorityGet() that can be used from an ISR.
+ * 可在 ISR 中使用的 uxTaskBasePriorityGet() 版本。
  */
 UBaseType_t uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
@@ -1144,17 +1077,15 @@ UBaseType_t uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask ) PRIVILEGED_
  * eTaskState eTaskGetState( TaskHandle_t xTask );
  * @endcode
  *
- * INCLUDE_eTaskGetState must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_eTaskGetState 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Obtain the state of any task.  States are encoded by the eTaskState
- * enumerated type.
+ * 获取任意任务的状态。状态由 eTaskState 枚举类型编码。
  *
- * @param xTask Handle of the task to be queried.
+ * @param xTask 要查询的任务句柄。
  *
- * @return The state of xTask at the time the function was called.  Note the
- * state of the task might change between the function being called, and the
- * functions return value being tested by the calling task.
+ * @return 调用该函数时 xTask 的状态。注意，从调用该函数到调用任务
+ * 测试其返回值之间，任务状态可能已经改变。
  */
 #if ( ( INCLUDE_eTaskGetState == 1 ) || ( configUSE_TRACE_FACILITY == 1 ) || ( INCLUDE_xTaskAbortDelay == 1 ) )
     eTaskState eTaskGetState( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
@@ -1166,51 +1097,46 @@ UBaseType_t uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask ) PRIVILEGED_
  * void vTaskGetInfo( TaskHandle_t xTask, TaskStatus_t *pxTaskStatus, BaseType_t xGetFreeStackSpace, eTaskState eState );
  * @endcode
  *
- * configUSE_TRACE_FACILITY must be defined as 1 for this function to be
- * available.  See the configuration section for more information.
+ * 要使此函数可用，必须将 configUSE_TRACE_FACILITY 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Populates a TaskStatus_t structure with information about a task.
+ * 用任务的相关信息填充 TaskStatus_t 结构体。
  *
- * @param xTask Handle of the task being queried.  If xTask is NULL then
- * information will be returned about the calling task.
+ * @param xTask 要查询的任务句柄。若 xTask 为 NULL，则返回调用任务的信息。
  *
- * @param pxTaskStatus A pointer to the TaskStatus_t structure that will be
- * filled with information about the task referenced by the handle passed using
- * the xTask parameter.
+ * @param pxTaskStatus 指向 TaskStatus_t 结构体的指针，该结构体将被填入
+ * xTask 参数所传句柄引用任务的相关信息。
  *
- * @param xGetFreeStackSpace The TaskStatus_t structure contains a member to report
- * the stack high water mark of the task being queried.  Calculating the stack
- * high water mark takes a relatively long time, and can make the system
- * temporarily unresponsive - so the xGetFreeStackSpace parameter is provided to
- * allow the high water mark checking to be skipped.  The high watermark value
- * will only be written to the TaskStatus_t structure if xGetFreeStackSpace is
- * not set to pdFALSE;
+ * @param xGetFreeStackSpace TaskStatus_t 结构体包含一个成员，用于报告
+ * 被查询任务的栈高水位线。计算栈高水位线耗时相对较长，可能使系统
+ * 暂时无响应——因此提供 xGetFreeStackSpace 参数，以便跳过高水位线检查。
+ * 仅当 xGetFreeStackSpace 未设置为 pdFALSE 时，高水位线值才会写入
+ * TaskStatus_t 结构体。
  *
- * @param eState The TaskStatus_t structure contains a member to report the
- * state of the task being queried.  Obtaining the task state is not as fast as
- * a simple assignment - so the eState parameter is provided to allow the state
- * information to be omitted from the TaskStatus_t structure.  To obtain state
- * information then set eState to eInvalid - otherwise the value passed in
- * eState will be reported as the task state in the TaskStatus_t structure.
+ * @param eState TaskStatus_t 结构体包含一个成员，用于报告被查询任务的
+ * 状态。获取任务状态并不像简单赋值那样快——因此提供 eState 参数，
+ * 以便从 TaskStatus_t 结构体中省略状态信息。若要获取状态信息，
+ * 请将 eState 设置为 eInvalid——否则，传入的 eState 值将作为任务状态
+ * 报告到 TaskStatus_t 结构体中。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vAFunction( void )
  * {
  * TaskHandle_t xHandle;
  * TaskStatus_t xTaskDetails;
  *
- *  // Obtain the handle of a task from its name.
+ *  // 根据任务名称获取任务句柄。
  *  xHandle = xTaskGetHandle( "Task_Name" );
  *
- *  // Check the handle is not NULL.
+ *  // 检查句柄不为 NULL。
  *  configASSERT( xHandle );
  *
- *  // Use the handle to obtain further information about the task.
+ *  // 使用句柄获取任务的更多信息。
  *  vTaskGetInfo( xHandle,
  *                &xTaskDetails,
- *                pdTRUE, // Include the high water mark in xTaskDetails.
- *                eInvalid ); // Include the task state in xTaskDetails.
+ *                pdTRUE, // 在 xTaskDetails 中包含高水位线。
+ *                eInvalid ); // 在 xTaskDetails 中包含任务状态。
  * }
  * @endcode
  * \defgroup vTaskGetInfo vTaskGetInfo
@@ -1229,36 +1155,34 @@ UBaseType_t uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask ) PRIVILEGED_
  * void vTaskPrioritySet( TaskHandle_t xTask, UBaseType_t uxNewPriority );
  * @endcode
  *
- * INCLUDE_vTaskPrioritySet must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_vTaskPrioritySet 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Set the priority of any task.
+ * 设置任意任务的优先级。
  *
- * A context switch will occur before the function returns if the priority
- * being set is higher than the currently executing task.
+ * 若所设置的优先级高于当前正在执行的任务，则函数返回前将发生上下文切换。
  *
- * @param xTask Handle to the task for which the priority is being set.
- * Passing a NULL handle results in the priority of the calling task being set.
+ * @param xTask 要设置优先级的任务句柄。传入 NULL 句柄将设置调用任务的优先级。
  *
- * @param uxNewPriority The priority to which the task will be set.
+ * @param uxNewPriority 任务将被设置的优先级。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vAFunction( void )
  * {
  * TaskHandle_t xHandle;
  *
- *   // Create a task, storing the handle.
+ *   // 创建任务并保存句柄。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandle );
  *
  *   // ...
  *
- *   // Use the handle to raise the priority of the created task.
+ *   // 使用句柄提高所创建任务的优先级。
  *   vTaskPrioritySet( xHandle, tskIDLE_PRIORITY + 1 );
  *
  *   // ...
  *
- *   // Use a NULL handle to raise our priority to the same value.
+ *   // 使用 NULL 句柄将我们的优先级提高到相同的值。
  *   vTaskPrioritySet( NULL, tskIDLE_PRIORITY + 1 );
  * }
  * @endcode
@@ -1274,46 +1198,45 @@ void vTaskPrioritySet( TaskHandle_t xTask,
  * void vTaskSuspend( TaskHandle_t xTaskToSuspend );
  * @endcode
  *
- * INCLUDE_vTaskSuspend must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_vTaskSuspend 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Suspend any task.  When suspended a task will never get any microcontroller
- * processing time, no matter what its priority.
+ * 挂起任意任务。任务处于挂起态时，无论其优先级多高，
+ * 都不会获得任何微控制器处理时间。
  *
- * Calls to vTaskSuspend are not accumulative -
- * i.e. calling vTaskSuspend () twice on the same task still only requires one
- * call to vTaskResume () to ready the suspended task.
+ * 对 vTaskSuspend 的调用不是累积的——
+ * 即对同一任务调用两次 vTaskSuspend()，仍然只需一次
+ * vTaskResume() 调用即可使该挂起任务进入就绪态。
  *
- * @param xTaskToSuspend Handle to the task being suspended.  Passing a NULL
- * handle will cause the calling task to be suspended.
+ * @param xTaskToSuspend 要挂起的任务句柄。传入 NULL 句柄将挂起调用任务。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vAFunction( void )
  * {
  * TaskHandle_t xHandle;
  *
- *   // Create a task, storing the handle.
+ *   // 创建任务并保存句柄。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandle );
  *
  *   // ...
  *
- *   // Use the handle to suspend the created task.
+ *   // 使用句柄挂起所创建的任务。
  *   vTaskSuspend( xHandle );
  *
  *   // ...
  *
- *   // The created task will not run during this period, unless
- *   // another task calls vTaskResume( xHandle ).
+ *   // 在此期间，所创建的任务不会运行，除非
+ *   // 另一个任务调用 vTaskResume( xHandle )。
  *
  *   //...
  *
  *
- *   // Suspend ourselves.
+ *   // 挂起自身。
  *   vTaskSuspend( NULL );
  *
- *   // We cannot get here unless another task calls vTaskResume
- *   // with our handle as the parameter.
+ *   // 除非另一个任务以我们的句柄为参数调用 vTaskResume，
+ *   // 否则无法执行到这里。
  * }
  * @endcode
  * \defgroup vTaskSuspend vTaskSuspend
@@ -1327,44 +1250,43 @@ void vTaskSuspend( TaskHandle_t xTaskToSuspend ) PRIVILEGED_FUNCTION;
  * void vTaskResume( TaskHandle_t xTaskToResume );
  * @endcode
  *
- * INCLUDE_vTaskSuspend must be defined as 1 for this function to be available.
- * See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_vTaskSuspend 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * Resumes a suspended task.
+ * 恢复被挂起的任务。
  *
- * A task that has been suspended by one or more calls to vTaskSuspend ()
- * will be made available for running again by a single call to
- * vTaskResume ().
+ * 通过一次或多次调用 vTaskSuspend() 挂起的任务，
+ * 只需一次 vTaskResume() 调用即可重新进入可运行状态。
  *
- * @param xTaskToResume Handle to the task being readied.
+ * @param xTaskToResume 要恢复为就绪态的任务句柄。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vAFunction( void )
  * {
  * TaskHandle_t xHandle;
  *
- *   // Create a task, storing the handle.
+ *   // 创建任务并保存句柄。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &xHandle );
  *
  *   // ...
  *
- *   // Use the handle to suspend the created task.
+ *   // 使用句柄挂起所创建的任务。
  *   vTaskSuspend( xHandle );
  *
  *   // ...
  *
- *   // The created task will not run during this period, unless
- *   // another task calls vTaskResume( xHandle ).
+ *   // 在此期间，所创建的任务不会运行，除非
+ *   // 另一个任务调用 vTaskResume( xHandle )。
  *
  *   //...
  *
  *
- *   // Resume the suspended task ourselves.
+ *   // 由我们自己恢复被挂起的任务。
  *   vTaskResume( xHandle );
  *
- *   // The created task will once again get microcontroller processing
- *   // time in accordance with its priority within the system.
+ *   // 所创建的任务将根据其在系统中的优先级，
+ *   // 再次获得微控制器处理时间。
  * }
  * @endcode
  * \defgroup vTaskResume vTaskResume
@@ -1378,25 +1300,22 @@ void vTaskResume( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
  * void xTaskResumeFromISR( TaskHandle_t xTaskToResume );
  * @endcode
  *
- * INCLUDE_xTaskResumeFromISR must be defined as 1 for this function to be
- * available.  See the configuration section for more information.
+ * 要使此函数可用，必须将 INCLUDE_xTaskResumeFromISR 定义为 1。
+ * 更多信息请参见配置章节。
  *
- * An implementation of vTaskResume() that can be called from within an ISR.
+ * vTaskResume() 的一种实现，可在 ISR 内部调用。
  *
- * A task that has been suspended by one or more calls to vTaskSuspend ()
- * will be made available for running again by a single call to
- * xTaskResumeFromISR ().
+ * 通过一次或多次调用 vTaskSuspend() 挂起的任务，
+ * 只需一次 xTaskResumeFromISR() 调用即可重新进入可运行状态。
  *
- * xTaskResumeFromISR() should not be used to synchronise a task with an
- * interrupt if there is a chance that the interrupt could arrive prior to the
- * task being suspended - as this can lead to interrupts being missed. Use of a
- * semaphore as a synchronisation mechanism would avoid this eventuality.
+ * 若中断可能在任务被挂起之前到达，则不应使用 xTaskResumeFromISR()
+ * 来实现任务与中断的同步——因为这可能导致中断丢失。
+ * 使用信号量作为同步机制可以避免这种情况。
  *
- * @param xTaskToResume Handle to the task being readied.
+ * @param xTaskToResume 要恢复为就绪态的任务句柄。
  *
- * @return pdTRUE if resuming the task should result in a context switch,
- * otherwise pdFALSE. This is used by the ISR to determine if a context switch
- * may be required following the ISR.
+ * @return 若恢复该任务应导致上下文切换，则返回 pdTRUE，
+ * 否则返回 pdFALSE。ISR 用它来判断中断返回后是否需要上下文切换。
  *
  * \defgroup vTaskResumeFromISR vTaskResumeFromISR
  * \ingroup TaskCtrl
@@ -1406,35 +1325,35 @@ BaseType_t xTaskResumeFromISR( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
 #if ( configUSE_CORE_AFFINITY == 1 )
 
 /**
- * @brief Sets the core affinity mask for a task.
+ * @brief 设置任务的核心亲和性掩码。
  *
- * It sets the cores on which a task can run. configUSE_CORE_AFFINITY must
- * be defined as 1 for this function to be available.
+ * 该掩码设置任务可在哪些核心上运行。要使此函数可用，
+ * 必须将 configUSE_CORE_AFFINITY 定义为 1。
  *
- * @param xTask The handle of the task to set the core affinity mask for.
- * Passing NULL will set the core affinity mask for the calling task.
+ * @param xTask 要设置核心亲和性掩码的任务句柄。
+ * 传入 NULL 将设置调用任务的核心亲和性掩码。
  *
- * @param uxCoreAffinityMask A bitwise value that indicates the cores on
- * which the task can run. Cores are numbered from 0 to configNUMBER_OF_CORES - 1.
- * For example, to ensure that a task can run on core 0 and core 1, set
- * uxCoreAffinityMask to 0x03.
+ * @param uxCoreAffinityMask 一个按位值，指示任务可在哪些核心上运行。
+ * 核心编号从 0 到 configNUMBER_OF_CORES - 1。
+ * 例如，要确保任务可在核心 0 和核心 1 上运行，
+ * 应将 uxCoreAffinityMask 设置为 0x03。
  *
- * Example usage:
+ * 用法示例：
  *
- * // The function that creates task.
+ * // 创建任务的函数。
  * void vAFunction( void )
  * {
  * TaskHandle_t xHandle;
  * UBaseType_t uxCoreAffinityMask;
  *
- *      // Create a task, storing the handle.
+ *      // 创建任务并保存句柄。
  *      xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &( xHandle ) );
  *
- *      // Define the core affinity mask such that this task can only run
- *      // on core 0 and core 2.
+ *      // 定义核心亲和性掩码，使此任务只能在
+ *      // 核心 0 和核心 2 上运行。
  *      uxCoreAffinityMask = ( ( 1 << 0 ) | ( 1 << 2 ) );
  *
- *      //Set the core affinity mask for the task.
+ *      // 设置任务的核心亲和性掩码。
  *      vTaskCoreAffinitySet( xHandle, uxCoreAffinityMask );
  * }
  */
@@ -1445,22 +1364,20 @@ BaseType_t xTaskResumeFromISR( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
 #if ( ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) )
 
 /**
- * @brief Gets the core affinity mask for a task.
+ * @brief 获取任务的核心亲和性掩码。
  *
- * configUSE_CORE_AFFINITY must be defined as 1 for this function to be
- * available.
+ * 要使此函数可用，必须将 configUSE_CORE_AFFINITY 定义为 1。
  *
- * @param xTask The handle of the task to get the core affinity mask for.
- * Passing NULL will get the core affinity mask for the calling task.
+ * @param xTask 要获取核心亲和性掩码的任务句柄。
+ * 传入 NULL 将获取调用任务的核心亲和性掩码。
  *
- * @return The core affinity mask which is a bitwise value that indicates
- * the cores on which a task can run. Cores are numbered from 0 to
- * configNUMBER_OF_CORES - 1. For example, if a task can run on core 0 and core 1,
- * the core affinity mask is 0x03.
+ * @return 核心亲和性掩码，它是一个按位值，指示任务可在哪些核心上运行。
+ * 核心编号从 0 到 configNUMBER_OF_CORES - 1。例如，若任务可在核心 0
+ * 和核心 1 上运行，则核心亲和性掩码为 0x03。
  *
- * Example usage:
+ * 用法示例：
  *
- * // Task handle of the networking task - it is populated elsewhere.
+ * // 网络任务的句柄——它在其他地方被填充。
  * TaskHandle_t xNetworkingTaskHandle;
  *
  * void vAFunction( void )
@@ -1468,24 +1385,23 @@ BaseType_t xTaskResumeFromISR( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
  * TaskHandle_t xHandle;
  * UBaseType_t uxNetworkingCoreAffinityMask;
  *
- *     // Create a task, storing the handle.
+ *     // 创建任务并保存句柄。
  *     xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, &( xHandle ) );
  *
- *     //Get the core affinity mask for the networking task.
+ *     // 获取网络任务的核心亲和性掩码。
  *     uxNetworkingCoreAffinityMask = vTaskCoreAffinityGet( xNetworkingTaskHandle );
  *
- *     // Here is a hypothetical scenario, just for the example. Assume that we
- *     // have 2 cores - Core 0 and core 1. We want to pin the application task to
- *     // the core different than the networking task to ensure that the
- *     // application task does not interfere with networking.
+ *     // 以下仅为示例的假设场景。假设我们有 2 个核心——核心 0 和核心 1。
+ *     // 我们希望将应用任务固定到与网络任务不同的核心上，
+ *     // 以确保应用任务不会干扰网络。
  *     if( ( uxNetworkingCoreAffinityMask & ( 1 << 0 ) ) != 0 )
  *     {
- *         // The networking task can run on core 0, pin our task to core 1.
+ *         // 网络任务可在核心 0 上运行，将我们的任务固定到核心 1。
  *         vTaskCoreAffinitySet( xHandle, ( 1 << 1 ) );
  *     }
  *     else
  *     {
- *         // Otherwise, pin our task to core 0.
+ *         // 否则，将我们的任务固定到核心 0。
  *         vTaskCoreAffinitySet( xHandle, ( 1 << 0 ) );
  *     }
  * }
@@ -1496,31 +1412,31 @@ BaseType_t xTaskResumeFromISR( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
 #if ( configUSE_TASK_PREEMPTION_DISABLE == 1 )
 
 /**
- * @brief Disables preemption for a task.
+ * @brief 禁止任务被抢占。
  *
- * @param xTask The handle of the task to disable preemption. Passing NULL
- * disables preemption for the calling task.
+ * @param xTask 要禁止抢占的任务句柄。传入 NULL
+ * 将禁止调用任务被抢占。
  *
- * Example usage:
+ * 用法示例：
  *
  * void vTaskCode( void *pvParameters )
  * {
- *     // Silence warnings about unused parameters.
+ *     // 消除未使用参数的警告。
  *     ( void ) pvParameters;
  *
  *     for( ;; )
  *     {
- *         // ... Perform some function here.
+ *         // ... 在此执行某些功能。
  *
- *         // Disable preemption for this task.
+ *         // 禁止此任务被抢占。
  *         vTaskPreemptionDisable( NULL );
  *
- *         // The task will not be preempted when it is executing in this portion ...
+ *         // 任务在此段代码执行期间不会被抢占……
  *
- *         // ... until the preemption is enabled again.
+ *         // ... 直到再次使能抢占。
  *         vTaskPreemptionEnable( NULL );
  *
- *         // The task can be preempted when it is executing in this portion.
+ *         // 任务在此段代码执行期间可被抢占。
  *     }
  * }
  */
@@ -1530,40 +1446,42 @@ BaseType_t xTaskResumeFromISR( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
 #if ( configUSE_TASK_PREEMPTION_DISABLE == 1 )
 
 /**
- * @brief Enables preemption for a task.
+ * @brief 使能任务被抢占。
  *
- * @param xTask The handle of the task to enable preemption. Passing NULL
- * enables preemption for the calling task.
+ * @param xTask 要使能被抢占的任务句柄。传入 NULL
+ * 将使能调用任务被抢占。
  *
- * Example usage:
+ * 用法示例：
  *
  * void vTaskCode( void *pvParameters )
  * {
- *     // Silence warnings about unused parameters.
+ *     // 消除未使用参数的警告。
  *     ( void ) pvParameters;
  *
  *     for( ;; )
  *     {
- *         // ... Perform some function here.
+ *         // ... 在此执行某些功能。
  *
- *         // Disable preemption for this task.
+ *         // 禁止此任务被抢占。
  *         vTaskPreemptionDisable( NULL );
  *
- *         // The task will not be preempted when it is executing in this portion ...
+ *         // 任务在此段代码执行期间不会被抢占……
  *
- *         // ... until the preemption is enabled again.
+ *         // ... 直到再次使能抢占。
  *         vTaskPreemptionEnable( NULL );
  *
- *         // The task can be preempted when it is executing in this portion.
+ *         // 任务在此段代码执行期间可被抢占。
  *     }
  * }
  */
     void vTaskPreemptionEnable( const TaskHandle_t xTask );
 #endif
 
-/*-----------------------------------------------------------
-* SCHEDULER CONTROL
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 调度器控制
+ * ----------------------------------------------------------
+ */
 
 /**
  * task. h
@@ -1571,23 +1489,21 @@ BaseType_t xTaskResumeFromISR( TaskHandle_t xTaskToResume ) PRIVILEGED_FUNCTION;
  * void vTaskStartScheduler( void );
  * @endcode
  *
- * Starts the real time kernel tick processing.  After calling the kernel
- * has control over which tasks are executed and when.
+ * 启动实时内核的节拍处理。调用后，内核将控制哪些任务执行以及何时执行。
  *
- * See the demo application file main.c for an example of creating
- * tasks and starting the kernel.
+ * 有关创建任务并启动内核的示例，请参见演示应用程序文件 main.c。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vAFunction( void )
  * {
- *   // Create at least one task before starting the kernel.
+ *   // 启动内核前至少创建一个任务。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL );
  *
- *   // Start the real time kernel with preemption.
+ *   // 以抢占方式启动实时内核。
  *   vTaskStartScheduler ();
  *
- *   // Will not get here unless a task calls vTaskEndScheduler ()
+ *   // 除非某个任务调用 vTaskEndScheduler()，否则不会执行到这里。
  * }
  * @endcode
  *
@@ -1602,50 +1518,46 @@ void vTaskStartScheduler( void ) PRIVILEGED_FUNCTION;
  * void vTaskEndScheduler( void );
  * @endcode
  *
- * NOTE:  At the time of writing only the x86 real mode port, which runs on a PC
- * in place of DOS, implements this function.
+ * 注意：撰写本文时，只有运行在 PC 上替代 DOS 的 x86 实模式移植层实现了此函数。
  *
- * Stops the real time kernel tick.  All created tasks will be automatically
- * deleted and multitasking (either preemptive or cooperative) will
- * stop.  Execution then resumes from the point where vTaskStartScheduler ()
- * was called, as if vTaskStartScheduler () had just returned.
+ * 停止实时内核节拍。所有已创建的任务都将被自动删除，多任务
+ * （抢占式或协作式）将停止。随后从调用 vTaskStartScheduler() 的位置
+ * 恢复执行，就像 vTaskStartScheduler() 刚刚返回一样。
  *
- * See the demo application file main. c in the demo/PC directory for an
- * example that uses vTaskEndScheduler ().
+ * 有关使用 vTaskEndScheduler() 的示例，请参见 demo/PC 目录中的
+ * 演示应用程序文件 main.c。
  *
- * vTaskEndScheduler () requires an exit function to be defined within the
- * portable layer (see vPortEndScheduler () in port. c for the PC port).  This
- * performs hardware specific operations such as stopping the kernel tick.
+ * vTaskEndScheduler() 要求在移植层中定义一个退出函数（PC 移植层参见
+ * port.c 中的 vPortEndScheduler()）。该函数执行与硬件相关的操作，
+ * 例如停止内核节拍。
  *
- * vTaskEndScheduler () will cause all of the resources allocated by the
- * kernel to be freed - but will not free resources allocated by application
- * tasks.
+ * vTaskEndScheduler() 将释放内核分配的所有资源——但不会释放
+ * 应用程序任务分配的资源。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vTaskCode( void * pvParameters )
  * {
  *   for( ;; )
  *   {
- *       // Task code goes here.
+ *       // 任务代码写在这里。
  *
- *       // At some point we want to end the real time kernel processing
- *       // so call ...
+ *       // 在某一时刻我们想结束实时内核处理，
+ *       // 因此调用……
  *       vTaskEndScheduler ();
  *   }
  * }
  *
  * void vAFunction( void )
  * {
- *   // Create at least one task before starting the kernel.
+ *   // 启动内核前至少创建一个任务。
  *   xTaskCreate( vTaskCode, "NAME", STACK_SIZE, NULL, tskIDLE_PRIORITY, NULL );
  *
- *   // Start the real time kernel with preemption.
+ *   // 以抢占方式启动实时内核。
  *   vTaskStartScheduler ();
  *
- *   // Will only get here when the vTaskCode () task has called
- *   // vTaskEndScheduler ().  When we get here we are back to single task
- *   // execution.
+ *   // 只有 vTaskCode() 任务调用了 vTaskEndScheduler() 时才会执行到这里。
+ *   // 执行到这里时，我们已回到单任务执行状态。
  * }
  * @endcode
  *
@@ -1660,44 +1572,39 @@ void vTaskEndScheduler( void ) PRIVILEGED_FUNCTION;
  * void vTaskSuspendAll( void );
  * @endcode
  *
- * Suspends the scheduler without disabling interrupts.  Context switches will
- * not occur while the scheduler is suspended.
+ * 挂起调度器，但不禁止中断。调度器挂起期间不会发生上下文切换。
  *
- * After calling vTaskSuspendAll () the calling task will continue to execute
- * without risk of being swapped out until a call to xTaskResumeAll () has been
- * made.
+ * 调用 vTaskSuspendAll() 后，调用任务将继续执行，
+ * 不会被换出，直到调用 xTaskResumeAll()。
  *
- * API functions that have the potential to cause a context switch (for example,
- * xTaskDelayUntil(), xQueueSend(), etc.) must not be called while the scheduler
- * is suspended.
+ * 在调度器挂起期间，不得调用可能导致上下文切换的 API 函数
+ * （例如 xTaskDelayUntil()、xQueueSend() 等）。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vTask1( void * pvParameters )
  * {
  *   for( ;; )
  *   {
- *       // Task code goes here.
+ *       // 任务代码写在这里。
  *
  *       // ...
  *
- *       // At some point the task wants to perform a long operation during
- *       // which it does not want to get swapped out.  It cannot use
- *       // taskENTER_CRITICAL ()/taskEXIT_CRITICAL () as the length of the
- *       // operation may cause interrupts to be missed - including the
- *       // ticks.
+ *       // 在某一时刻，任务希望执行一个耗时较长的操作，
+ *       // 在此期间不希望被换出。它不能使用
+ *       // taskENTER_CRITICAL()/taskEXIT_CRITICAL()，因为该操作
+ *       // 的持续时间可能导致中断被错过——包括节拍中断。
  *
- *       // Prevent the real time kernel swapping out the task.
+ *       // 防止实时内核将任务换出。
  *       vTaskSuspendAll ();
  *
- *       // Perform the operation here.  There is no need to use critical
- *       // sections as we have all the microcontroller processing time.
- *       // During this time interrupts will still operate and the kernel
- *       // tick count will be maintained.
+ *       // 在此执行操作。无需使用临界区，因为我们拥有
+ *       // 全部微控制器处理时间。在此期间中断仍会正常工作，
+ *       // 内核节拍计数也会继续维护。
  *
  *       // ...
  *
- *       // The operation is complete.  Restart the kernel.
+ *       // 操作完成。重新启动内核。
  *       xTaskResumeAll ();
  *   }
  * }
@@ -1713,44 +1620,41 @@ void vTaskSuspendAll( void ) PRIVILEGED_FUNCTION;
  * BaseType_t xTaskResumeAll( void );
  * @endcode
  *
- * Resumes scheduler activity after it was suspended by a call to
- * vTaskSuspendAll().
+ * 在调用 vTaskSuspendAll() 挂起调度器后，恢复调度器活动。
  *
- * xTaskResumeAll() only resumes the scheduler.  It does not unsuspend tasks
- * that were previously suspended by a call to vTaskSuspend().
+ * xTaskResumeAll() 仅恢复调度器。它不会恢复先前因调用 vTaskSuspend()
+ * 而挂起的任务。
  *
- * @return If resuming the scheduler caused a context switch then pdTRUE is
- *         returned, otherwise pdFALSE is returned.
+ * @return 若恢复调度器导致了上下文切换，则返回 pdTRUE，
+ *         否则返回 pdFALSE。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
  * void vTask1( void * pvParameters )
  * {
  *   for( ;; )
  *   {
- *       // Task code goes here.
+ *       // 任务代码写在这里。
  *
  *       // ...
  *
- *       // At some point the task wants to perform a long operation during
- *       // which it does not want to get swapped out.  It cannot use
- *       // taskENTER_CRITICAL ()/taskEXIT_CRITICAL () as the length of the
- *       // operation may cause interrupts to be missed - including the
- *       // ticks.
+ *       // 在某一时刻，任务希望执行一个耗时较长的操作，
+ *       // 在此期间不希望被换出。它不能使用
+ *       // taskENTER_CRITICAL()/taskEXIT_CRITICAL()，因为该操作
+ *       // 的持续时间可能导致中断被错过——包括节拍中断。
  *
- *       // Prevent the real time kernel swapping out the task.
+ *       // 防止实时内核将任务换出。
  *       vTaskSuspendAll ();
  *
- *       // Perform the operation here.  There is no need to use critical
- *       // sections as we have all the microcontroller processing time.
- *       // During this time interrupts will still operate and the real
- *       // time kernel tick count will be maintained.
+ *       // 在此执行操作。无需使用临界区，因为我们拥有
+ *       // 全部微控制器处理时间。在此期间中断仍会正常工作，
+ *       // 实时内核节拍计数也会继续维护。
  *
  *       // ...
  *
- *       // The operation is complete.  Restart the kernel.  We want to force
- *       // a context switch - but there is no point if resuming the scheduler
- *       // caused a context switch already.
+ *       // 操作完成。重新启动内核。我们希望强制进行
+ *       // 上下文切换——但如果恢复调度器已经导致上下文切换，
+ *       // 就没有必要再强制切换。
  *       if( !xTaskResumeAll () )
  *       {
  *            taskYIELD ();
@@ -1763,9 +1667,11 @@ void vTaskSuspendAll( void ) PRIVILEGED_FUNCTION;
  */
 BaseType_t xTaskResumeAll( void ) PRIVILEGED_FUNCTION;
 
-/*-----------------------------------------------------------
-* TASK UTILITIES
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 任务工具
+ * ----------------------------------------------------------
+ */
 
 /**
  * task. h
@@ -1773,7 +1679,7 @@ BaseType_t xTaskResumeAll( void ) PRIVILEGED_FUNCTION;
  * TickType_t xTaskGetTickCount( void );
  * @endcode
  *
- * @return The count of ticks since vTaskStartScheduler was called.
+ * @return 自调用 vTaskStartScheduler 以来的节拍计数。
  *
  * \defgroup xTaskGetTickCount xTaskGetTickCount
  * \ingroup TaskUtils
@@ -1786,12 +1692,11 @@ TickType_t xTaskGetTickCount( void ) PRIVILEGED_FUNCTION;
  * TickType_t xTaskGetTickCountFromISR( void );
  * @endcode
  *
- * @return The count of ticks since vTaskStartScheduler was called.
+ * @return 自调用 vTaskStartScheduler 以来的节拍计数。
  *
- * This is a version of xTaskGetTickCount() that is safe to be called from an
- * ISR - provided that TickType_t is the natural word size of the
- * microcontroller being used or interrupt nesting is either not supported or
- * not being used.
+ * 这是 xTaskGetTickCount() 的一个版本，可以安全地从 ISR 中调用——
+ * 前提是 TickType_t 为所用微控制器的自然字长，或者不支持中断嵌套，
+ * 或者未使用中断嵌套。
  *
  * \defgroup xTaskGetTickCountFromISR xTaskGetTickCountFromISR
  * \ingroup TaskUtils
@@ -1804,10 +1709,9 @@ TickType_t xTaskGetTickCountFromISR( void ) PRIVILEGED_FUNCTION;
  * uint16_t uxTaskGetNumberOfTasks( void );
  * @endcode
  *
- * @return The number of tasks that the real time kernel is currently managing.
- * This includes all ready, blocked and suspended tasks.  A task that
- * has been deleted but not yet freed by the idle task will also be
- * included in the count.
+ * @return 实时内核当前管理的任务数量。
+ * 这包括所有就绪、阻塞和挂起的任务。已被删除但尚未由空闲任务
+ * 释放的任务也会计入该数量。
  *
  * \defgroup uxTaskGetNumberOfTasks uxTaskGetNumberOfTasks
  * \ingroup TaskUtils
@@ -1820,9 +1724,9 @@ UBaseType_t uxTaskGetNumberOfTasks( void ) PRIVILEGED_FUNCTION;
  * char *pcTaskGetName( TaskHandle_t xTaskToQuery );
  * @endcode
  *
- * @return The text (human readable) name of the task referenced by the handle
- * xTaskToQuery.  A task can query its own name by either passing in its own
- * handle, or by setting xTaskToQuery to NULL.
+ * @return 句柄 xTaskToQuery 所引用任务的文本（人类可读）名称。
+ * 任务可以通过传入自身句柄，或将 xTaskToQuery 设置为 NULL，
+ * 来查询自己的名称。
  *
  * \defgroup pcTaskGetName pcTaskGetName
  * \ingroup TaskUtils
@@ -1835,12 +1739,11 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * TaskHandle_t xTaskGetHandle( const char *pcNameToQuery );
  * @endcode
  *
- * NOTE:  This function takes a relatively long time to complete and should be
- * used sparingly.
+ * 注意：此函数执行时间相对较长，应尽量少用。
  *
- * @return The handle of the task that has the human readable name pcNameToQuery.
- * NULL is returned if no matching name is found.  INCLUDE_xTaskGetHandle
- * must be set to 1 in FreeRTOSConfig.h for pcTaskGetHandle() to be available.
+ * @return 具有人类可读名称 pcNameToQuery 的任务句柄。
+ * 若未找到匹配名称，则返回 NULL。要使 pcTaskGetHandle() 可用，
+ * 必须在 FreeRTOSConfig.h 中将 INCLUDE_xTaskGetHandle 设置为 1。
  *
  * \defgroup pcTaskGetHandle pcTaskGetHandle
  * \ingroup TaskUtils
@@ -1857,18 +1760,16 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  *                                   StaticTask_t ** ppxTaskBuffer );
  * @endcode
  *
- * Retrieve pointers to a statically created task's data structure
- * buffer and stack buffer. These are the same buffers that are supplied
- * at the time of creation.
+ * 获取指向静态创建任务的数据结构缓冲区和栈缓冲区的指针。
+ * 这些缓冲区与创建任务时提供的缓冲区相同。
  *
- * @param xTask The task for which to retrieve the buffers.
+ * @param xTask 要获取缓冲区的任务。
  *
- * @param ppuxStackBuffer Used to return a pointer to the task's stack buffer.
+ * @param ppuxStackBuffer 用于返回指向任务栈缓冲区的指针。
  *
- * @param ppxTaskBuffer Used to return a pointer to the task's data structure
- * buffer.
+ * @param ppxTaskBuffer 用于返回指向任务数据结构缓冲区的指针。
  *
- * @return pdTRUE if buffers were retrieved, pdFALSE otherwise.
+ * @return 若成功获取缓冲区，返回 pdTRUE；否则返回 pdFALSE。
  *
  * \defgroup xTaskGetStaticBuffers xTaskGetStaticBuffers
  * \ingroup TaskUtils
@@ -1877,7 +1778,7 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
     BaseType_t xTaskGetStaticBuffers( TaskHandle_t xTask,
                                       StackType_t ** ppuxStackBuffer,
                                       StaticTask_t ** ppxTaskBuffer ) PRIVILEGED_FUNCTION;
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION（静态分配支持） */
 
 /**
  * task.h
@@ -1885,26 +1786,23 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * UBaseType_t uxTaskGetStackHighWaterMark( TaskHandle_t xTask );
  * @endcode
  *
- * INCLUDE_uxTaskGetStackHighWaterMark must be set to 1 in FreeRTOSConfig.h for
- * this function to be available.
+ * 要使此函数可用，必须在 FreeRTOSConfig.h 中将
+ * INCLUDE_uxTaskGetStackHighWaterMark 设置为 1。
  *
- * Returns the high water mark of the stack associated with xTask.  That is,
- * the minimum free stack space there has been (in words, so on a 32 bit machine
- * a value of 1 means 4 bytes) since the task started.  The smaller the returned
- * number the closer the task has come to overflowing its stack.
+ * 返回与 xTask 关联的栈的高水位线。即任务启动以来
+ * 曾出现过的最小空闲栈空间（以字为单位，因此在 32 位机器上
+ * 值为 1 表示 4 字节）。返回值越小，说明任务越接近栈溢出。
  *
- * uxTaskGetStackHighWaterMark() and uxTaskGetStackHighWaterMark2() are the
- * same except for their return type.  Using configSTACK_DEPTH_TYPE allows the
- * user to determine the return type.  It gets around the problem of the value
- * overflowing on 8-bit types without breaking backward compatibility for
- * applications that expect an 8-bit return type.
+ * uxTaskGetStackHighWaterMark() 与 uxTaskGetStackHighWaterMark2() 除返回类型外
+ * 完全相同。使用 configSTACK_DEPTH_TYPE 可以让用户决定返回类型。
+ * 这样既解决了 8 位类型上的数值溢出问题，又不会破坏
+ * 期望 8 位返回类型的应用程序的向后兼容性。
  *
- * @param xTask Handle of the task associated with the stack to be checked.
- * Set xTask to NULL to check the stack of the calling task.
+ * @param xTask 要检查栈的任务句柄。
+ * 将 xTask 设置为 NULL 可检查调用任务的栈。
  *
- * @return The smallest amount of free stack space there has been (in words, so
- * actual spaces on the stack rather than bytes) since the task referenced by
- * xTask was created.
+ * @return 自 xTask 引用的任务创建以来，曾出现过的最小空闲栈空间
+ * （以字为单位，即栈上的实际空间而非字节数）。
  */
 #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
     UBaseType_t uxTaskGetStackHighWaterMark( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
@@ -1916,37 +1814,35 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * configSTACK_DEPTH_TYPE uxTaskGetStackHighWaterMark2( TaskHandle_t xTask );
  * @endcode
  *
- * INCLUDE_uxTaskGetStackHighWaterMark2 must be set to 1 in FreeRTOSConfig.h for
- * this function to be available.
+ * 要使此函数可用，必须在 FreeRTOSConfig.h 中将
+ * INCLUDE_uxTaskGetStackHighWaterMark2 设置为 1。
  *
- * Returns the high water mark of the stack associated with xTask.  That is,
- * the minimum free stack space there has been (in words, so on a 32 bit machine
- * a value of 1 means 4 bytes) since the task started.  The smaller the returned
- * number the closer the task has come to overflowing its stack.
+ * 返回与 xTask 关联的栈的高水位线。即任务启动以来
+ * 曾出现过的最小空闲栈空间（以字为单位，因此在 32 位机器上
+ * 值为 1 表示 4 字节）。返回值越小，说明任务越接近栈溢出。
  *
- * uxTaskGetStackHighWaterMark() and uxTaskGetStackHighWaterMark2() are the
- * same except for their return type.  Using configSTACK_DEPTH_TYPE allows the
- * user to determine the return type.  It gets around the problem of the value
- * overflowing on 8-bit types without breaking backward compatibility for
- * applications that expect an 8-bit return type.
+ * uxTaskGetStackHighWaterMark() 与 uxTaskGetStackHighWaterMark2() 除返回类型外
+ * 完全相同。使用 configSTACK_DEPTH_TYPE 可以让用户决定返回类型。
+ * 这样既解决了 8 位类型上的数值溢出问题，又不会破坏
+ * 期望 8 位返回类型的应用程序的向后兼容性。
  *
- * @param xTask Handle of the task associated with the stack to be checked.
- * Set xTask to NULL to check the stack of the calling task.
+ * @param xTask 要检查栈的任务句柄。
+ * 将 xTask 设置为 NULL 可检查调用任务的栈。
  *
- * @return The smallest amount of free stack space there has been (in words, so
- * actual spaces on the stack rather than bytes) since the task referenced by
- * xTask was created.
+ * @return 自 xTask 引用的任务创建以来，曾出现过的最小空闲栈空间
+ * （以字为单位，即栈上的实际空间而非字节数）。
  */
 #if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 )
     configSTACK_DEPTH_TYPE uxTaskGetStackHighWaterMark2( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 #endif
 
-/* When using trace macros it is sometimes necessary to include task.h before
- * FreeRTOS.h.  When this is done TaskHookFunction_t will not yet have been defined,
- * so the following two prototypes will cause a compilation error.  This can be
- * fixed by simply guarding against the inclusion of these two prototypes unless
- * they are explicitly required by the configUSE_APPLICATION_TASK_TAG configuration
- * constant. */
+/*
+ * 使用跟踪宏时，有时需要在 FreeRTOS.h 之前包含 task.h。
+ * 此时 TaskHookFunction_t 尚未定义，
+ * 因此下面两个原型会导致编译错误。解决方法很简单：
+ * 除非 configUSE_APPLICATION_TASK_TAG 配置常量明确要求
+ * 这两个原型，否则对它们的包含加以保护。
+ */
 #ifdef configUSE_APPLICATION_TASK_TAG
     #if configUSE_APPLICATION_TASK_TAG == 1
 
@@ -1956,9 +1852,8 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vTaskSetApplicationTaskTag( TaskHandle_t xTask, TaskHookFunction_t pxHookFunction );
  * @endcode
  *
- * Sets pxHookFunction to be the task hook function used by the task xTask.
- * Passing xTask as NULL has the effect of setting the calling tasks hook
- * function.
+ * 将 pxHookFunction 设置为任务 xTask 使用的任务钩子函数。
+ * xTask 传入 NULL 时，效果是设置调用任务的钩子函数。
  */
         void vTaskSetApplicationTaskTag( TaskHandle_t xTask,
                                          TaskHookFunction_t pxHookFunction ) PRIVILEGED_FUNCTION;
@@ -1969,9 +1864,9 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void xTaskGetApplicationTaskTag( TaskHandle_t xTask );
  * @endcode
  *
- * Returns the pxHookFunction value assigned to the task xTask.  Do not
- * call from an interrupt service routine - call
- * xTaskGetApplicationTaskTagFromISR() instead.
+ * 返回分配给任务 xTask 的 pxHookFunction 值。
+ * 不要在中断服务程序中调用——请改为调用
+ * xTaskGetApplicationTaskTagFromISR()。
  */
         TaskHookFunction_t xTaskGetApplicationTaskTag( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
@@ -1981,20 +1876,21 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void xTaskGetApplicationTaskTagFromISR( TaskHandle_t xTask );
  * @endcode
  *
- * Returns the pxHookFunction value assigned to the task xTask.  Can
- * be called from an interrupt service routine.
+ * 返回分配给任务 xTask 的 pxHookFunction 值。
+ * 可从中断服务程序中调用。
  */
         TaskHookFunction_t xTaskGetApplicationTaskTagFromISR( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
-    #endif /* configUSE_APPLICATION_TASK_TAG ==1 */
-#endif /* ifdef configUSE_APPLICATION_TASK_TAG */
+    #endif /* configUSE_APPLICATION_TASK_TAG ==1（应用任务标签功能使能条件） */
+#endif /* ifdef configUSE_APPLICATION_TASK_TAG（应用任务标签条件编译） */
 
 #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS > 0 )
 
-/* Each task contains an array of pointers that is dimensioned by the
- * configNUM_THREAD_LOCAL_STORAGE_POINTERS setting in FreeRTOSConfig.h.  The
- * kernel does not use the pointers itself, so the application writer can use
- * the pointers for any purpose they wish.  The following two functions are
- * used to set and query a pointer respectively. */
+/*
+ * 每个任务包含一个指针数组，其大小由 FreeRTOSConfig.h 中的
+ * configNUM_THREAD_LOCAL_STORAGE_POINTERS 设置决定。
+ * 内核自身不使用这些指针，因此应用程序编写者可以将其用于任何目的。
+ * 下面两个函数分别用于设置和查询指针。
+ */
     void vTaskSetThreadLocalStoragePointer( TaskHandle_t xTaskToSet,
                                             BaseType_t xIndex,
                                             void * pvValue ) PRIVILEGED_FUNCTION;
@@ -2011,16 +1907,16 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName);
  * @endcode
  *
- * The application stack overflow hook is called when a stack overflow is detected for a task.
+ * 当检测到任务发生栈溢出时，会调用应用程序栈溢出钩子函数。
  *
- * Details on stack overflow detection can be found here: https://www.FreeRTOS.org/Stacks-and-stack-overflow-checking.html
+ * 有关栈溢出检测的详细信息，请参见：https://www.FreeRTOS.org/Stacks-and-stack-overflow-checking.html
  *
- * @param xTask the task that just exceeded its stack boundaries.
- * @param pcTaskName A character string containing the name of the offending task.
+ * @param xTask 刚刚超出其栈边界的任务。
+ * @param pcTaskName 包含违规任务名称的字符串。
  */
-    /* MISRA Ref 8.6.1 [External linkage] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-86 */
-    /* coverity[misra_c_2012_rule_8_6_violation] */
+    /* MISRA 参考 8.6.1 [外部链接] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-86 */
+    /* coverity[misra_c_2012_rule_8_6_violation] —— MISRA C:2012 规则 8.6 违规抑制 */
     void vApplicationStackOverflowHook( TaskHandle_t xTask,
                                         char * pcTaskName );
 
@@ -2034,14 +1930,13 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vApplicationIdleHook( void );
  * @endcode
  *
- * The application idle hook is called by the idle task.
- * This allows the application designer to add background functionality without
- * the overhead of a separate task.
- * NOTE: vApplicationIdleHook() MUST NOT, UNDER ANY CIRCUMSTANCES, CALL A FUNCTION THAT MIGHT BLOCK.
+ * 应用程序空闲钩子由空闲任务调用。
+ * 这使应用设计者能够在无需额外任务开销的情况下添加后台功能。
+ * 注意：vApplicationIdleHook() 在任何情况下都不得调用可能阻塞的函数。
  */
-    /* MISRA Ref 8.6.1 [External linkage] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-86 */
-    /* coverity[misra_c_2012_rule_8_6_violation] */
+    /* MISRA 参考 8.6.1 [外部链接] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-86 */
+    /* coverity[misra_c_2012_rule_8_6_violation] —— MISRA C:2012 规则 8.6 违规抑制 */
     void vApplicationIdleHook( void );
 
 #endif
@@ -2050,16 +1945,16 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
 #if  ( configUSE_TICK_HOOK != 0 )
 
 /**
- *  task.h
+ * task.h
  * @code{c}
  * void vApplicationTickHook( void );
  * @endcode
  *
- * This hook function is called in the system tick handler after any OS work is completed.
+ * 此钩子函数在系统节拍处理程序中、所有操作系统工作完成后被调用。
  */
-    /* MISRA Ref 8.6.1 [External linkage] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-86 */
-    /* coverity[misra_c_2012_rule_8_6_violation] */
+    /* MISRA 参考 8.6.1 [外部链接] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-86 */
+    /* coverity[misra_c_2012_rule_8_6_violation] —— MISRA C:2012 规则 8.6 违规抑制 */
     void vApplicationTickHook( void );
 
 #endif
@@ -2072,12 +1967,13 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer, StackType_t ** ppxIdleTaskStackBuffer, configSTACK_DEPTH_TYPE * puxIdleTaskStackSize )
  * @endcode
  *
- * This function is used to provide a statically allocated block of memory to FreeRTOS to hold the Idle Task TCB.  This function is required when
- * configSUPPORT_STATIC_ALLOCATION is set.  For more information see this URI: https://www.FreeRTOS.org/a00110.html#configSUPPORT_STATIC_ALLOCATION
+ * 此函数用于向 FreeRTOS 提供一块静态分配的内存，以保存空闲任务的 TCB。
+ * 当 configSUPPORT_STATIC_ALLOCATION 设置时需要使用此函数。
+ * 更多信息请参见：https://www.FreeRTOS.org/a00110.html#configSUPPORT_STATIC_ALLOCATION
  *
- * @param ppxIdleTaskTCBBuffer A handle to a statically allocated TCB buffer
- * @param ppxIdleTaskStackBuffer A handle to a statically allocated Stack buffer for the idle task
- * @param puxIdleTaskStackSize A pointer to the number of elements that will fit in the allocated stack buffer
+ * @param ppxIdleTaskTCBBuffer 指向静态分配的 TCB 缓冲区的句柄
+ * @param ppxIdleTaskStackBuffer 指向空闲任务静态分配栈缓冲区的句柄
+ * @param puxIdleTaskStackSize 指向所分配栈缓冲区可容纳元素数量的指针
  */
     void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
                                         StackType_t ** ppxIdleTaskStackBuffer,
@@ -2089,31 +1985,30 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vApplicationGetPassiveIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer, StackType_t ** ppxIdleTaskStackBuffer, configSTACK_DEPTH_TYPE * puxIdleTaskStackSize, BaseType_t xCoreID )
  * @endcode
  *
- * This function is used to provide a statically allocated block of memory to FreeRTOS to hold the Idle Tasks TCB.  This function is required when
- * configSUPPORT_STATIC_ALLOCATION is set.  For more information see this URI: https://www.FreeRTOS.org/a00110.html#configSUPPORT_STATIC_ALLOCATION
+ * 此函数用于向 FreeRTOS 提供一块静态分配的内存，以保存空闲任务的 TCB。
+ * 当 configSUPPORT_STATIC_ALLOCATION 设置时需要使用此函数。
+ * 更多信息请参见：https://www.FreeRTOS.org/a00110.html#configSUPPORT_STATIC_ALLOCATION
  *
- * In the FreeRTOS SMP, there are a total of configNUMBER_OF_CORES idle tasks:
- *  1. 1 Active idle task which does all the housekeeping.
- *  2. ( configNUMBER_OF_CORES - 1 ) Passive idle tasks which do nothing.
- * These idle tasks are created to ensure that each core has an idle task to run when
- * no other task is available to run.
+ * 在 FreeRTOS SMP 中，总共有 configNUMBER_OF_CORES 个空闲任务：
+ *  1. 1 个活动空闲任务，负责所有日常维护工作。
+ *  2. ( configNUMBER_OF_CORES - 1 ) 个被动空闲任务，不执行任何操作。
+ * 创建这些空闲任务，是为了确保每个核心在没有其他任务可运行时都有空闲任务可运行。
  *
- * The function vApplicationGetPassiveIdleTaskMemory is called with passive idle
- * task index 0, 1 ... ( configNUMBER_OF_CORES - 2 ) to get memory for passive idle
- * tasks.
+ * 调用 vApplicationGetPassiveIdleTaskMemory 时，传入的被动空闲任务索引依次为
+ * 0、1 ... ( configNUMBER_OF_CORES - 2 )，以获取各被动空闲任务的内存。
  *
- * @param ppxIdleTaskTCBBuffer A handle to a statically allocated TCB buffer
- * @param ppxIdleTaskStackBuffer A handle to a statically allocated Stack buffer for the idle task
- * @param puxIdleTaskStackSize A pointer to the number of elements that will fit in the allocated stack buffer
- * @param xPassiveIdleTaskIndex The passive idle task index of the idle task buffer
+ * @param ppxIdleTaskTCBBuffer 指向静态分配的 TCB 缓冲区的句柄
+ * @param ppxIdleTaskStackBuffer 指向空闲任务静态分配栈缓冲区的句柄
+ * @param puxIdleTaskStackSize 指向所分配栈缓冲区可容纳元素数量的指针
+ * @param xPassiveIdleTaskIndex 空闲任务缓冲区对应的被动空闲任务索引
  */
     #if ( configNUMBER_OF_CORES > 1 )
         void vApplicationGetPassiveIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
                                                    StackType_t ** ppxIdleTaskStackBuffer,
                                                    configSTACK_DEPTH_TYPE * puxIdleTaskStackSize,
                                                    BaseType_t xPassiveIdleTaskIndex );
-    #endif /* #if ( configNUMBER_OF_CORES > 1 ) */
-#endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
+    #endif /* #if ( configNUMBER_OF_CORES > 1 )（多核条件） */
+#endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 )（静态分配支持条件） */
 
 /**
  * task.h
@@ -2121,12 +2016,11 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * BaseType_t xTaskCallApplicationTaskHook( TaskHandle_t xTask, void *pvParameter );
  * @endcode
  *
- * Calls the hook function associated with xTask.  Passing xTask as NULL has
- * the effect of calling the Running tasks (the calling task) hook function.
+ * 调用与 xTask 关联的钩子函数。xTask 传入 NULL 时，
+ * 效果是调用运行任务（即调用任务）的钩子函数。
  *
- * pvParameter is passed to the hook function for the task to interpret as it
- * wants.  The return value is the value returned by the task hook function
- * registered by the user.
+ * pvParameter 会传给钩子函数，由任务自行解释。
+ * 返回值是用户注册的任务钩子函数所返回的值。
  */
 #if ( configUSE_APPLICATION_TASK_TAG == 1 )
     BaseType_t xTaskCallApplicationTaskHook( TaskHandle_t xTask,
@@ -2134,104 +2028,97 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
 #endif
 
 /**
- * xTaskGetIdleTaskHandle() is only available if
- * INCLUDE_xTaskGetIdleTaskHandle is set to 1 in FreeRTOSConfig.h.
+ * xTaskGetIdleTaskHandle() 仅在 FreeRTOSConfig.h 中
+ * INCLUDE_xTaskGetIdleTaskHandle 设置为 1 时可用。
  *
- * In single-core FreeRTOS, this function simply returns the handle of the idle
- * task. It is not valid to call xTaskGetIdleTaskHandle() before the scheduler
- * has been started.
+ * 在单核 FreeRTOS 中，此函数仅返回空闲任务的句柄。
+ * 在调度器启动之前调用 xTaskGetIdleTaskHandle() 是无效的。
  *
- * In the FreeRTOS SMP, there are a total of configNUMBER_OF_CORES idle tasks:
- *  1. 1 Active idle task which does all the housekeeping.
- *  2. ( configNUMBER_OF_CORES - 1 ) Passive idle tasks which do nothing.
- * These idle tasks are created to ensure that each core has an idle task to run when
- * no other task is available to run. Call xTaskGetIdleTaskHandle() or
- * xTaskGetIdleTaskHandleForCore() with xCoreID set to 0  to get the Active
- * idle task handle. Call xTaskGetIdleTaskHandleForCore() with xCoreID set to
- * 1,2 ... ( configNUMBER_OF_CORES - 1 ) to get the Passive idle task handles.
+ * 在 FreeRTOS SMP 中，总共有 configNUMBER_OF_CORES 个空闲任务：
+ *  1. 1 个活动空闲任务，负责所有日常维护工作。
+ *  2. ( configNUMBER_OF_CORES - 1 ) 个被动空闲任务，不执行任何操作。
+ * 创建这些空闲任务，是为了确保每个核心在没有其他任务可运行时都有空闲任务可运行。
+ * 调用 xTaskGetIdleTaskHandle() 或 xTaskGetIdleTaskHandleForCore()，并将 xCoreID
+ * 设置为 0，可获取活动空闲任务的句柄。调用 xTaskGetIdleTaskHandleForCore()，
+ * 并将 xCoreID 设置为 1、2 ... ( configNUMBER_OF_CORES - 1 )，
+ * 可获取各被动空闲任务的句柄。
  */
 #if ( INCLUDE_xTaskGetIdleTaskHandle == 1 )
     #if ( configNUMBER_OF_CORES == 1 )
         TaskHandle_t xTaskGetIdleTaskHandle( void ) PRIVILEGED_FUNCTION;
-    #endif /* #if ( configNUMBER_OF_CORES == 1 ) */
+    #endif /* #if ( configNUMBER_OF_CORES == 1 )（单核条件） */
 
     TaskHandle_t xTaskGetIdleTaskHandleForCore( BaseType_t xCoreID ) PRIVILEGED_FUNCTION;
-#endif /* #if ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) */
+#endif /* #if ( INCLUDE_xTaskGetIdleTaskHandle == 1 )（空闲任务句柄功能使能条件） */
 
 /**
- * configUSE_TRACE_FACILITY must be defined as 1 in FreeRTOSConfig.h for
- * uxTaskGetSystemState() to be available.
+ * 要使 uxTaskGetSystemState() 可用，必须在 FreeRTOSConfig.h 中
+ * 将 configUSE_TRACE_FACILITY 定义为 1。
  *
- * uxTaskGetSystemState() populates a TaskStatus_t structure for each task in
- * the system.  TaskStatus_t structures contain, among other things, members
- * for the task handle, task name, task priority, task state, and total amount
- * of run time consumed by the task.  See the TaskStatus_t structure
- * definition in this file for the full member list.
+ * uxTaskGetSystemState() 为系统中的每个任务填充一个 TaskStatus_t 结构体。
+ * TaskStatus_t 结构体包含任务句柄、任务名称、任务优先级、任务状态以及
+ * 任务消耗的总运行时间等成员。完整成员列表请参见本文件中的
+ * TaskStatus_t 结构体定义。
  *
- * NOTE:  This function is intended for debugging use only as its use results in
- * the scheduler remaining suspended for an extended period.
+ * 注意：此函数仅供调试使用，因为使用它会使调度器长时间保持挂起。
  *
- * @param pxTaskStatusArray A pointer to an array of TaskStatus_t structures.
- * The array must contain at least one TaskStatus_t structure for each task
- * that is under the control of the RTOS.  The number of tasks under the control
- * of the RTOS can be determined using the uxTaskGetNumberOfTasks() API function.
+ * @param pxTaskStatusArray 指向 TaskStatus_t 结构体数组的指针。
+ * 对于受 RTOS 控制的每个任务，该数组必须至少包含一个 TaskStatus_t 结构体。
+ * 受 RTOS 控制的任务数量可通过 uxTaskGetNumberOfTasks() API 函数确定。
  *
- * @param uxArraySize The size of the array pointed to by the pxTaskStatusArray
- * parameter.  The size is specified as the number of indexes in the array, or
- * the number of TaskStatus_t structures contained in the array, not by the
- * number of bytes in the array.
+ * @param uxArraySize pxTaskStatusArray 参数所指向数组的大小。该大小以
+ * 数组中的索引个数或数组包含的 TaskStatus_t 结构体个数表示，
+ * 而不是数组的字节数。
  *
- * @param pulTotalRunTime If configGENERATE_RUN_TIME_STATS is set to 1 in
- * FreeRTOSConfig.h then *pulTotalRunTime is set by uxTaskGetSystemState() to the
- * total run time (as defined by the run time stats clock, see
- * https://www.FreeRTOS.org/rtos-run-time-stats.html) since the target booted.
- * pulTotalRunTime can be set to NULL to omit the total run time information.
+ * @param pulTotalRunTime 若 FreeRTOSConfig.h 中 configGENERATE_RUN_TIME_STATS
+ * 设置为 1，则 uxTaskGetSystemState() 会将 *pulTotalRunTime 设置为目标启动以来
+ * 的总运行时间（按运行时统计时钟定义，参见
+ * https://www.FreeRTOS.org/rtos-run-time-stats.html）。
+ * pulTotalRunTime 可设置为 NULL，以省略总运行时间信息。
  *
- * @return The number of TaskStatus_t structures that were populated by
- * uxTaskGetSystemState().  This should equal the number returned by the
- * uxTaskGetNumberOfTasks() API function, but will be zero if the value passed
- * in the uxArraySize parameter was too small.
+ * @return uxTaskGetSystemState() 填充的 TaskStatus_t 结构体数量。
+ * 该值应等于 uxTaskGetNumberOfTasks() API 函数返回的数量；
+ * 但如果 uxArraySize 参数传入的值过小，则返回值为零。
  *
- * Example usage:
+ * 用法示例：
  * @code{c}
- *  // This example demonstrates how a human readable table of run time stats
- *  // information is generated from raw data provided by uxTaskGetSystemState().
- *  // The human readable table is written to pcWriteBuffer
+ *  // 此示例演示如何根据 uxTaskGetSystemState() 提供的原始数据
+ *  // 生成人类可读的运行时间统计表。
+ *  // 人类可读的表格写入 pcWriteBuffer。
  *  void vTaskGetRunTimeStats( char *pcWriteBuffer )
  *  {
  *  TaskStatus_t *pxTaskStatusArray;
  *  volatile UBaseType_t uxArraySize, x;
  *  configRUN_TIME_COUNTER_TYPE ulTotalRunTime, ulStatsAsPercentage;
  *
- *      // Make sure the write buffer does not contain a string.
+ *      // 确保写入缓冲区中不包含字符串。
  * pcWriteBuffer = 0x00;
  *
- *      // Take a snapshot of the number of tasks in case it changes while this
- *      // function is executing.
+ *      // 对任务数量进行快照，以防此函数执行期间任务数量发生变化。
  *      uxArraySize = uxTaskGetNumberOfTasks();
  *
- *      // Allocate a TaskStatus_t structure for each task.  An array could be
- *      // allocated statically at compile time.
+ *      // 为每个任务分配一个 TaskStatus_t 结构体。也可以在编译时
+ *      // 静态分配一个数组。
  *      pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
  *
  *      if( pxTaskStatusArray != NULL )
  *      {
- *          // Generate raw status information about each task.
+ *          // 生成每个任务的原始状态信息。
  *          uxArraySize = uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, &ulTotalRunTime );
  *
- *          // For percentage calculations.
+ *          // 用于百分比计算。
  *          ulTotalRunTime /= 100U;
  *
- *          // Avoid divide by zero errors.
+ *          // 避免除零错误。
  *          if( ulTotalRunTime > 0 )
  *          {
- *              // For each populated position in the pxTaskStatusArray array,
- *              // format the raw data as human readable ASCII data
+ *              // 对 pxTaskStatusArray 数组中每个已填充的位置，
+ *              // 将原始数据格式化为人类可读的 ASCII 数据。
  *              for( x = 0; x < uxArraySize; x++ )
  *              {
- *                  // What percentage of the total run time has the task used?
- *                  // This will always be rounded down to the nearest integer.
- *                  // ulTotalRunTimeDiv100 has already been divided by 100.
+ *                  // 该任务消耗了总运行时间的百分之多少？
+ *                  // 结果始终向下取整到最接近的整数。
+ *                  // ulTotalRunTimeDiv100 已经除以 100。
  *                  ulStatsAsPercentage = pxTaskStatusArray[ x ].ulRunTimeCounter / ulTotalRunTime;
  *
  *                  if( ulStatsAsPercentage > 0U )
@@ -2240,8 +2127,8 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  *                  }
  *                  else
  *                  {
- *                      // If the percentage is zero here then the task has
- *                      // consumed less than 1% of the total run time.
+ *                      // 若此处百分比为零，说明该任务消耗的总运行时间
+ *                      // 不足 1%。
  *                      sprintf( pcWriteBuffer, "%s\t\t%lu\t\t<1%%\r\n", pxTaskStatusArray[ x ].pcTaskName, pxTaskStatusArray[ x ].ulRunTimeCounter );
  *                  }
  *
@@ -2249,7 +2136,7 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  *              }
  *          }
  *
- *          // The array is no longer needed, free the memory it consumes.
+ *          // 不再需要该数组，释放其占用的内存。
  *          vPortFree( pxTaskStatusArray );
  *      }
  *  }
@@ -2262,35 +2149,29 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
 
 
 /**
- * For each task, call pxCallbackFunction with the task's handle and state,
- * and the provided context.
+ * 对每个任务，以任务句柄、状态以及提供的上下文调用 pxCallbackFunction。
  *
- * NOTE: This function is intended for debugging use only as it suspends
- * the scheduler for an extended period. The callback runs while the
- * scheduler is suspended, so it must return quickly and must not perform
- * blocking operations.
+ * 注意：此函数仅供调试使用，因为它会使调度器长时间保持挂起。
+ * 回调在调度器挂起期间运行，因此必须快速返回，且不得执行阻塞操作。
  *
- * NOTE: This API is privileged-only (it invokes a user callback from
- * privileged context).
+ * 注意：此 API 仅限特权态使用（它会从特权上下文调用用户回调）。
  *
- * @param pxCallbackFunction Callback to invoke once for each task (passing
- * the task's handle, state, and the pvCallbackContext).
+ * @param pxCallbackFunction 对每个任务调用一次的回调（传入任务句柄、
+ * 状态和 pvCallbackContext）。
  *
- * @param pvCallbackContext Opaque caller-provided context passed through to
- * each callback invocation.
+ * @param pvCallbackContext 调用方提供的不透明上下文，原样传给每次回调调用。
  *
- * @param pulTotalRunTime If configGENERATE_RUN_TIME_STATS is set to 1 in
- * FreeRTOSConfig.h then *pulTotalRunTime is set to the total run time since
- * boot. pulTotalRunTime can be set to NULL to omit the total run time
- * information.
+ * @param pulTotalRunTime 若 FreeRTOSConfig.h 中 configGENERATE_RUN_TIME_STATS
+ * 设置为 1，则 *pulTotalRunTime 被设置为自启动以来的总运行时间。
+ * pulTotalRunTime 可设置为 NULL，以省略总运行时间信息。
  *
- * @return The number tasks provided to the callback.
+ * @return 提供给回调的任务数量。
  */
     UBaseType_t uxTaskCallForEachTask( TaskStatusCallbackFunction_t pxCallbackFunction,
                                        void * pvCallbackContext,
                                        configRUN_TIME_COUNTER_TYPE * const pulTotalRunTime ) PRIVILEGED_FUNCTION;
 
-#endif /* if ( configUSE_TRACE_FACILITY == 1 ) */
+#endif /* if ( configUSE_TRACE_FACILITY == 1 )（跟踪功能使能条件） */
 
 /**
  * task. h
@@ -2298,55 +2179,49 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vTaskListTasks( char *pcWriteBuffer, size_t uxBufferLength );
  * @endcode
  *
- * configUSE_TRACE_FACILITY and configUSE_STATS_FORMATTING_FUNCTIONS must
- * both be defined as 1 for this function to be available.  See the
- * configuration section of the FreeRTOS.org website for more information.
+ * 要使此函数可用，必须将 configUSE_TRACE_FACILITY 和
+ * configUSE_STATS_FORMATTING_FUNCTIONS 都定义为 1。更多信息请参见
+ * FreeRTOS.org 网站的配置章节。
  *
- * NOTE 1: This function will disable interrupts for its duration.  It is
- * not intended for normal application runtime use but as a debug aid.
+ * 注意 1：此函数在执行期间会禁止中断。它不用于正常的应用程序运行时，
+ * 而是一种调试辅助手段。
  *
- * Lists all the current tasks, along with their current state and stack
- * usage high water mark.
+ * 列出所有当前任务，以及它们当前的状态和栈使用高水位线。
  *
- * Tasks are reported as running ('X'), blocked ('B'), ready ('R'), deleted ('D')
- * or suspended ('S').
+ * 任务状态报告为运行（'X'）、阻塞（'B'）、就绪（'R'）、已删除（'D'）
+ * 或挂起（'S'）。
  *
- * PLEASE NOTE:
+ * 请注意：
  *
- * This function is provided for convenience only, and is used by many of the
- * demo applications.  Do not consider it to be part of the scheduler.
+ * 此函数仅为方便使用而提供，许多演示应用程序都在使用它。
+ * 不要将其视为调度器的一部分。
  *
- * vTaskListTasks() calls uxTaskGetSystemState(), then formats part of the
- * uxTaskGetSystemState() output into a human readable table that displays task
- * information in the following format:
- * Task Name, Task State, Task Priority, Task Stack High Watermak, Task Number.
+ * vTaskListTasks() 调用 uxTaskGetSystemState()，然后将 uxTaskGetSystemState()
+ * 的部分输出格式化为人类可读的表格，按以下格式显示任务信息：
+ * 任务名称、任务状态、任务优先级、任务栈高水位线、任务编号。
  *
- * The following is a sample output:
+ * 以下是一个输出示例：
  * Task A       X       2           67           2
  * Task B       R       1           67           3
  * IDLE         R       0           67           5
  * Tmr Svc      B       6           137          6
  *
- * Stack usage specified as the number of unused StackType_t words stack can hold
- * on top of stack - not the number of bytes.
+ * 栈使用量以栈顶还能容纳的未使用 StackType_t 字数表示，
+ * 而不是字节数。
  *
- * vTaskListTasks() has a dependency on the snprintf() C library function that might
- * bloat the code size, use a lot of stack, and provide different results on
- * different platforms.  An alternative, tiny, third party, and limited
- * functionality implementation of snprintf() is provided in many of the
- * FreeRTOS/Demo sub-directories in a file called printf-stdarg.c (note
- * printf-stdarg.c does not provide a full snprintf() implementation!).
+ * vTaskListTasks() 依赖 snprintf() C 库函数，这可能会增大代码体积、
+ * 占用大量栈空间，并在不同平台上产生不同结果。许多 FreeRTOS/Demo
+ * 子目录中提供了一个名为 printf-stdarg.c 的第三方替代实现，它小巧且
+ * 功能有限（注意：printf-stdarg.c 并未提供完整的 snprintf() 实现！）。
  *
- * It is recommended that production systems call uxTaskGetSystemState()
- * directly to get access to raw stats data, rather than indirectly through a
- * call to vTaskListTasks().
+ * 建议生产系统直接调用 uxTaskGetSystemState() 获取原始统计数据，
+ * 而不是通过调用 vTaskListTasks() 间接获取。
  *
- * @param pcWriteBuffer A buffer into which the above mentioned details
- * will be written, in ASCII form.  This buffer is assumed to be large
- * enough to contain the generated report.  Approximately 40 bytes per
- * task should be sufficient.
+ * @param pcWriteBuffer 用于以 ASCII 形式写入上述详细信息的缓冲区。
+ * 假定该缓冲区足够大，能够容纳生成的报告。每个任务约 40 字节
+ * 应该足够。
  *
- * @param uxBufferLength Length of the pcWriteBuffer.
+ * @param uxBufferLength pcWriteBuffer 的长度。
  *
  * \defgroup vTaskListTasks vTaskListTasks
  * \ingroup TaskUtils
@@ -2362,58 +2237,51 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vTaskList( char *pcWriteBuffer );
  * @endcode
  *
- * configUSE_TRACE_FACILITY and configUSE_STATS_FORMATTING_FUNCTIONS must
- * both be defined as 1 for this function to be available.  See the
- * configuration section of the FreeRTOS.org website for more information.
+ * 要使此函数可用，必须将 configUSE_TRACE_FACILITY 和
+ * configUSE_STATS_FORMATTING_FUNCTIONS 都定义为 1。更多信息请参见
+ * FreeRTOS.org 网站的配置章节。
  *
- * WARN: This function assumes that the pcWriteBuffer is of length
- * configSTATS_BUFFER_MAX_LENGTH. This function is there only for
- * backward compatibility. New applications are recommended to
- * use vTaskListTasks and supply the length of the pcWriteBuffer explicitly.
+ * 警告：此函数假定 pcWriteBuffer 的长度为 configSTATS_BUFFER_MAX_LENGTH。
+ * 保留此函数仅是为了向后兼容。建议新应用程序使用
+ * vTaskListTasks，并显式提供 pcWriteBuffer 的长度。
  *
- * NOTE 1: This function will disable interrupts for its duration.  It is
- * not intended for normal application runtime use but as a debug aid.
+ * 注意 1：此函数在执行期间会禁止中断。它不用于正常的应用程序运行时，
+ * 而是一种调试辅助手段。
  *
- * Lists all the current tasks, along with their current state and stack
- * usage high water mark.
+ * 列出所有当前任务，以及它们当前的状态和栈使用高水位线。
  *
- * Tasks are reported as running ('X'), blocked ('B'), ready ('R'), deleted ('D')
- * or suspended ('S').
+ * 任务状态报告为运行（'X'）、阻塞（'B'）、就绪（'R'）、已删除（'D'）
+ * 或挂起（'S'）。
  *
- * PLEASE NOTE:
+ * 请注意：
  *
- * This function is provided for convenience only, and is used by many of the
- * demo applications.  Do not consider it to be part of the scheduler.
+ * 此函数仅为方便使用而提供，许多演示应用程序都在使用它。
+ * 不要将其视为调度器的一部分。
  *
- * vTaskList() calls uxTaskGetSystemState(), then formats part of the
- * uxTaskGetSystemState() output into a human readable table that displays task
- * information in the following format:
- * Task Name, Task State, Task Priority, Task Stack High Watermak, Task Number.
+ * vTaskList() 调用 uxTaskGetSystemState()，然后将 uxTaskGetSystemState()
+ * 的部分输出格式化为人类可读的表格，按以下格式显示任务信息：
+ * 任务名称、任务状态、任务优先级、任务栈高水位线、任务编号。
  *
- * The following is a sample output:
+ * 以下是一个输出示例：
  * Task A       X       2           67           2
  * Task B       R       1           67           3
  * IDLE         R       0           67           5
  * Tmr Svc      B       6           137          6
  *
- * Stack usage specified as the number of unused StackType_t words stack can hold
- * on top of stack - not the number of bytes.
+ * 栈使用量以栈顶还能容纳的未使用 StackType_t 字数表示，
+ * 而不是字节数。
  *
- * vTaskList() has a dependency on the snprintf() C library function that might
- * bloat the code size, use a lot of stack, and provide different results on
- * different platforms.  An alternative, tiny, third party, and limited
- * functionality implementation of snprintf() is provided in many of the
- * FreeRTOS/Demo sub-directories in a file called printf-stdarg.c (note
- * printf-stdarg.c does not provide a full snprintf() implementation!).
+ * vTaskList() 依赖 snprintf() C 库函数，这可能会增大代码体积、
+ * 占用大量栈空间，并在不同平台上产生不同结果。许多 FreeRTOS/Demo
+ * 子目录中提供了一个名为 printf-stdarg.c 的第三方替代实现，它小巧且
+ * 功能有限（注意：printf-stdarg.c 并未提供完整的 snprintf() 实现！）。
  *
- * It is recommended that production systems call uxTaskGetSystemState()
- * directly to get access to raw stats data, rather than indirectly through a
- * call to vTaskList().
+ * 建议生产系统直接调用 uxTaskGetSystemState() 获取原始统计数据，
+ * 而不是通过调用 vTaskList() 间接获取。
  *
- * @param pcWriteBuffer A buffer into which the above mentioned details
- * will be written, in ASCII form.  This buffer is assumed to be large
- * enough to contain the generated report.  Approximately 40 bytes per
- * task should be sufficient.
+ * @param pcWriteBuffer 用于以 ASCII 形式写入上述详细信息的缓冲区。
+ * 假定该缓冲区足够大，能够容纳生成的报告。每个任务约 40 字节
+ * 应该足够。
  *
  * \defgroup vTaskList vTaskList
  * \ingroup TaskUtils
@@ -2426,52 +2294,44 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vTaskGetRunTimeStatistics( char *pcWriteBuffer, size_t uxBufferLength );
  * @endcode
  *
- * configGENERATE_RUN_TIME_STATS and configUSE_STATS_FORMATTING_FUNCTIONS
- * must both be defined as 1 for this function to be available.  The application
- * must also then provide definitions for
- * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() and portGET_RUN_TIME_COUNTER_VALUE()
- * to configure a peripheral timer/counter and return the timers current count
- * value respectively.  The counter should be at least 10 times the frequency of
- * the tick count.
+ * 要使此函数可用，必须将 configGENERATE_RUN_TIME_STATS 和
+ * configUSE_STATS_FORMATTING_FUNCTIONS 都定义为 1。应用程序还必须
+ * 提供 portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 和
+ * portGET_RUN_TIME_COUNTER_VALUE() 的定义，分别用于配置外设定时器/计数器
+ * 并返回该定时器的当前计数值。计数器的频率应至少为节拍频率的 10 倍。
  *
- * NOTE 1: This function will disable interrupts for its duration.  It is
- * not intended for normal application runtime use but as a debug aid.
+ * 注意 1：此函数在执行期间会禁止中断。它不用于正常的应用程序运行时，
+ * 而是一种调试辅助手段。
  *
- * Setting configGENERATE_RUN_TIME_STATS to 1 will result in a total
- * accumulated execution time being stored for each task.  The resolution
- * of the accumulated time value depends on the frequency of the timer
- * configured by the portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() macro.
- * Calling vTaskGetRunTimeStatistics() writes the total execution time of each
- * task into a buffer, both as an absolute count value and as a percentage
- * of the total system execution time.
+ * 将 configGENERATE_RUN_TIME_STATS 设置为 1 后，系统会为每个任务
+ * 保存累计的总执行时间。累计时间值的分辨率取决于
+ * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 宏所配置定时器的频率。
+ * 调用 vTaskGetRunTimeStatistics() 会将每个任务的总执行时间写入缓冲区，
+ * 既以绝对计数值表示，也以占系统总执行时间的百分比表示。
  *
- * NOTE 2:
+ * 注意 2：
  *
- * This function is provided for convenience only, and is used by many of the
- * demo applications.  Do not consider it to be part of the scheduler.
+ * 此函数仅为方便使用而提供，许多演示应用程序都在使用它。
+ * 不要将其视为调度器的一部分。
  *
- * vTaskGetRunTimeStatistics() calls uxTaskGetSystemState(), then formats part of
- * the uxTaskGetSystemState() output into a human readable table that displays the
- * amount of time each task has spent in the Running state in both absolute and
- * percentage terms.
+ * vTaskGetRunTimeStatistics() 调用 uxTaskGetSystemState()，然后将
+ * uxTaskGetSystemState() 的部分输出格式化为人类可读的表格，
+ * 以绝对值和百分比两种形式显示每个任务在运行态所花费的时间。
  *
- * vTaskGetRunTimeStatistics() has a dependency on the snprintf() C library function
- * that might bloat the code size, use a lot of stack, and provide different
- * results on different platforms.  An alternative, tiny, third party, and
- * limited functionality implementation of snprintf() is provided in many of the
- * FreeRTOS/Demo sub-directories in a file called printf-stdarg.c (note
- * printf-stdarg.c does not provide a full snprintf() implementation!).
+ * vTaskGetRunTimeStatistics() 依赖 snprintf() C 库函数，这可能会增大
+ * 代码体积、占用大量栈空间，并在不同平台上产生不同结果。
+ * 许多 FreeRTOS/Demo 子目录中提供了一个名为 printf-stdarg.c 的
+ * 第三方替代实现，它小巧且功能有限（注意：printf-stdarg.c 并未提供
+ * 完整的 snprintf() 实现！）。
  *
- * It is recommended that production systems call uxTaskGetSystemState() directly
- * to get access to raw stats data, rather than indirectly through a call to
- * vTaskGetRunTimeStatistics().
+ * 建议生产系统直接调用 uxTaskGetSystemState() 获取原始统计数据，
+ * 而不是通过调用 vTaskGetRunTimeStatistics() 间接获取。
  *
- * @param pcWriteBuffer A buffer into which the execution times will be
- * written, in ASCII form.  This buffer is assumed to be large enough to
- * contain the generated report.  Approximately 40 bytes per task should
- * be sufficient.
+ * @param pcWriteBuffer 用于以 ASCII 形式写入执行时间的缓冲区。
+ * 假定该缓冲区足够大，能够容纳生成的报告。每个任务约 40 字节
+ * 应该足够。
  *
- * @param uxBufferLength Length of the pcWriteBuffer.
+ * @param uxBufferLength pcWriteBuffer 的长度。
  *
  * \defgroup vTaskGetRunTimeStatistics vTaskGetRunTimeStatistics
  * \ingroup TaskUtils
@@ -2487,56 +2347,46 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * void vTaskGetRunTimeStats( char *pcWriteBuffer );
  * @endcode
  *
- * configGENERATE_RUN_TIME_STATS and configUSE_STATS_FORMATTING_FUNCTIONS
- * must both be defined as 1 for this function to be available.  The application
- * must also then provide definitions for
- * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() and portGET_RUN_TIME_COUNTER_VALUE()
- * to configure a peripheral timer/counter and return the timers current count
- * value respectively.  The counter should be at least 10 times the frequency of
- * the tick count.
+ * 要使此函数可用，必须将 configGENERATE_RUN_TIME_STATS 和
+ * configUSE_STATS_FORMATTING_FUNCTIONS 都定义为 1。应用程序还必须
+ * 提供 portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 和
+ * portGET_RUN_TIME_COUNTER_VALUE() 的定义，分别用于配置外设定时器/计数器
+ * 并返回该定时器的当前计数值。计数器的频率应至少为节拍频率的 10 倍。
  *
- * WARN: This function assumes that the pcWriteBuffer is of length
- * configSTATS_BUFFER_MAX_LENGTH. This function is there only for
- * backward compatibility. New applications are recommended to use
- * vTaskGetRunTimeStatistics and supply the length of the pcWriteBuffer
- * explicitly.
+ * 警告：此函数假定 pcWriteBuffer 的长度为 configSTATS_BUFFER_MAX_LENGTH。
+ * 保留此函数仅是为了向后兼容。建议新应用程序使用
+ * vTaskGetRunTimeStatistics，并显式提供 pcWriteBuffer 的长度。
  *
- * NOTE 1: This function will disable interrupts for its duration.  It is
- * not intended for normal application runtime use but as a debug aid.
+ * 注意 1：此函数在执行期间会禁止中断。它不用于正常的应用程序运行时，
+ * 而是一种调试辅助手段。
  *
- * Setting configGENERATE_RUN_TIME_STATS to 1 will result in a total
- * accumulated execution time being stored for each task.  The resolution
- * of the accumulated time value depends on the frequency of the timer
- * configured by the portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() macro.
- * Calling vTaskGetRunTimeStats() writes the total execution time of each
- * task into a buffer, both as an absolute count value and as a percentage
- * of the total system execution time.
+ * 将 configGENERATE_RUN_TIME_STATS 设置为 1 后，系统会为每个任务
+ * 保存累计的总执行时间。累计时间值的分辨率取决于
+ * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 宏所配置定时器的频率。
+ * 调用 vTaskGetRunTimeStats() 会将每个任务的总执行时间写入缓冲区，
+ * 既以绝对计数值表示，也以占系统总执行时间的百分比表示。
  *
- * NOTE 2:
+ * 注意 2：
  *
- * This function is provided for convenience only, and is used by many of the
- * demo applications.  Do not consider it to be part of the scheduler.
+ * 此函数仅为方便使用而提供，许多演示应用程序都在使用它。
+ * 不要将其视为调度器的一部分。
  *
- * vTaskGetRunTimeStats() calls uxTaskGetSystemState(), then formats part of the
- * uxTaskGetSystemState() output into a human readable table that displays the
- * amount of time each task has spent in the Running state in both absolute and
- * percentage terms.
+ * vTaskGetRunTimeStats() 调用 uxTaskGetSystemState()，然后将
+ * uxTaskGetSystemState() 的部分输出格式化为人类可读的表格，
+ * 以绝对值和百分比两种形式显示每个任务在运行态所花费的时间。
  *
- * vTaskGetRunTimeStats() has a dependency on the snprintf() C library function
- * that might bloat the code size, use a lot of stack, and provide different
- * results on different platforms.  An alternative, tiny, third party, and
- * limited functionality implementation of snprintf() is provided in many of the
- * FreeRTOS/Demo sub-directories in a file called printf-stdarg.c (note
- * printf-stdarg.c does not provide a full snprintf() implementation!).
+ * vTaskGetRunTimeStats() 依赖 snprintf() C 库函数，这可能会增大
+ * 代码体积、占用大量栈空间，并在不同平台上产生不同结果。
+ * 许多 FreeRTOS/Demo 子目录中提供了一个名为 printf-stdarg.c 的
+ * 第三方替代实现，它小巧且功能有限（注意：printf-stdarg.c 并未提供
+ * 完整的 snprintf() 实现！）。
  *
- * It is recommended that production systems call uxTaskGetSystemState() directly
- * to get access to raw stats data, rather than indirectly through a call to
- * vTaskGetRunTimeStats().
+ * 建议生产系统直接调用 uxTaskGetSystemState() 获取原始统计数据，
+ * 而不是通过调用 vTaskGetRunTimeStats() 间接获取。
  *
- * @param pcWriteBuffer A buffer into which the execution times will be
- * written, in ASCII form.  This buffer is assumed to be large enough to
- * contain the generated report.  Approximately 40 bytes per task should
- * be sufficient.
+ * @param pcWriteBuffer 用于以 ASCII 形式写入执行时间的缓冲区。
+ * 假定该缓冲区足够大，能够容纳生成的报告。每个任务约 40 字节
+ * 应该足够。
  *
  * \defgroup vTaskGetRunTimeStats vTaskGetRunTimeStats
  * \ingroup TaskUtils
@@ -2550,28 +2400,22 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * configRUN_TIME_COUNTER_TYPE ulTaskGetRunTimePercent( const TaskHandle_t xTask );
  * @endcode
  *
- * configGENERATE_RUN_TIME_STATS must be defined as 1 for these functions to be
- * available.  The application must also then provide definitions for
- * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() and
- * portGET_RUN_TIME_COUNTER_VALUE() to configure a peripheral timer/counter and
- * return the timers current count value respectively.  The counter should be
- * at least 10 times the frequency of the tick count.
+ * 要使这些函数可用，必须将 configGENERATE_RUN_TIME_STATS 定义为 1。
+ * 应用程序还必须提供 portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 和
+ * portGET_RUN_TIME_COUNTER_VALUE() 的定义，分别用于配置外设定时器/计数器
+ * 并返回该定时器的当前计数值。计数器的频率应至少为节拍频率的 10 倍。
  *
- * Setting configGENERATE_RUN_TIME_STATS to 1 will result in a total
- * accumulated execution time being stored for each task.  The resolution
- * of the accumulated time value depends on the frequency of the timer
- * configured by the portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() macro.
- * While uxTaskGetSystemState() and vTaskGetRunTimeStats() writes the total
- * execution time of each task into a buffer, ulTaskGetRunTimeCounter()
- * returns the total execution time of just one task and
- * ulTaskGetRunTimePercent() returns the percentage of the CPU time used by
- * just one task.
+ * 将 configGENERATE_RUN_TIME_STATS 设置为 1 后，系统会为每个任务
+ * 保存累计的总执行时间。累计时间值的分辨率取决于
+ * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 宏所配置定时器的频率。
+ * uxTaskGetSystemState() 和 vTaskGetRunTimeStats() 会将每个任务的总执行时间
+ * 写入缓冲区，而 ulTaskGetRunTimeCounter() 仅返回单个任务的总执行时间，
+ * ulTaskGetRunTimePercent() 仅返回单个任务所占用的 CPU 时间百分比。
  *
- * @return The total run time of the given task or the percentage of the total
- * run time consumed by the given task.  This is the amount of time the task
- * has actually been executing.  The unit of time is dependent on the frequency
- * configured using the portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() and
- * portGET_RUN_TIME_COUNTER_VALUE() macros.
+ * @return 给定任务的总运行时间，或给定任务消耗的总运行时间百分比。
+ * 这是任务实际执行的时间。时间单位取决于
+ * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 和
+ * portGET_RUN_TIME_COUNTER_VALUE() 宏所配置的频率。
  *
  * \defgroup ulTaskGetRunTimeCounter ulTaskGetRunTimeCounter
  * \ingroup TaskUtils
@@ -2588,32 +2432,26 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * configRUN_TIME_COUNTER_TYPE ulTaskGetIdleRunTimePercent( void );
  * @endcode
  *
- * configGENERATE_RUN_TIME_STATS must be defined as 1 for these functions to be
- * available.  The application must also then provide definitions for
- * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() and
- * portGET_RUN_TIME_COUNTER_VALUE() to configure a peripheral timer/counter and
- * return the timers current count value respectively.  The counter should be
- * at least 10 times the frequency of the tick count.
+ * 要使这些函数可用，必须将 configGENERATE_RUN_TIME_STATS 定义为 1。
+ * 应用程序还必须提供 portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 和
+ * portGET_RUN_TIME_COUNTER_VALUE() 的定义，分别用于配置外设定时器/计数器
+ * 并返回该定时器的当前计数值。计数器的频率应至少为节拍频率的 10 倍。
  *
- * Setting configGENERATE_RUN_TIME_STATS to 1 will result in a total
- * accumulated execution time being stored for each task.  The resolution
- * of the accumulated time value depends on the frequency of the timer
- * configured by the portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() macro.
- * While uxTaskGetSystemState() and vTaskGetRunTimeStats() writes the total
- * execution time of each task into a buffer, ulTaskGetIdleRunTimeCounter()
- * returns the total execution time of just the idle task and
- * ulTaskGetIdleRunTimePercent() returns the percentage of the CPU time used by
- * just the idle task.
+ * 将 configGENERATE_RUN_TIME_STATS 设置为 1 后，系统会为每个任务
+ * 保存累计的总执行时间。累计时间值的分辨率取决于
+ * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 宏所配置定时器的频率。
+ * uxTaskGetSystemState() 和 vTaskGetRunTimeStats() 会将每个任务的总执行时间
+ * 写入缓冲区，而 ulTaskGetIdleRunTimeCounter() 仅返回空闲任务的总执行时间，
+ * ulTaskGetIdleRunTimePercent() 仅返回空闲任务所占用的 CPU 时间百分比。
  *
- * Note the amount of idle time is only a good measure of the slack time in a
- * system if there are no other tasks executing at the idle priority, tickless
- * idle is not used, and configIDLE_SHOULD_YIELD is set to 0.
+ * 注意，只有在没有其他任务以空闲优先级执行、未使用无节拍空闲模式，
+ * 且 configIDLE_SHOULD_YIELD 设置为 0 时，空闲时间量才能很好地
+ * 衡量系统中的富余时间。
  *
- * @return The total run time of the idle task or the percentage of the total
- * run time consumed by the idle task.  This is the amount of time the
- * idle task has actually been executing.  The unit of time is dependent on the
- * frequency configured using the portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() and
- * portGET_RUN_TIME_COUNTER_VALUE() macros.
+ * @return 空闲任务的总运行时间，或空闲任务消耗的总运行时间百分比。
+ * 这是空闲任务实际执行的时间。时间单位取决于
+ * portCONFIGURE_TIMER_FOR_RUN_TIME_STATS() 和
+ * portGET_RUN_TIME_COUNTER_VALUE() 宏所配置的频率。
  *
  * \defgroup ulTaskGetIdleRunTimeCounter ulTaskGetIdleRunTimeCounter
  * \ingroup TaskUtils
@@ -2630,102 +2468,83 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * BaseType_t xTaskNotify( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction );
  * @endcode
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for these
- * functions to be available.
+ * 要使这些函数可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Sends a direct to task notification to a task, with an optional value and
- * action.
+ * 向任务发送直接任务通知，可选择附带数值和操作。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * Events can be sent to a task using an intermediary object.  Examples of such
- * objects are queues, semaphores, mutexes and event groups.  Task notifications
- * are a method of sending an event directly to a task without the need for such
- * an intermediary object.
+ * 事件可以通过中间对象发送给任务。此类对象的例子包括队列、信号量、
+ * 互斥量和事件组。任务通知则是一种无需此类中间对象、
+ * 直接向任务发送事件的方法。
  *
- * A notification sent to a task can optionally perform an action, such as
- * update, overwrite or increment one of the task's notification values.  In
- * that way task notifications can be used to send data to a task, or be used as
- * light weight and fast binary or counting semaphores.
+ * 发送给任务的通知可以选择执行某种操作，例如更新、覆盖或递增任务的
+ * 某个通知值。因此，任务通知既可用于向任务发送数据，也可用作
+ * 轻量、快速的二值信号量或计数信号量。
  *
- * A task can use xTaskNotifyWaitIndexed() or ulTaskNotifyTakeIndexed() to
- * [optionally] block to wait for a notification to be pending.  The task does
- * not consume any CPU time while it is in the Blocked state.
+ * 任务可以使用 xTaskNotifyWaitIndexed() 或 ulTaskNotifyTakeIndexed()
+ * ［可选地］阻塞等待通知挂起。任务处于阻塞态期间不消耗任何 CPU 时间。
  *
- * A notification sent to a task will remain pending until it is cleared by the
- * task calling xTaskNotifyWaitIndexed() or ulTaskNotifyTakeIndexed() (or their
- * un-indexed equivalents).  If the task was already in the Blocked state to
- * wait for a notification when the notification arrives then the task will
- * automatically be removed from the Blocked state (unblocked) and the
- * notification cleared.
+ * 发送给任务的通知将保持挂起状态，直到任务调用
+ * xTaskNotifyWaitIndexed() 或 ulTaskNotifyTakeIndexed()（或其非索引版本）
+ * 将其清除。若通知到达时任务已经处于阻塞态等待通知，则任务将自动
+ * 离开阻塞态（解除阻塞），并清除该通知。
  *
- * **NOTE** Each notification within the array operates independently - a task
- * can only block on one notification within the array at a time and will not be
- * unblocked by a notification sent to any other array index.
+ * **注意** 数组中的每个通知独立运作——任务一次只能阻塞在数组中的一个
+ * 通知上，且不会被发送到其他数组索引的通知解除阻塞。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  xTaskNotify() is the original API function, and remains backward
- * compatible by always operating on the notification value at index 0 in the
- * array. Calling xTaskNotify() is equivalent to calling xTaskNotifyIndexed()
- * with the uxIndexToNotify parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * xTaskNotify() 是原始 API 函数，它始终作用于数组索引 0 处的通知值，
+ * 从而保持向后兼容。调用 xTaskNotify() 等价于调用
+ * xTaskNotifyIndexed()，并将 uxIndexToNotify 参数设置为 0。
  *
- * @param xTaskToNotify The handle of the task being notified.  The handle to a
- * task can be returned from the xTaskCreate() API function used to create the
- * task, and the handle of the currently running task can be obtained by calling
- * xTaskGetCurrentTaskHandle().
+ * @param xTaskToNotify 被通知任务的句柄。任务句柄可由创建任务时使用的
+ * xTaskCreate() API 函数返回，当前运行任务的句柄可通过调用
+ * xTaskGetCurrentTaskHandle() 获取。
  *
- * @param uxIndexToNotify The index within the target task's array of
- * notification values to which the notification is to be sent.  uxIndexToNotify
- * must be less than configTASK_NOTIFICATION_ARRAY_ENTRIES.  xTaskNotify() does
- * not have this parameter and always sends notifications to index 0.
+ * @param uxIndexToNotify 目标任务通知值数组中的索引，通知将发送到该索引。
+ * uxIndexToNotify 必须小于 configTASK_NOTIFICATION_ARRAY_ENTRIES。
+ * xTaskNotify() 没有此参数，始终将通知发送到索引 0。
  *
- * @param ulValue Data that can be sent with the notification.  How the data is
- * used depends on the value of the eAction parameter.
+ * @param ulValue 可随通知发送的数据。数据如何使用取决于
+ * eAction 参数的值。
  *
- * @param eAction Specifies how the notification updates the task's notification
- * value, if at all.  Valid values for eAction are as follows:
+ * @param eAction 指定通知如何更新任务的通知值（如果需要更新）。
+ * eAction 的有效值如下：
  *
  * eSetBits -
- * The target notification value is bitwise ORed with ulValue.
- * xTaskNotifyIndexed() always returns pdPASS in this case.
+ * 目标通知值与 ulValue 按位或。此时 xTaskNotifyIndexed() 始终返回 pdPASS。
  *
  * eIncrement -
- * The target notification value is incremented.  ulValue is not used and
- * xTaskNotifyIndexed() always returns pdPASS in this case.
+ * 目标通知值递增。不使用 ulValue，此时 xTaskNotifyIndexed() 始终返回 pdPASS。
  *
  * eSetValueWithOverwrite -
- * The target notification value is set to the value of ulValue, even if the
- * task being notified had not yet processed the previous notification at the
- * same array index (the task already had a notification pending at that index).
- * xTaskNotifyIndexed() always returns pdPASS in this case.
+ * 目标通知值被设置为 ulValue 的值，即使被通知任务尚未处理同一数组索引处
+ * 先前的通知（该任务在该索引处已有挂起的通知）。
+ * 此时 xTaskNotifyIndexed() 始终返回 pdPASS。
  *
  * eSetValueWithoutOverwrite -
- * If the task being notified did not already have a notification pending at the
- * same array index then the target notification value is set to ulValue and
- * xTaskNotifyIndexed() will return pdPASS.  If the task being notified already
- * had a notification pending at the same array index then no action is
- * performed and pdFAIL is returned.
+ * 若被通知任务在同一数组索引处没有已挂起的通知，则目标通知值被设置为
+ * ulValue，xTaskNotifyIndexed() 将返回 pdPASS。若被通知任务在同一数组索引处
+ * 已有挂起的通知，则不执行任何操作并返回 pdFAIL。
  *
  * eNoAction -
- * The task receives a notification at the specified array index without the
- * notification value at that index being updated.  ulValue is not used and
- * xTaskNotifyIndexed() always returns pdPASS in this case.
+ * 任务在指定数组索引处收到通知，但该索引处的通知值不更新。
+ * 不使用 ulValue，此时 xTaskNotifyIndexed() 始终返回 pdPASS。
  *
- * @param pulPreviousNotificationValue Can be used to pass out the subject
- * task's notification value before any bits are modified by the notify function.
+ * @param pulPreviousNotificationValue 可用于传出目标任务在通知函数
+ * 修改任何位之前的通知值。
  *
- * @return Dependent on the value of eAction.  See the description of the
- * eAction parameter.
+ * @return 取决于 eAction 的值。参见 eAction 参数的说明。
  *
  * \defgroup xTaskNotifyIndexed xTaskNotifyIndexed
  * \ingroup TaskNotifications
@@ -2747,19 +2566,15 @@ BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify,
  * BaseType_t xTaskNotifyAndQuery( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotifyValue );
  * @endcode
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * xTaskNotifyAndQueryIndexed() performs the same operation as
- * xTaskNotifyIndexed() with the addition that it also returns the subject
- * task's prior notification value (the notification value at the time the
- * function is called rather than when the function returns) in the additional
- * pulPreviousNotifyValue parameter.
+ * xTaskNotifyAndQueryIndexed() 执行与 xTaskNotifyIndexed() 相同的操作，
+ * 区别在于它还会通过附加的 pulPreviousNotifyValue 参数返回目标任务的
+ * 先前通知值（该值为函数调用时的通知值，而不是函数返回时的通知值）。
  *
- * xTaskNotifyAndQuery() performs the same operation as xTaskNotify() with the
- * addition that it also returns the subject task's prior notification value
- * (the notification value as it was at the time the function is called, rather
- * than when the function returns) in the additional pulPreviousNotifyValue
- * parameter.
+ * xTaskNotifyAndQuery() 执行与 xTaskNotify() 相同的操作，
+ * 区别在于它还会通过附加的 pulPreviousNotifyValue 参数返回目标任务的
+ * 先前通知值（该值为函数调用时的通知值，而不是函数返回时的通知值）。
  *
  * \defgroup xTaskNotifyAndQueryIndexed xTaskNotifyAndQueryIndexed
  * \ingroup TaskNotifications
@@ -2776,111 +2591,89 @@ BaseType_t xTaskGenericNotify( TaskHandle_t xTaskToNotify,
  * BaseType_t xTaskNotifyFromISR( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for these
- * functions to be available.
+ * 要使这些函数可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * A version of xTaskNotifyIndexed() that can be used from an interrupt service
- * routine (ISR).
+ * xTaskNotifyIndexed() 的一个版本，可在中断服务程序（ISR）中使用。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * Events can be sent to a task using an intermediary object.  Examples of such
- * objects are queues, semaphores, mutexes and event groups.  Task notifications
- * are a method of sending an event directly to a task without the need for such
- * an intermediary object.
+ * 事件可以通过中间对象发送给任务。此类对象的例子包括队列、信号量、
+ * 互斥量和事件组。任务通知则是一种无需此类中间对象、
+ * 直接向任务发送事件的方法。
  *
- * A notification sent to a task can optionally perform an action, such as
- * update, overwrite or increment one of the task's notification values.  In
- * that way task notifications can be used to send data to a task, or be used as
- * light weight and fast binary or counting semaphores.
+ * 发送给任务的通知可以选择执行某种操作，例如更新、覆盖或递增任务的
+ * 某个通知值。因此，任务通知既可用于向任务发送数据，也可用作
+ * 轻量、快速的二值信号量或计数信号量。
  *
- * A task can use xTaskNotifyWaitIndexed() to [optionally] block to wait for a
- * notification to be pending, or ulTaskNotifyTakeIndexed() to [optionally] block
- * to wait for a notification value to have a non-zero value.  The task does
- * not consume any CPU time while it is in the Blocked state.
+ * 任务可以使用 xTaskNotifyWaitIndexed()［可选地］阻塞等待通知挂起，
+ * 或使用 ulTaskNotifyTakeIndexed()［可选地］阻塞等待通知值变为非零。
+ * 任务处于阻塞态期间不消耗任何 CPU 时间。
  *
- * A notification sent to a task will remain pending until it is cleared by the
- * task calling xTaskNotifyWaitIndexed() or ulTaskNotifyTakeIndexed() (or their
- * un-indexed equivalents).  If the task was already in the Blocked state to
- * wait for a notification when the notification arrives then the task will
- * automatically be removed from the Blocked state (unblocked) and the
- * notification cleared.
+ * 发送给任务的通知将保持挂起状态，直到任务调用
+ * xTaskNotifyWaitIndexed() 或 ulTaskNotifyTakeIndexed()（或其非索引版本）
+ * 将其清除。若通知到达时任务已经处于阻塞态等待通知，则任务将自动
+ * 离开阻塞态（解除阻塞），并清除该通知。
  *
- * **NOTE** Each notification within the array operates independently - a task
- * can only block on one notification within the array at a time and will not be
- * unblocked by a notification sent to any other array index.
+ * **注意** 数组中的每个通知独立运作——任务一次只能阻塞在数组中的一个
+ * 通知上，且不会被发送到其他数组索引的通知解除阻塞。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  xTaskNotifyFromISR() is the original API function, and remains
- * backward compatible by always operating on the notification value at index 0
- * within the array. Calling xTaskNotifyFromISR() is equivalent to calling
- * xTaskNotifyIndexedFromISR() with the uxIndexToNotify parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * xTaskNotifyFromISR() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 xTaskNotifyFromISR() 等价于调用
+ * xTaskNotifyIndexedFromISR()，并将 uxIndexToNotify 参数设置为 0。
  *
- * @param uxIndexToNotify The index within the target task's array of
- * notification values to which the notification is to be sent.  uxIndexToNotify
- * must be less than configTASK_NOTIFICATION_ARRAY_ENTRIES.  xTaskNotifyFromISR()
- * does not have this parameter and always sends notifications to index 0.
+ * @param uxIndexToNotify 目标任务通知值数组中的索引，通知将发送到该索引。
+ * uxIndexToNotify 必须小于 configTASK_NOTIFICATION_ARRAY_ENTRIES。
+ * xTaskNotifyFromISR() 没有此参数，始终将通知发送到索引 0。
  *
- * @param xTaskToNotify The handle of the task being notified.  The handle to a
- * task can be returned from the xTaskCreate() API function used to create the
- * task, and the handle of the currently running task can be obtained by calling
- * xTaskGetCurrentTaskHandle().
+ * @param xTaskToNotify 被通知任务的句柄。任务句柄可由创建任务时使用的
+ * xTaskCreate() API 函数返回，当前运行任务的句柄可通过调用
+ * xTaskGetCurrentTaskHandle() 获取。
  *
- * @param ulValue Data that can be sent with the notification.  How the data is
- * used depends on the value of the eAction parameter.
+ * @param ulValue 可随通知发送的数据。数据如何使用取决于
+ * eAction 参数的值。
  *
- * @param eAction Specifies how the notification updates the task's notification
- * value, if at all.  Valid values for eAction are as follows:
+ * @param eAction 指定通知如何更新任务的通知值（如果需要更新）。
+ * eAction 的有效值如下：
  *
  * eSetBits -
- * The task's notification value is bitwise ORed with ulValue.  xTaskNotify()
- * always returns pdPASS in this case.
+ * 任务的通知值与 ulValue 按位或。此时 xTaskNotify() 始终返回 pdPASS。
  *
  * eIncrement -
- * The task's notification value is incremented.  ulValue is not used and
- * xTaskNotify() always returns pdPASS in this case.
+ * 任务的通知值递增。不使用 ulValue，此时 xTaskNotify() 始终返回 pdPASS。
  *
  * eSetValueWithOverwrite -
- * The task's notification value is set to the value of ulValue, even if the
- * task being notified had not yet processed the previous notification (the
- * task already had a notification pending).  xTaskNotify() always returns
- * pdPASS in this case.
+ * 任务的通知值被设置为 ulValue 的值，即使被通知任务尚未处理先前的通知
+ * （该任务已有挂起的通知）。此时 xTaskNotify() 始终返回 pdPASS。
  *
  * eSetValueWithoutOverwrite -
- * If the task being notified did not already have a notification pending then
- * the task's notification value is set to ulValue and xTaskNotify() will
- * return pdPASS.  If the task being notified already had a notification
- * pending then no action is performed and pdFAIL is returned.
+ * 若被通知任务没有已挂起的通知，则任务的通知值被设置为 ulValue，
+ * xTaskNotify() 将返回 pdPASS。若被通知任务已有挂起的通知，
+ * 则不执行任何操作并返回 pdFAIL。
  *
  * eNoAction -
- * The task receives a notification without its notification value being
- * updated.  ulValue is not used and xTaskNotify() always returns pdPASS in
- * this case.
+ * 任务收到通知，但其通知值不更新。不使用 ulValue，
+ * 此时 xTaskNotify() 始终返回 pdPASS。
  *
- * @param pulPreviousNotificationValue Can be used to pass out the subject
- * task's notification value before any bits are modified by the notify function.
+ * @param pulPreviousNotificationValue 可用于传出目标任务在通知函数
+ * 修改任何位之前的通知值。
  *
- * @param pxHigherPriorityTaskWoken  xTaskNotifyFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending the notification caused the
- * task to which the notification was sent to leave the Blocked state, and the
- * unblocked task has a priority higher than the currently running task.  If
- * xTaskNotifyFromISR() sets this value to pdTRUE then a context switch should
- * be requested before the interrupt is exited.  How a context switch is
- * requested from an ISR is dependent on the port - see the documentation page
- * for the port in use.
+ * @param pxHigherPriorityTaskWoken 若发送通知导致被通知任务离开阻塞态，
+ * 且解除阻塞任务的优先级高于当前运行任务，则 xTaskNotifyFromISR()
+ * 会将 *pxHigherPriorityTaskWoken 设置为 pdTRUE。若 xTaskNotifyFromISR()
+ * 将该值设置为 pdTRUE，则应在退出中断前请求上下文切换。
+ * 如何从 ISR 请求上下文切换取决于移植层——请参见所用移植层的文档页面。
  *
- * @return Dependent on the value of eAction.  See the description of the
- * eAction parameter.
+ * @return 取决于 eAction 的值。参见 eAction 参数的说明。
  *
  * \defgroup xTaskNotifyIndexedFromISR xTaskNotifyIndexedFromISR
  * \ingroup TaskNotifications
@@ -2903,19 +2696,16 @@ BaseType_t xTaskGenericNotifyFromISR( TaskHandle_t xTaskToNotify,
  * BaseType_t xTaskNotifyAndQueryFromISR( TaskHandle_t xTaskToNotify, uint32_t ulValue, eNotifyAction eAction, uint32_t *pulPreviousNotificationValue, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * xTaskNotifyAndQueryIndexedFromISR() performs the same operation as
- * xTaskNotifyIndexedFromISR() with the addition that it also returns the
- * subject task's prior notification value (the notification value at the time
- * the function is called rather than at the time the function returns) in the
- * additional pulPreviousNotifyValue parameter.
+ * xTaskNotifyAndQueryIndexedFromISR() 执行与 xTaskNotifyIndexedFromISR()
+ * 相同的操作，区别在于它还会通过附加的 pulPreviousNotifyValue 参数
+ * 返回目标任务的先前通知值（该值为函数调用时的通知值，
+ * 而不是函数返回时的通知值）。
  *
- * xTaskNotifyAndQueryFromISR() performs the same operation as
- * xTaskNotifyFromISR() with the addition that it also returns the subject
- * task's prior notification value (the notification value at the time the
- * function is called rather than at the time the function returns) in the
- * additional pulPreviousNotifyValue parameter.
+ * xTaskNotifyAndQueryFromISR() 执行与 xTaskNotifyFromISR() 相同的操作，
+ * 区别在于它还会通过附加的 pulPreviousNotifyValue 参数返回目标任务的
+ * 先前通知值（该值为函数调用时的通知值，而不是函数返回时的通知值）。
  *
  * \defgroup xTaskNotifyAndQueryIndexedFromISR xTaskNotifyAndQueryIndexedFromISR
  * \ingroup TaskNotifications
@@ -2933,98 +2723,77 @@ BaseType_t xTaskGenericNotifyFromISR( TaskHandle_t xTaskToNotify,
  * BaseType_t xTaskNotifyWait( uint32_t ulBitsToClearOnEntry, uint32_t ulBitsToClearOnExit, uint32_t *pulNotificationValue, TickType_t xTicksToWait );
  * @endcode
  *
- * Waits for a direct to task notification to be pending at a given index within
- * an array of direct to task notifications.
+ * 等待直接任务通知数组中指定索引处的通知挂起。
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for this
- * function to be available.
+ * 要使此函数可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * Events can be sent to a task using an intermediary object.  Examples of such
- * objects are queues, semaphores, mutexes and event groups.  Task notifications
- * are a method of sending an event directly to a task without the need for such
- * an intermediary object.
+ * 事件可以通过中间对象发送给任务。此类对象的例子包括队列、信号量、
+ * 互斥量和事件组。任务通知则是一种无需此类中间对象、
+ * 直接向任务发送事件的方法。
  *
- * A notification sent to a task can optionally perform an action, such as
- * update, overwrite or increment one of the task's notification values.  In
- * that way task notifications can be used to send data to a task, or be used as
- * light weight and fast binary or counting semaphores.
+ * 发送给任务的通知可以选择执行某种操作，例如更新、覆盖或递增任务的
+ * 某个通知值。因此，任务通知既可用于向任务发送数据，也可用作
+ * 轻量、快速的二值信号量或计数信号量。
  *
- * A notification sent to a task will remain pending until it is cleared by the
- * task calling xTaskNotifyWaitIndexed() or ulTaskNotifyTakeIndexed() (or their
- * un-indexed equivalents).  If the task was already in the Blocked state to
- * wait for a notification when the notification arrives then the task will
- * automatically be removed from the Blocked state (unblocked) and the
- * notification cleared.
+ * 发送给任务的通知将保持挂起状态，直到任务调用
+ * xTaskNotifyWaitIndexed() 或 ulTaskNotifyTakeIndexed()（或其非索引版本）
+ * 将其清除。若通知到达时任务已经处于阻塞态等待通知，则任务将自动
+ * 离开阻塞态（解除阻塞），并清除该通知。
  *
- * A task can use xTaskNotifyWaitIndexed() to [optionally] block to wait for a
- * notification to be pending, or ulTaskNotifyTakeIndexed() to [optionally] block
- * to wait for a notification value to have a non-zero value.  The task does
- * not consume any CPU time while it is in the Blocked state.
+ * 任务可以使用 xTaskNotifyWaitIndexed()［可选地］阻塞等待通知挂起，
+ * 或使用 ulTaskNotifyTakeIndexed()［可选地］阻塞等待通知值变为非零。
+ * 任务处于阻塞态期间不消耗任何 CPU 时间。
  *
- * **NOTE** Each notification within the array operates independently - a task
- * can only block on one notification within the array at a time and will not be
- * unblocked by a notification sent to any other array index.
+ * **注意** 数组中的每个通知独立运作——任务一次只能阻塞在数组中的一个
+ * 通知上，且不会被发送到其他数组索引的通知解除阻塞。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  xTaskNotifyWait() is the original API function, and remains backward
- * compatible by always operating on the notification value at index 0 in the
- * array. Calling xTaskNotifyWait() is equivalent to calling
- * xTaskNotifyWaitIndexed() with the uxIndexToWaitOn parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * xTaskNotifyWait() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 xTaskNotifyWait() 等价于调用
+ * xTaskNotifyWaitIndexed()，并将 uxIndexToWaitOn 参数设置为 0。
  *
- * @param uxIndexToWaitOn The index within the calling task's array of
- * notification values on which the calling task will wait for a notification to
- * be received.  uxIndexToWaitOn must be less than
- * configTASK_NOTIFICATION_ARRAY_ENTRIES.  xTaskNotifyWait() does
- * not have this parameter and always waits for notifications on index 0.
+ * @param uxIndexToWaitOn 调用任务通知值数组中的索引，调用任务将在该索引处
+ * 等待接收到通知。uxIndexToWaitOn 必须小于
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES。xTaskNotifyWait() 没有此参数，
+ * 始终在索引 0 处等待通知。
  *
- * @param ulBitsToClearOnEntry Bits that are set in ulBitsToClearOnEntry value
- * will be cleared in the calling task's notification value before the task
- * checks to see if any notifications are pending, and optionally blocks if no
- * notifications are pending.  Setting ulBitsToClearOnEntry to ULONG_MAX (if
- * limits.h is included) or 0xffffffffU (if limits.h is not included) will have
- * the effect of resetting the task's notification value to 0.  Setting
- * ulBitsToClearOnEntry to 0 will leave the task's notification value unchanged.
+ * @param ulBitsToClearOnEntry 在 ulBitsToClearOnEntry 值中置位的位，
+ * 将在调用任务检查是否有通知挂起之前，从调用任务的通知值中清除；
+ * 若没有通知挂起，则可选地进入阻塞。将 ulBitsToClearOnEntry 设置为
+ * ULONG_MAX（若包含 limits.h）或 0xffffffffU（若未包含 limits.h），
+ * 其效果是将任务的通知值重置为 0。将 ulBitsToClearOnEntry 设置为 0，
+ * 则任务的通知值保持不变。
  *
- * @param ulBitsToClearOnExit If a notification is pending or received before
- * the calling task exits the xTaskNotifyWait() function then the task's
- * notification value (see the xTaskNotify() API function) is passed out using
- * the pulNotificationValue parameter.  Then any bits that are set in
- * ulBitsToClearOnExit will be cleared in the task's notification value (note
- * *pulNotificationValue is set before any bits are cleared).  Setting
- * ulBitsToClearOnExit to ULONG_MAX (if limits.h is included) or 0xffffffffUL
- * (if limits.h is not included) will have the effect of resetting the task's
- * notification value to 0 before the function exits.  Setting
- * ulBitsToClearOnExit to 0 will leave the task's notification value unchanged
- * when the function exits (in which case the value passed out in
- * pulNotificationValue will match the task's notification value).
+ * @param ulBitsToClearOnExit 若调用任务退出 xTaskNotifyWait() 函数之前
+ * 有通知挂起或已收到通知，则任务的通知值（参见 xTaskNotify() API 函数）
+ * 将通过 pulNotificationValue 参数传出。随后，ulBitsToClearOnExit 中置位的
+ * 任何位将从任务的通知值中清除（注意，*pulNotificationValue 在清除任何位
+ * 之前设置）。将 ulBitsToClearOnExit 设置为 ULONG_MAX（若包含 limits.h）或
+ * 0xffffffffUL（若未包含 limits.h），其效果是在函数退出前将任务的通知值
+ * 重置为 0。将 ulBitsToClearOnExit 设置为 0，则函数退出时任务的通知值
+ * 保持不变（此时通过 pulNotificationValue 传出的值将与任务的通知值一致）。
  *
- * @param pulNotificationValue Used to pass the task's notification value out
- * of the function.  Note the value passed out will not be effected by the
- * clearing of any bits caused by ulBitsToClearOnExit being non-zero.
+ * @param pulNotificationValue 用于将任务的通知值传出函数。注意，传出值
+ * 不会受到 ulBitsToClearOnExit 非零所导致的位清除的影响。
  *
- * @param xTicksToWait The maximum amount of time that the task should wait in
- * the Blocked state for a notification to be received, should a notification
- * not already be pending when xTaskNotifyWait() was called.  The task
- * will not consume any processing time while it is in the Blocked state.  This
- * is specified in kernel ticks, the macro pdMS_TO_TICKS( value_in_ms ) can be
- * used to convert a time specified in milliseconds to a time specified in
- * ticks.
+ * @param xTicksToWait 若调用 xTaskNotifyWait() 时尚无通知挂起，则任务应在
+ * 阻塞态等待接收通知的最长时间。任务处于阻塞态期间不消耗任何处理时间。
+ * 该时间以内核节拍为单位指定，可使用宏 pdMS_TO_TICKS( value_in_ms )
+ * 将毫秒时间转换为节拍时间。
  *
- * @return If a notification was received (including notifications that were
- * already pending when xTaskNotifyWait was called) then pdPASS is
- * returned.  Otherwise pdFAIL is returned.
+ * @return 若收到通知（包括调用 xTaskNotifyWait 时已经挂起的通知），
+ * 则返回 pdPASS；否则返回 pdFAIL。
  *
  * \defgroup xTaskNotifyWaitIndexed xTaskNotifyWaitIndexed
  * \ingroup TaskNotifications
@@ -3046,67 +2815,57 @@ BaseType_t xTaskGenericNotifyWait( UBaseType_t uxIndexToWaitOn,
  * BaseType_t xTaskNotifyGive( TaskHandle_t xTaskToNotify );
  * @endcode
  *
- * Sends a direct to task notification to a particular index in the target
- * task's notification array in a manner similar to giving a counting semaphore.
+ * 以类似于释放计数信号量的方式，向目标任务通知数组的特定索引
+ * 发送直接任务通知。
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for more details.
+ * 更多详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for these
- * macros to be available.
+ * 要使这些宏可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * Events can be sent to a task using an intermediary object.  Examples of such
- * objects are queues, semaphores, mutexes and event groups.  Task notifications
- * are a method of sending an event directly to a task without the need for such
- * an intermediary object.
+ * 事件可以通过中间对象发送给任务。此类对象的例子包括队列、信号量、
+ * 互斥量和事件组。任务通知则是一种无需此类中间对象、
+ * 直接向任务发送事件的方法。
  *
- * A notification sent to a task can optionally perform an action, such as
- * update, overwrite or increment one of the task's notification values.  In
- * that way task notifications can be used to send data to a task, or be used as
- * light weight and fast binary or counting semaphores.
+ * 发送给任务的通知可以选择执行某种操作，例如更新、覆盖或递增任务的
+ * 某个通知值。因此，任务通知既可用于向任务发送数据，也可用作
+ * 轻量、快速的二值信号量或计数信号量。
  *
- * xTaskNotifyGiveIndexed() is a helper macro intended for use when task
- * notifications are used as light weight and faster binary or counting
- * semaphore equivalents.  Actual FreeRTOS semaphores are given using the
- * xSemaphoreGive() API function, the equivalent action that instead uses a task
- * notification is xTaskNotifyGiveIndexed().
+ * xTaskNotifyGiveIndexed() 是一个辅助宏，适用于将任务通知用作
+ * 轻量且更快的二值信号量或计数信号量替代品的场景。实际 FreeRTOS
+ * 信号量通过 xSemaphoreGive() API 函数释放，而改用任务通知的等效操作
+ * 是 xTaskNotifyGiveIndexed()。
  *
- * When task notifications are being used as a binary or counting semaphore
- * equivalent then the task being notified should wait for the notification
- * using the ulTaskNotifyTakeIndexed() API function rather than the
- * xTaskNotifyWaitIndexed() API function.
+ * 当任务通知被用作二值信号量或计数信号量的替代品时，被通知任务应使用
+ * ulTaskNotifyTakeIndexed() API 函数等待通知，而不是使用
+ * xTaskNotifyWaitIndexed() API 函数。
  *
- * **NOTE** Each notification within the array operates independently - a task
- * can only block on one notification within the array at a time and will not be
- * unblocked by a notification sent to any other array index.
+ * **注意** 数组中的每个通知独立运作——任务一次只能阻塞在数组中的一个
+ * 通知上，且不会被发送到其他数组索引的通知解除阻塞。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  xTaskNotifyGive() is the original API function, and remains backward
- * compatible by always operating on the notification value at index 0 in the
- * array. Calling xTaskNotifyGive() is equivalent to calling
- * xTaskNotifyGiveIndexed() with the uxIndexToNotify parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * xTaskNotifyGive() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 xTaskNotifyGive() 等价于调用
+ * xTaskNotifyGiveIndexed()，并将 uxIndexToNotify 参数设置为 0。
  *
- * @param xTaskToNotify The handle of the task being notified.  The handle to a
- * task can be returned from the xTaskCreate() API function used to create the
- * task, and the handle of the currently running task can be obtained by calling
- * xTaskGetCurrentTaskHandle().
+ * @param xTaskToNotify 被通知任务的句柄。任务句柄可由创建任务时使用的
+ * xTaskCreate() API 函数返回，当前运行任务的句柄可通过调用
+ * xTaskGetCurrentTaskHandle() 获取。
  *
- * @param uxIndexToNotify The index within the target task's array of
- * notification values to which the notification is to be sent.  uxIndexToNotify
- * must be less than configTASK_NOTIFICATION_ARRAY_ENTRIES.  xTaskNotifyGive()
- * does not have this parameter and always sends notifications to index 0.
+ * @param uxIndexToNotify 目标任务通知值数组中的索引，通知将发送到该索引。
+ * uxIndexToNotify 必须小于 configTASK_NOTIFICATION_ARRAY_ENTRIES。
+ * xTaskNotifyGive() 没有此参数，始终将通知发送到索引 0。
  *
- * @return xTaskNotifyGive() is a macro that calls xTaskNotify() with the
- * eAction parameter set to eIncrement - so pdPASS is always returned.
+ * @return xTaskNotifyGive() 是一个宏，它调用 xTaskNotify() 并将
+ * eAction 参数设置为 eIncrement——因此始终返回 pdPASS。
  *
  * \defgroup xTaskNotifyGiveIndexed xTaskNotifyGiveIndexed
  * \ingroup TaskNotifications
@@ -3123,74 +2882,60 @@ BaseType_t xTaskGenericNotifyWait( UBaseType_t uxIndexToWaitOn,
  * void vTaskNotifyGiveFromISR( TaskHandle_t xTaskHandle, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * A version of xTaskNotifyGiveIndexed() that can be called from an interrupt
- * service routine (ISR).
+ * xTaskNotifyGiveIndexed() 的一个版本，可在中断服务程序（ISR）中调用。
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for more details.
+ * 更多详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for this macro
- * to be available.
+ * 要使此宏可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * Events can be sent to a task using an intermediary object.  Examples of such
- * objects are queues, semaphores, mutexes and event groups.  Task notifications
- * are a method of sending an event directly to a task without the need for such
- * an intermediary object.
+ * 事件可以通过中间对象发送给任务。此类对象的例子包括队列、信号量、
+ * 互斥量和事件组。任务通知则是一种无需此类中间对象、
+ * 直接向任务发送事件的方法。
  *
- * A notification sent to a task can optionally perform an action, such as
- * update, overwrite or increment one of the task's notification values.  In
- * that way task notifications can be used to send data to a task, or be used as
- * light weight and fast binary or counting semaphores.
+ * 发送给任务的通知可以选择执行某种操作，例如更新、覆盖或递增任务的
+ * 某个通知值。因此，任务通知既可用于向任务发送数据，也可用作
+ * 轻量、快速的二值信号量或计数信号量。
  *
- * vTaskNotifyGiveIndexedFromISR() is intended for use when task notifications
- * are used as light weight and faster binary or counting semaphore equivalents.
- * Actual FreeRTOS semaphores are given from an ISR using the
- * xSemaphoreGiveFromISR() API function, the equivalent action that instead uses
- * a task notification is vTaskNotifyGiveIndexedFromISR().
+ * vTaskNotifyGiveIndexedFromISR() 适用于将任务通知用作轻量且更快的
+ * 二值信号量或计数信号量替代品的场景。实际 FreeRTOS 信号量通过
+ * xSemaphoreGiveFromISR() API 函数从 ISR 中释放，而改用任务通知的
+ * 等效操作是 vTaskNotifyGiveIndexedFromISR()。
  *
- * When task notifications are being used as a binary or counting semaphore
- * equivalent then the task being notified should wait for the notification
- * using the ulTaskNotifyTakeIndexed() API function rather than the
- * xTaskNotifyWaitIndexed() API function.
+ * 当任务通知被用作二值信号量或计数信号量的替代品时，被通知任务应使用
+ * ulTaskNotifyTakeIndexed() API 函数等待通知，而不是使用
+ * xTaskNotifyWaitIndexed() API 函数。
  *
- * **NOTE** Each notification within the array operates independently - a task
- * can only block on one notification within the array at a time and will not be
- * unblocked by a notification sent to any other array index.
+ * **注意** 数组中的每个通知独立运作——任务一次只能阻塞在数组中的一个
+ * 通知上，且不会被发送到其他数组索引的通知解除阻塞。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  xTaskNotifyFromISR() is the original API function, and remains
- * backward compatible by always operating on the notification value at index 0
- * within the array. Calling xTaskNotifyGiveFromISR() is equivalent to calling
- * xTaskNotifyGiveIndexedFromISR() with the uxIndexToNotify parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * xTaskNotifyFromISR() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 xTaskNotifyGiveFromISR() 等价于调用
+ * xTaskNotifyGiveIndexedFromISR()，并将 uxIndexToNotify 参数设置为 0。
  *
- * @param xTaskToNotify The handle of the task being notified.  The handle to a
- * task can be returned from the xTaskCreate() API function used to create the
- * task, and the handle of the currently running task can be obtained by calling
- * xTaskGetCurrentTaskHandle().
+ * @param xTaskToNotify 被通知任务的句柄。任务句柄可由创建任务时使用的
+ * xTaskCreate() API 函数返回，当前运行任务的句柄可通过调用
+ * xTaskGetCurrentTaskHandle() 获取。
  *
- * @param uxIndexToNotify The index within the target task's array of
- * notification values to which the notification is to be sent.  uxIndexToNotify
- * must be less than configTASK_NOTIFICATION_ARRAY_ENTRIES.
- * xTaskNotifyGiveFromISR() does not have this parameter and always sends
- * notifications to index 0.
+ * @param uxIndexToNotify 目标任务通知值数组中的索引，通知将发送到该索引。
+ * uxIndexToNotify 必须小于 configTASK_NOTIFICATION_ARRAY_ENTRIES。
+ * xTaskNotifyGiveFromISR() 没有此参数，始终将通知发送到索引 0。
  *
- * @param pxHigherPriorityTaskWoken  vTaskNotifyGiveFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending the notification caused the
- * task to which the notification was sent to leave the Blocked state, and the
- * unblocked task has a priority higher than the currently running task.  If
- * vTaskNotifyGiveFromISR() sets this value to pdTRUE then a context switch
- * should be requested before the interrupt is exited.  How a context switch is
- * requested from an ISR is dependent on the port - see the documentation page
- * for the port in use.
+ * @param pxHigherPriorityTaskWoken 若发送通知导致被通知任务离开阻塞态，
+ * 且解除阻塞任务的优先级高于当前运行任务，则 vTaskNotifyGiveFromISR()
+ * 会将 *pxHigherPriorityTaskWoken 设置为 pdTRUE。
+ * 若 vTaskNotifyGiveFromISR() 将该值设置为 pdTRUE，则应在退出中断前
+ * 请求上下文切换。如何从 ISR 请求上下文切换取决于移植层——
+ * 请参见所用移植层的文档页面。
  *
  * \defgroup vTaskNotifyGiveIndexedFromISR vTaskNotifyGiveIndexedFromISR
  * \ingroup TaskNotifications
@@ -3211,92 +2956,74 @@ void vTaskGenericNotifyGiveFromISR( TaskHandle_t xTaskToNotify,
  * uint32_t ulTaskNotifyTake( BaseType_t xClearCountOnExit, TickType_t xTicksToWait );
  * @endcode
  *
- * Waits for a direct to task notification on a particular index in the calling
- * task's notification array in a manner similar to taking a counting semaphore.
+ * 以类似于获取计数信号量的方式，等待调用任务通知数组中特定索引处的
+ * 直接任务通知。
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for this
- * function to be available.
+ * 要使此函数可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * Events can be sent to a task using an intermediary object.  Examples of such
- * objects are queues, semaphores, mutexes and event groups.  Task notifications
- * are a method of sending an event directly to a task without the need for such
- * an intermediary object.
+ * 事件可以通过中间对象发送给任务。此类对象的例子包括队列、信号量、
+ * 互斥量和事件组。任务通知则是一种无需此类中间对象、
+ * 直接向任务发送事件的方法。
  *
- * A notification sent to a task can optionally perform an action, such as
- * update, overwrite or increment one of the task's notification values.  In
- * that way task notifications can be used to send data to a task, or be used as
- * light weight and fast binary or counting semaphores.
+ * 发送给任务的通知可以选择执行某种操作，例如更新、覆盖或递增任务的
+ * 某个通知值。因此，任务通知既可用于向任务发送数据，也可用作
+ * 轻量、快速的二值信号量或计数信号量。
  *
- * ulTaskNotifyTakeIndexed() is intended for use when a task notification is
- * used as a faster and lighter weight binary or counting semaphore alternative.
- * Actual FreeRTOS semaphores are taken using the xSemaphoreTake() API function,
- * the equivalent action that instead uses a task notification is
- * ulTaskNotifyTakeIndexed().
+ * ulTaskNotifyTakeIndexed() 适用于将任务通知用作更快、更轻量的
+ * 二值信号量或计数信号量替代品的场景。实际 FreeRTOS 信号量通过
+ * xSemaphoreTake() API 函数获取，而改用任务通知的等效操作是
+ * ulTaskNotifyTakeIndexed()。
  *
- * When a task is using its notification value as a binary or counting semaphore
- * other tasks should send notifications to it using the xTaskNotifyGiveIndexed()
- * macro, or xTaskNotifyIndex() function with the eAction parameter set to
- * eIncrement.
+ * 当任务将其通知值用作二值信号量或计数信号量时，其他任务应使用
+ * xTaskNotifyGiveIndexed() 宏，或使用 xTaskNotifyIndex() 函数并将
+ * eAction 参数设置为 eIncrement，向该任务发送通知。
  *
- * ulTaskNotifyTakeIndexed() can either clear the task's notification value at
- * the array index specified by the uxIndexToWaitOn parameter to zero on exit,
- * in which case the notification value acts like a binary semaphore, or
- * decrement the notification value on exit, in which case the notification
- * value acts like a counting semaphore.
+ * ulTaskNotifyTakeIndexed() 可以在退出时将 uxIndexToWaitOn 参数所指定
+ * 数组索引处的任务通知值清零，此时通知值的作用类似于二值信号量；
+ * 也可以在退出时递减通知值，此时通知值的作用类似于计数信号量。
  *
- * A task can use ulTaskNotifyTakeIndexed() to [optionally] block to wait for
- * a notification.  The task does not consume any CPU time while it is in the
- * Blocked state.
+ * 任务可以使用 ulTaskNotifyTakeIndexed()［可选地］阻塞等待通知。
+ * 任务处于阻塞态期间不消耗任何 CPU 时间。
  *
- * Where as xTaskNotifyWaitIndexed() will return when a notification is pending,
- * ulTaskNotifyTakeIndexed() will return when the task's notification value is
- * not zero.
+ * xTaskNotifyWaitIndexed() 在有通知挂起时返回，而
+ * ulTaskNotifyTakeIndexed() 在任务的通知值非零时返回。
  *
- * **NOTE** Each notification within the array operates independently - a task
- * can only block on one notification within the array at a time and will not be
- * unblocked by a notification sent to any other array index.
+ * **注意** 数组中的每个通知独立运作——任务一次只能阻塞在数组中的一个
+ * 通知上，且不会被发送到其他数组索引的通知解除阻塞。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  ulTaskNotifyTake() is the original API function, and remains backward
- * compatible by always operating on the notification value at index 0 in the
- * array. Calling ulTaskNotifyTake() is equivalent to calling
- * ulTaskNotifyTakeIndexed() with the uxIndexToWaitOn parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * ulTaskNotifyTake() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 ulTaskNotifyTake() 等价于调用
+ * ulTaskNotifyTakeIndexed()，并将 uxIndexToWaitOn 参数设置为 0。
  *
- * @param uxIndexToWaitOn The index within the calling task's array of
- * notification values on which the calling task will wait for a notification to
- * be non-zero.  uxIndexToWaitOn must be less than
- * configTASK_NOTIFICATION_ARRAY_ENTRIES.  xTaskNotifyTake() does
- * not have this parameter and always waits for notifications on index 0.
+ * @param uxIndexToWaitOn 调用任务通知值数组中的索引，调用任务将在该索引处
+ * 等待通知值变为非零。uxIndexToWaitOn 必须小于
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES。xTaskNotifyTake() 没有此参数，
+ * 始终在索引 0 处等待通知。
  *
- * @param xClearCountOnExit if xClearCountOnExit is pdFALSE then the task's
- * notification value is decremented when the function exits.  In this way the
- * notification value acts like a counting semaphore.  If xClearCountOnExit is
- * not pdFALSE then the task's notification value is cleared to zero when the
- * function exits.  In this way the notification value acts like a binary
- * semaphore.
+ * @param xClearCountOnExit 若 xClearCountOnExit 为 pdFALSE，则函数退出时
+ * 任务的通知值递减。这样通知值的作用类似于计数信号量。
+ * 若 xClearCountOnExit 不为 pdFALSE，则函数退出时任务的通知值清零。
+ * 这样通知值的作用类似于二值信号量。
  *
- * @param xTicksToWait The maximum amount of time that the task should wait in
- * the Blocked state for the task's notification value to be greater than zero,
- * should the count not already be greater than zero when
- * ulTaskNotifyTake() was called.  The task will not consume any processing
- * time while it is in the Blocked state.  This is specified in kernel ticks,
- * the macro pdMS_TO_TICKS( value_in_ms ) can be used to convert a time
- * specified in milliseconds to a time specified in ticks.
+ * @param xTicksToWait 若调用 ulTaskNotifyTake() 时计数值尚未大于零，
+ * 则任务应在阻塞态等待其通知值大于零的最长时间。
+ * 任务处于阻塞态期间不消耗任何处理时间。该时间以内核节拍为单位指定，
+ * 可使用宏 pdMS_TO_TICKS( value_in_ms ) 将毫秒时间转换为节拍时间。
  *
- * @return The task's notification count before it is either cleared to zero or
- * decremented (see the xClearCountOnExit parameter).
+ * @return 任务通知值被清零或递减之前（参见 xClearCountOnExit 参数）的
+ * 通知计数值。
  *
  * \defgroup ulTaskNotifyTakeIndexed ulTaskNotifyTakeIndexed
  * \ingroup TaskNotifications
@@ -3317,51 +3044,42 @@ uint32_t ulTaskGenericNotifyTake( UBaseType_t uxIndexToWaitOn,
  * BaseType_t xTaskNotifyStateClear( TaskHandle_t xTask );
  * @endcode
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for these
- * functions to be available.
+ * 要使这些函数可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * If a notification is sent to an index within the array of notifications then
- * the notification at that index is said to be 'pending' until it is read or
- * explicitly cleared by the receiving task.  xTaskNotifyStateClearIndexed()
- * is the function that clears a pending notification without reading the
- * notification value.  The notification value at the same array index is not
- * altered.  Set xTask to NULL to clear the notification state of the calling
- * task.
+ * 若向通知数组中的某个索引发送了通知，则称该索引处的通知处于“挂起”状态，
+ * 直到接收任务读取它或显式清除它。xTaskNotifyStateClearIndexed()
+ * 就是用于在不读取通知值的情况下清除挂起通知的函数。
+ * 同一数组索引处的通知值不会被修改。将 xTask 设置为 NULL 可清除
+ * 调用任务的通知状态。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  xTaskNotifyStateClear() is the original API function, and remains
- * backward compatible by always operating on the notification value at index 0
- * within the array. Calling xTaskNotifyStateClear() is equivalent to calling
- * xTaskNotifyStateClearIndexed() with the uxIndexToNotify parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * xTaskNotifyStateClear() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 xTaskNotifyStateClear() 等价于调用
+ * xTaskNotifyStateClearIndexed()，并将 uxIndexToNotify 参数设置为 0。
  *
- * @param xTask The handle of the RTOS task that will have a notification state
- * cleared.  Set xTask to NULL to clear a notification state in the calling
- * task.  To obtain a task's handle create the task using xTaskCreate() and
- * make use of the pxCreatedTask parameter, or create the task using
- * xTaskCreateStatic() and store the returned value, or use the task's name in
- * a call to xTaskGetHandle().
+ * @param xTask 要清除通知状态的 RTOS 任务句柄。将 xTask 设置为 NULL
+ * 可清除调用任务的通知状态。要获取任务句柄，可使用 xTaskCreate() 创建任务
+ * 并利用 pxCreatedTask 参数，或使用 xTaskCreateStatic() 创建任务并保存
+ * 其返回值，也可在调用 xTaskGetHandle() 时使用任务名称。
  *
- * @param uxIndexToClear The index within the target task's array of
- * notification values to act upon.  For example, setting uxIndexToClear to 1
- * will clear the state of the notification at index 1 within the array.
- * uxIndexToClear must be less than configTASK_NOTIFICATION_ARRAY_ENTRIES.
- * ulTaskNotifyStateClear() does not have this parameter and always acts on the
- * notification at index 0.
+ * @param uxIndexToClear 目标任务通知值数组中要操作的索引。例如，
+ * 将 uxIndexToClear 设置为 1 将清除数组中索引 1 处通知的状态。
+ * uxIndexToClear 必须小于 configTASK_NOTIFICATION_ARRAY_ENTRIES。
+ * ulTaskNotifyStateClear() 没有此参数，始终操作索引 0 处的通知。
  *
- * @return pdTRUE if the task's notification state was set to
- * eNotWaitingNotification, otherwise pdFALSE.
+ * @return 若任务的通知状态被设置为 eNotWaitingNotification，则返回 pdTRUE；
+ * 否则返回 pdFALSE。
  *
  * \defgroup xTaskNotifyStateClearIndexed xTaskNotifyStateClearIndexed
  * \ingroup TaskNotifications
@@ -3381,53 +3099,43 @@ BaseType_t xTaskGenericNotifyStateClear( TaskHandle_t xTask,
  * uint32_t ulTaskNotifyValueClear( TaskHandle_t xTask, uint32_t ulBitsToClear );
  * @endcode
  *
- * See https://www.FreeRTOS.org/RTOS-task-notifications.html for details.
+ * 详情请参见 https://www.FreeRTOS.org/RTOS-task-notifications.html。
  *
- * configUSE_TASK_NOTIFICATIONS must be undefined or defined as 1 for these
- * functions to be available.
+ * 要使这些函数可用，configUSE_TASK_NOTIFICATIONS 必须未定义或定义为 1。
  *
- * Each task has a private array of "notification values" (or 'notifications'),
- * each of which is a 32-bit unsigned integer (uint32_t).  The constant
- * configTASK_NOTIFICATION_ARRAY_ENTRIES sets the number of indexes in the
- * array, and (for backward compatibility) defaults to 1 if left undefined.
- * Prior to FreeRTOS V10.4.0 there was only one notification value per task.
+ * 每个任务都有一个私有的“通知值”（或称“通知”）数组，
+ * 其中每个通知值都是 32 位无符号整数（uint32_t）。常量
+ * configTASK_NOTIFICATION_ARRAY_ENTRIES 设置数组中的索引数量，
+ * （为保持向后兼容）若未定义则默认为 1。
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个通知值。
  *
- * ulTaskNotifyValueClearIndexed() clears the bits specified by the
- * ulBitsToClear bit mask in the notification value at array index uxIndexToClear
- * of the task referenced by xTask.
+ * ulTaskNotifyValueClearIndexed() 清除由 xTask 引用任务的通知值中、
+ * 数组索引 uxIndexToClear 处由 ulBitsToClear 位掩码指定的位。
  *
- * Backward compatibility information:
- * Prior to FreeRTOS V10.4.0 each task had a single "notification value", and
- * all task notification API functions operated on that value. Replacing the
- * single notification value with an array of notification values necessitated a
- * new set of API functions that could address specific notifications within the
- * array.  ulTaskNotifyValueClear() is the original API function, and remains
- * backward compatible by always operating on the notification value at index 0
- * within the array. Calling ulTaskNotifyValueClear() is equivalent to calling
- * ulTaskNotifyValueClearIndexed() with the uxIndexToClear parameter set to 0.
+ * 向后兼容信息：
+ * 在 FreeRTOS V10.4.0 之前，每个任务只有一个“通知值”，
+ * 所有任务通知 API 函数都作用于该值。用通知值数组替换单一通知值
+ * 后，需要一组新的 API 函数来访问数组中的特定通知。
+ * ulTaskNotifyValueClear() 是原始 API 函数，它始终作用于数组索引 0 处的
+ * 通知值，从而保持向后兼容。调用 ulTaskNotifyValueClear() 等价于调用
+ * ulTaskNotifyValueClearIndexed()，并将 uxIndexToClear 参数设置为 0。
  *
- * @param xTask The handle of the RTOS task that will have bits in one of its
- * notification values cleared. Set xTask to NULL to clear bits in a
- * notification value of the calling task.  To obtain a task's handle create the
- * task using xTaskCreate() and make use of the pxCreatedTask parameter, or
- * create the task using xTaskCreateStatic() and store the returned value, or
- * use the task's name in a call to xTaskGetHandle().
+ * @param xTask 要清除其某个通知值中位的 RTOS 任务句柄。将 xTask 设置为 NULL
+ * 可清除调用任务通知值中的位。要获取任务句柄，可使用 xTaskCreate() 创建任务
+ * 并利用 pxCreatedTask 参数，或使用 xTaskCreateStatic() 创建任务并保存
+ * 其返回值，也可在调用 xTaskGetHandle() 时使用任务名称。
  *
- * @param uxIndexToClear The index within the target task's array of
- * notification values in which to clear the bits.  uxIndexToClear
- * must be less than configTASK_NOTIFICATION_ARRAY_ENTRIES.
- * ulTaskNotifyValueClear() does not have this parameter and always clears bits
- * in the notification value at index 0.
+ * @param uxIndexToClear 目标任务通知值数组中要清除位的索引。
+ * uxIndexToClear 必须小于 configTASK_NOTIFICATION_ARRAY_ENTRIES。
+ * ulTaskNotifyValueClear() 没有此参数，始终清除索引 0 处通知值中的位。
  *
- * @param ulBitsToClear Bit mask of the bits to clear in the notification value of
- * xTask. Set a bit to 1 to clear the corresponding bits in the task's notification
- * value. Set ulBitsToClear to 0xffffffff (UINT_MAX on 32-bit architectures) to clear
- * the notification value to 0.  Set ulBitsToClear to 0 to query the task's
- * notification value without clearing any bits.
+ * @param ulBitsToClear 要清除的位掩码，作用于 xTask 的通知值。
+ * 将某位置 1 可清除任务通知值中对应的位。将 ulBitsToClear 设置为 0xffffffff
+ * （32 位架构上为 UINT_MAX）可将通知值清零。将 ulBitsToClear 设置为 0
+ * 可查询任务的通知值而不清除任何位。
  *
  *
- * @return The value of the target task's notification value before the bits
- * specified by ulBitsToClear were cleared.
+ * @return 目标任务通知值在清除 ulBitsToClear 指定的位之前的值。
  * \defgroup ulTaskNotifyValueClear ulTaskNotifyValueClear
  * \ingroup TaskNotifications
  */
@@ -3445,11 +3153,10 @@ uint32_t ulTaskGenericNotifyValueClear( TaskHandle_t xTask,
  * void vTaskSetTimeOutState( TimeOut_t * const pxTimeOut );
  * @endcode
  *
- * Capture the current time for future use with xTaskCheckForTimeOut().
+ * 捕获当前时间，供以后与 xTaskCheckForTimeOut() 配合使用。
  *
- * @param pxTimeOut Pointer to a timeout object into which the current time
- * is to be captured.  The captured time includes the tick count and the number
- * of times the tick count has overflowed since the system first booted.
+ * @param pxTimeOut 指向超时对象的指针，当前时间将被捕获到该对象中。
+ * 捕获的时间包括节拍计数，以及自系统首次启动以来节拍计数溢出的次数。
  * \defgroup vTaskSetTimeOutState vTaskSetTimeOutState
  * \ingroup TaskCtrl
  */
@@ -3461,38 +3168,32 @@ void vTaskSetTimeOutState( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNCTION;
  * BaseType_t xTaskCheckForTimeOut( TimeOut_t * const pxTimeOut, TickType_t * const pxTicksToWait );
  * @endcode
  *
- * Determines if pxTicksToWait ticks has passed since a time was captured
- * using a call to vTaskSetTimeOutState().  The captured time includes the tick
- * count and the number of times the tick count has overflowed.
+ * 判断自调用 vTaskSetTimeOutState() 捕获时间以来，是否已经过
+ * pxTicksToWait 个节拍。捕获的时间包括节拍计数以及节拍计数溢出的次数。
  *
- * @param pxTimeOut The time status as captured previously using
- * vTaskSetTimeOutState. If the timeout has not yet occurred, it is updated
- * to reflect the current time status.
- * @param pxTicksToWait The number of ticks to check for timeout i.e. if
- * pxTicksToWait ticks have passed since pxTimeOut was last updated (either by
- * vTaskSetTimeOutState() or xTaskCheckForTimeOut()), the timeout has occurred.
- * If the timeout has not occurred, pxTicksToWait is updated to reflect the
- * number of remaining ticks.
+ * @param pxTimeOut 先前使用 vTaskSetTimeOutState 捕获的时间状态。
+ * 若超时尚未发生，则将其更新为当前时间状态。
+ * @param pxTicksToWait 要检查超时的节拍数，即若自 pxTimeOut 上次更新
+ * （由 vTaskSetTimeOutState() 或 xTaskCheckForTimeOut() 更新）以来
+ * 已经过 pxTicksToWait 个节拍，则说明已超时。若超时尚未发生，
+ * 则将 pxTicksToWait 更新为剩余的节拍数。
  *
- * @return If timeout has occurred, pdTRUE is returned. Otherwise pdFALSE is
- * returned and pxTicksToWait is updated to reflect the number of remaining
- * ticks.
+ * @return 若已超时，返回 pdTRUE。否则返回 pdFALSE，
+ * 并将 pxTicksToWait 更新为剩余的节拍数。
  *
  * @see https://www.FreeRTOS.org/xTaskCheckForTimeOut.html
  *
- * Example Usage:
+ * 用法示例：
  * @code{c}
- *  // Driver library function used to receive uxWantedBytes from an Rx buffer
- *  // that is filled by a UART interrupt. If there are not enough bytes in the
- *  // Rx buffer then the task enters the Blocked state until it is notified that
- *  // more data has been placed into the buffer. If there is still not enough
- *  // data then the task re-enters the Blocked state, and xTaskCheckForTimeOut()
- *  // is used to re-calculate the Block time to ensure the total amount of time
- *  // spent in the Blocked state does not exceed MAX_TIME_TO_WAIT. This
- *  // continues until either the buffer contains at least uxWantedBytes bytes,
- *  // or the total amount of time spent in the Blocked state reaches
- *  // MAX_TIME_TO_WAIT - at which point the task reads however many bytes are
- *  // available up to a maximum of uxWantedBytes.
+ *  // 驱动程序库函数，用于从由 UART 中断填充的接收缓冲区中
+ *  // 接收 uxWantedBytes 个字节。若接收缓冲区中的字节数不足，
+ *  // 则任务进入阻塞态，直到收到已向缓冲区放入更多数据的通知。
+ *  // 若数据仍然不足，则任务重新进入阻塞态，并使用
+ *  // xTaskCheckForTimeOut() 重新计算阻塞时间，以确保在阻塞态
+ *  // 花费的总时间不超过 MAX_TIME_TO_WAIT。此过程持续进行，
+ *  // 直到缓冲区至少包含 uxWantedBytes 个字节，或
+ *  // 在阻塞态花费的总时间达到 MAX_TIME_TO_WAIT——此时任务
+ *  // 读取当前可用的字节数，最多不超过 uxWantedBytes 个。
  *
  *  size_t xUART_Receive( uint8_t *pucBuffer, size_t uxWantedBytes )
  *  {
@@ -3500,34 +3201,30 @@ void vTaskSetTimeOutState( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNCTION;
  *  TickType_t xTicksToWait = MAX_TIME_TO_WAIT;
  *  TimeOut_t xTimeOut;
  *
- *      // Initialize xTimeOut.  This records the time at which this function
- *      // was entered.
+ *      // 初始化 xTimeOut。它会记录进入此函数的时间。
  *      vTaskSetTimeOutState( &xTimeOut );
  *
- *      // Loop until the buffer contains the wanted number of bytes, or a
- *      // timeout occurs.
+ *      // 循环，直到缓冲区包含所需数量的字节，或发生超时。
  *      while( UART_bytes_in_rx_buffer( pxUARTInstance ) < uxWantedBytes )
  *      {
- *          // The buffer didn't contain enough data so this task is going to
- *          // enter the Blocked state. Adjusting xTicksToWait to account for
- *          // any time that has been spent in the Blocked state within this
- *          // function so far to ensure the total amount of time spent in the
- *          // Blocked state does not exceed MAX_TIME_TO_WAIT.
+ *          // 缓冲区中的数据不足，因此此任务将进入阻塞态。
+ *          // 调整 xTicksToWait，以计入此前在此函数内已在阻塞态
+ *          // 花费的时间，确保在阻塞态花费的总时间
+ *          // 不超过 MAX_TIME_TO_WAIT。
  *          if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) != pdFALSE )
  *          {
- *              //Timed out before the wanted number of bytes were available,
- *              // exit the loop.
+ *              // 在获得所需数量的字节之前已超时，
+ *              // 退出循环。
  *              break;
  *          }
  *
- *          // Wait for a maximum of xTicksToWait ticks to be notified that the
- *          // receive interrupt has placed more data into the buffer.
+ *          // 最多等待 xTicksToWait 个节拍，以收到接收中断
+ *          // 已向缓冲区放入更多数据的通知。
  *          ulTaskNotifyTake( pdTRUE, xTicksToWait );
  *      }
  *
- *      // Attempt to read uxWantedBytes from the receive buffer into pucBuffer.
- *      // The actual number of bytes read (which might be less than
- *      // uxWantedBytes) is returned.
+ *      // 尝试从接收缓冲区读取 uxWantedBytes 个字节到 pucBuffer。
+ *      // 返回实际读取的字节数（可能少于 uxWantedBytes）。
  *      uxReceived = UART_read_from_receive_buffer( pxUARTInstance,
  *                                                  pucBuffer,
  *                                                  uxWantedBytes );
@@ -3547,22 +3244,19 @@ BaseType_t xTaskCheckForTimeOut( TimeOut_t * const pxTimeOut,
  * BaseType_t xTaskCatchUpTicks( TickType_t xTicksToCatchUp );
  * @endcode
  *
- * This function corrects the tick count value after the application code has held
- * interrupts disabled for an extended period resulting in tick interrupts having
- * been missed.
+ * 当应用程序代码长时间禁止中断，导致节拍中断被错过时，
+ * 此函数用于修正节拍计数值。
  *
- * This function is similar to vTaskStepTick(), however, unlike
- * vTaskStepTick(), xTaskCatchUpTicks() may move the tick count forward past a
- * time at which a task should be removed from the blocked state.  That means
- * tasks may have to be removed from the blocked state as the tick count is
- * moved.
+ * 此函数与 vTaskStepTick() 类似，但不同之处在于：
+ * xTaskCatchUpTicks() 可能将节拍计数向前推进越过某个任务本应
+ * 离开阻塞态的时间点。这意味着在推进节拍计数时，
+ * 可能需要将任务从阻塞态移出。
  *
- * @param xTicksToCatchUp The number of tick interrupts that have been missed due to
- * interrupts being disabled.  Its value is not computed automatically, so must be
- * computed by the application writer.
+ * @param xTicksToCatchUp 因中断被禁止而错过的节拍中断数量。
+ * 该值不会自动计算，必须由应用程序编写者计算。
  *
- * @return pdTRUE if moving the tick count forward resulted in a task leaving the
- * blocked state and a context switch being performed.  Otherwise pdFALSE.
+ * @return 若向前推进节拍计数导致任务离开阻塞态并执行了上下文切换，
+ * 则返回 pdTRUE；否则返回 pdFALSE。
  *
  * \defgroup xTaskCatchUpTicks xTaskCatchUpTicks
  * \ingroup TaskCtrl
@@ -3575,8 +3269,7 @@ BaseType_t xTaskCatchUpTicks( TickType_t xTicksToCatchUp ) PRIVILEGED_FUNCTION;
  * void vTaskResetState( void );
  * @endcode
  *
- * This function resets the internal state of the task. It must be called by the
- * application before restarting the scheduler.
+ * 此函数重置任务的内部状态。应用程序必须在重新启动调度器之前调用它。
  *
  * \defgroup vTaskResetState vTaskResetState
  * \ingroup SchedulerControl
@@ -3584,63 +3277,53 @@ BaseType_t xTaskCatchUpTicks( TickType_t xTicksToCatchUp ) PRIVILEGED_FUNCTION;
 void vTaskResetState( void ) PRIVILEGED_FUNCTION;
 
 
-/*-----------------------------------------------------------
-* SCHEDULER INTERNALS AVAILABLE FOR PORTING PURPOSES
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 可供移植使用的调度器内部接口
+ * ----------------------------------------------------------
+ */
 
 #if ( configNUMBER_OF_CORES == 1 )
     #define taskYIELD_WITHIN_API()    portYIELD_WITHIN_API()
-#else /* #if ( configNUMBER_OF_CORES == 1 ) */
+#else /* #if ( configNUMBER_OF_CORES == 1 )（单核条件） */
     #define taskYIELD_WITHIN_API()    vTaskYieldWithinAPI()
-#endif /* #if ( configNUMBER_OF_CORES == 1 ) */
+#endif /* #if ( configNUMBER_OF_CORES == 1 )（单核条件） */
 
 /*
- * THIS FUNCTION MUST NOT BE USED FROM APPLICATION CODE.  IT IS ONLY
- * INTENDED FOR USE WHEN IMPLEMENTING A PORT OF THE SCHEDULER AND IS
- * AN INTERFACE WHICH IS FOR THE EXCLUSIVE USE OF THE SCHEDULER.
+ * 应用程序代码不得使用此函数。它仅用于实现调度器移植，
+ * 是调度器专用接口。
  *
- * Called from the real time kernel tick (either preemptive or cooperative),
- * this increments the tick count and checks if any tasks that are blocked
- * for a finite period required removing from a blocked list and placing on
- * a ready list.  If a non-zero value is returned then a context switch is
- * required because either:
- *   + A task was removed from a blocked list because its timeout had expired,
- *     or
- *   + Time slicing is in use and there is a task of equal priority to the
- *     currently running task.
+ * 此函数由实时内核节拍调用（抢占式或协作式），它将递增节拍计数，
+ * 并检查是否有因有限时间阻塞而需要从阻塞链表移出、放入就绪链表的任务。
+ * 若返回非零值，则需要上下文切换，原因可能是：
+ *   + 某任务因超时到期而从阻塞链表移出，或
+ *   + 正在使用时间片轮转，且存在与当前运行任务优先级相同的任务。
  */
 BaseType_t xTaskIncrementTick( void ) PRIVILEGED_FUNCTION;
 
 /*
- * THIS FUNCTION MUST NOT BE USED FROM APPLICATION CODE.  IT IS AN
- * INTERFACE WHICH IS FOR THE EXCLUSIVE USE OF THE SCHEDULER.
+ * 应用程序代码不得使用此函数。它是调度器专用接口。
  *
- * THIS FUNCTION MUST BE CALLED WITH INTERRUPTS DISABLED.
+ * 调用此函数时必须禁止中断。
  *
- * Removes the calling task from the ready list and places it both
- * on the list of tasks waiting for a particular event, and the
- * list of delayed tasks.  The task will be removed from both lists
- * and replaced on the ready list should either the event occur (and
- * there be no higher priority tasks waiting on the same event) or
- * the delay period expires.
+ * 从就绪链表中移除调用任务，并将其同时放入等待特定事件的任务链表
+ * 和延时任务链表。若事件发生（且没有更高优先级任务等待同一事件）
+ * 或延时时间到期，任务将从这两个链表中移除并重新放回就绪链表。
  *
- * The 'unordered' version replaces the event list item value with the
- * xItemValue value, and inserts the list item at the end of the list.
+ * “无序”版本用 xItemValue 值替换事件链表项的值，
+ * 并将链表项插入链表末尾。
  *
- * The 'ordered' version uses the existing event list item value (which is the
- * owning task's priority) to insert the list item into the event list in task
- * priority order.
+ * “有序”版本使用现有事件链表项的值（即所属任务的优先级），
+ * 按任务优先级顺序将链表项插入事件链表。
  *
- * @param pxEventList The list containing tasks that are blocked waiting
- * for the event to occur.
+ * @param pxEventList 包含因等待事件发生而阻塞的任务的链表。
  *
- * @param xItemValue The item value to use for the event list item when the
- * event list is not ordered by task priority.
+ * @param xItemValue 当事件链表不按任务优先级排序时，
+ * 用于事件链表项的项值。
  *
- * @param xTicksToWait The maximum amount of time that the task should wait
- * for the event to occur.  This is specified in kernel ticks, the constant
- * portTICK_PERIOD_MS can be used to convert kernel ticks into a real time
- * period.
+ * @param xTicksToWait 任务等待事件发生的最长时间。
+ * 该时间以内核节拍为单位指定，可使用常量 portTICK_PERIOD_MS
+ * 将内核节拍转换为实际时间。
  */
 void vTaskPlaceOnEventList( List_t * const pxEventList,
                             const TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
@@ -3649,55 +3332,44 @@ void vTaskPlaceOnUnorderedEventList( List_t * pxEventList,
                                      const TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
 
 /*
- * THIS FUNCTION MUST NOT BE USED FROM APPLICATION CODE.  IT IS AN
- * INTERFACE WHICH IS FOR THE EXCLUSIVE USE OF THE SCHEDULER.
+ * 应用程序代码不得使用此函数。它是调度器专用接口。
  *
- * THIS FUNCTION MUST BE CALLED WITH INTERRUPTS DISABLED.
+ * 调用此函数时必须禁止中断。
  *
- * This function performs nearly the same function as vTaskPlaceOnEventList().
- * The difference being that this function does not permit tasks to block
- * indefinitely, whereas vTaskPlaceOnEventList() does.
- *
+ * 此函数执行的功能与 vTaskPlaceOnEventList() 几乎相同。
+ * 区别在于此函数不允许任务无限期阻塞，而 vTaskPlaceOnEventList() 允许。
  */
 void vTaskPlaceOnEventListRestricted( List_t * const pxEventList,
                                       TickType_t xTicksToWait,
                                       const BaseType_t xWaitIndefinitely ) PRIVILEGED_FUNCTION;
 
 /*
- * THIS FUNCTION MUST NOT BE USED FROM APPLICATION CODE.  IT IS AN
- * INTERFACE WHICH IS FOR THE EXCLUSIVE USE OF THE SCHEDULER.
+ * 应用程序代码不得使用此函数。它是调度器专用接口。
  *
- * THIS FUNCTION MUST BE CALLED WITH INTERRUPTS DISABLED.
+ * 调用此函数时必须禁止中断。
  *
- * Removes a task from both the specified event list and the list of blocked
- * tasks, and places it on a ready queue.
+ * 从指定事件链表和阻塞任务链表中移除任务，并将其放入就绪队列。
  *
- * xTaskRemoveFromEventList()/vTaskRemoveFromUnorderedEventList() will be called
- * if either an event occurs to unblock a task, or the block timeout period
- * expires.
+ * 当事件发生使任务解除阻塞，或阻塞超时时间到期时，
+ * 会调用 xTaskRemoveFromEventList()/vTaskRemoveFromUnorderedEventList()。
  *
- * xTaskRemoveFromEventList() is used when the event list is in task priority
- * order.  It removes the list item from the head of the event list as that will
- * have the highest priority owning task of all the tasks on the event list.
- * vTaskRemoveFromUnorderedEventList() is used when the event list is not
- * ordered and the event list items hold something other than the owning tasks
- * priority.  In this case the event list item value is updated to the value
- * passed in the xItemValue parameter.
+ * 当事件链表按任务优先级排序时使用 xTaskRemoveFromEventList()。
+ * 它从事件链表头部移除链表项，因为该链表项对应事件链表上所有任务中
+ * 优先级最高的所属任务。当事件链表不按顺序排列，且事件链表项保存的
+ * 不是所属任务优先级时，使用 vTaskRemoveFromUnorderedEventList()。
+ * 此时，事件链表项的值会更新为 xItemValue 参数传入的值。
  *
- * @return pdTRUE if the task being removed has a higher priority than the task
- * making the call, otherwise pdFALSE.
+ * @return 若被移除任务的优先级高于调用任务，则返回 pdTRUE；否则返回 pdFALSE。
  */
 BaseType_t xTaskRemoveFromEventList( const List_t * const pxEventList ) PRIVILEGED_FUNCTION;
 void vTaskRemoveFromUnorderedEventList( ListItem_t * pxEventListItem,
                                         const TickType_t xItemValue ) PRIVILEGED_FUNCTION;
 
 /*
- * THIS FUNCTION MUST NOT BE USED FROM APPLICATION CODE.  IT IS ONLY
- * INTENDED FOR USE WHEN IMPLEMENTING A PORT OF THE SCHEDULER AND IS
- * AN INTERFACE WHICH IS FOR THE EXCLUSIVE USE OF THE SCHEDULER.
+ * 应用程序代码不得使用此函数。它仅用于实现调度器移植，
+ * 是调度器专用接口。
  *
- * Sets the pointer to the current TCB to the TCB of the highest priority task
- * that is ready to run.
+ * 将当前 TCB 的指针设置为最高优先级的就绪运行任务的 TCB。
  */
 #if ( configNUMBER_OF_CORES == 1 )
     portDONT_DISCARD void vTaskSwitchContext( void ) PRIVILEGED_FUNCTION;
@@ -3706,66 +3378,58 @@ void vTaskRemoveFromUnorderedEventList( ListItem_t * pxEventListItem,
 #endif
 
 /*
- * THESE FUNCTIONS MUST NOT BE USED FROM APPLICATION CODE.  THEY ARE USED BY
- * THE EVENT BITS MODULE.
+ * 这些函数不得在应用程序代码中使用。它们由事件位模块使用。
  */
 TickType_t uxTaskResetEventItemValue( void ) PRIVILEGED_FUNCTION;
 
 /*
- * Return the handle of the calling task.
+ * 返回调用任务的句柄。
  */
 TaskHandle_t xTaskGetCurrentTaskHandle( void ) PRIVILEGED_FUNCTION;
 
 /*
- * Return the handle of the task running on specified core.
+ * 返回指定核心上运行任务的句柄。
  */
 TaskHandle_t xTaskGetCurrentTaskHandleForCore( BaseType_t xCoreID ) PRIVILEGED_FUNCTION;
 
 /*
- * Shortcut used by the queue implementation to prevent unnecessary call to
- * taskYIELD();
+ * 队列实现使用的快捷方式，用于避免不必要的 taskYIELD() 调用。
  */
 void vTaskMissedYield( void ) PRIVILEGED_FUNCTION;
 
 /*
- * Returns the scheduler state as taskSCHEDULER_RUNNING,
- * taskSCHEDULER_NOT_STARTED or taskSCHEDULER_SUSPENDED.
+ * 返回调度器状态，为 taskSCHEDULER_RUNNING、taskSCHEDULER_NOT_STARTED 或 taskSCHEDULER_SUSPENDED。
  */
 BaseType_t xTaskGetSchedulerState( void ) PRIVILEGED_FUNCTION;
 
 /*
- * Raises the priority of the mutex holder to that of the calling task should
- * the mutex holder have a priority less than the calling task.
+ * 若互斥量持有者的优先级低于调用任务，则将互斥量持有者的优先级提升到调用任务的优先级。
  */
 BaseType_t xTaskPriorityInherit( TaskHandle_t const pxMutexHolder ) PRIVILEGED_FUNCTION;
 
 /*
- * Set the priority of a task back to its proper priority in the case that it
- * inherited a higher priority while it was holding a semaphore.
+ * 在任务持有信号量期间继承了更高优先级的情况下，将任务优先级恢复为其应有的优先级。
  */
 BaseType_t xTaskPriorityDisinherit( TaskHandle_t const pxMutexHolder ) PRIVILEGED_FUNCTION;
 
 /*
- * If a higher priority task attempting to obtain a mutex caused a lower
- * priority task to inherit the higher priority task's priority - but the higher
- * priority task then timed out without obtaining the mutex, then the lower
- * priority task will disinherit the priority again - but only down as far as
- * the highest priority task that is still waiting for the mutex (if there were
- * more than one task waiting for the mutex).
+ * 若一个更高优先级任务尝试获取互斥量，导致较低优先级任务继承了
+ * 该更高优先级任务的优先级——但该更高优先级任务随后在未获取到互斥量的
+ * 情况下超时，则较低优先级任务将再次放弃该优先级——但只会降低到
+ * 仍在等待该互斥量的最高优先级任务的水平（若有多个任务在等待该互斥量）。
  */
 void vTaskPriorityDisinheritAfterTimeout( TaskHandle_t const pxMutexHolder,
                                           UBaseType_t uxHighestPriorityWaitingTask ) PRIVILEGED_FUNCTION;
 
 /*
- * Get the uxTaskNumber assigned to the task referenced by the xTask parameter.
+ * 获取分配给 xTask 参数所引用任务的 uxTaskNumber。
  */
 #if ( configUSE_TRACE_FACILITY == 1 )
     UBaseType_t uxTaskGetTaskNumber( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Set the uxTaskNumber of the task referenced by the xTask parameter to
- * uxHandle.
+ * 将 xTask 参数所引用任务的 uxTaskNumber 设置为 uxHandle。
  */
 #if ( configUSE_TRACE_FACILITY == 1 )
     void vTaskSetTaskNumber( TaskHandle_t xTask,
@@ -3773,94 +3437,83 @@ void vTaskPriorityDisinheritAfterTimeout( TaskHandle_t const pxMutexHolder,
 #endif
 
 /*
- * Only available when configUSE_TICKLESS_IDLE is set to 1.
- * If tickless mode is being used, or a low power mode is implemented, then
- * the tick interrupt will not execute during idle periods.  When this is the
- * case, the tick count value maintained by the scheduler needs to be kept up
- * to date with the actual execution time by being skipped forward by a time
- * equal to the idle period.
+ * 仅当 configUSE_TICKLESS_IDLE 设置为 1 时可用。
+ * 若使用无节拍模式，或实现了低功耗模式，则空闲期间不会执行节拍中断。
+ * 在这种情况下，调度器维护的节拍计数值需要通过向前跳过等于空闲期的
+ * 时间，来与实际执行时间保持一致。
  */
 #if ( configUSE_TICKLESS_IDLE != 0 )
     void vTaskStepTick( TickType_t xTicksToJump ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Only available when configUSE_TICKLESS_IDLE is set to 1.
- * Provided for use within portSUPPRESS_TICKS_AND_SLEEP() to allow the port
- * specific sleep function to determine if it is ok to proceed with the sleep,
- * and if it is ok to proceed, if it is ok to sleep indefinitely.
+ * 仅当 configUSE_TICKLESS_IDLE 设置为 1 时可用。
+ * 提供此函数以便在 portSUPPRESS_TICKS_AND_SLEEP() 中使用，
+ * 使移植层特定的睡眠函数能够判断是否可以继续进入睡眠，
+ * 以及如果可以继续，是否可以无限期睡眠。
  *
- * This function is necessary because portSUPPRESS_TICKS_AND_SLEEP() is only
- * called with the scheduler suspended, not from within a critical section.  It
- * is therefore possible for an interrupt to request a context switch between
- * portSUPPRESS_TICKS_AND_SLEEP() and the low power mode actually being
- * entered.  eTaskConfirmSleepModeStatus() should be called from a short
- * critical section between the timer being stopped and the sleep mode being
- * entered to ensure it is ok to proceed into the sleep mode.
+ * 此函数是必要的，因为 portSUPPRESS_TICKS_AND_SLEEP() 仅在调度器挂起时
+ * 被调用，而不是在临界区内调用。因此，在 portSUPPRESS_TICKS_AND_SLEEP()
+ * 与实际进入低功耗模式之间，中断可能请求上下文切换。
+ * 应在停止定时器之后、进入睡眠模式之前的短临界区内调用
+ * eTaskConfirmSleepModeStatus()，以确保可以安全进入睡眠模式。
  */
 #if ( configUSE_TICKLESS_IDLE != 0 )
     eSleepModeStatus eTaskConfirmSleepModeStatus( void ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * For internal use only.  Increment the mutex held count when a mutex is
- * taken and return the handle of the task that has taken the mutex.
+ * 仅供内部使用。获取互斥量时递增互斥量持有计数，并返回已获取该互斥量的任务句柄。
  */
 TaskHandle_t pvTaskIncrementMutexHeldCount( void ) PRIVILEGED_FUNCTION;
 
 /*
- * For internal use only.  Same as vTaskSetTimeOutState(), but without a critical
- * section.
+ * 仅供内部使用。与 vTaskSetTimeOutState() 相同，但不使用临界区。
  */
 void vTaskInternalSetTimeOutState( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNCTION;
 
 /*
- * For internal use only. Same as portYIELD_WITHIN_API() in single core FreeRTOS.
- * For SMP this is not defined by the port.
+ * 仅供内部使用。在单核 FreeRTOS 中与 portYIELD_WITHIN_API() 相同。对于 SMP，移植层不定义此函数。
  */
 #if ( configNUMBER_OF_CORES > 1 )
     void vTaskYieldWithinAPI( void );
 #endif
 
 /*
- * This function is only intended for use when implementing a port of the scheduler
- * and is only available when portCRITICAL_NESTING_IN_TCB is set to 1 or configNUMBER_OF_CORES
- * is greater than 1. This function can be used in the implementation of portENTER_CRITICAL
- * if port wants to maintain critical nesting count in TCB in single core FreeRTOS.
- * It should be used in the implementation of portENTER_CRITICAL if port is running a
- * multiple core FreeRTOS.
+ * 此函数仅用于实现调度器移植，且仅在 portCRITICAL_NESTING_IN_TCB 设置为 1
+ * 或 configNUMBER_OF_CORES 大于 1 时可用。若移植层希望在单核 FreeRTOS 中
+ * 将临界区嵌套计数保存在 TCB 中，则可在 portENTER_CRITICAL 的实现中
+ * 使用此函数。若移植层运行的是多核 FreeRTOS，则应在 portENTER_CRITICAL
+ * 的实现中使用此函数。
  */
 #if ( ( portCRITICAL_NESTING_IN_TCB == 1 ) || ( configNUMBER_OF_CORES > 1 ) )
     void vTaskEnterCritical( void );
 #endif
 
 /*
- * This function is only intended for use when implementing a port of the scheduler
- * and is only available when portCRITICAL_NESTING_IN_TCB is set to 1 or configNUMBER_OF_CORES
- * is greater than 1. This function can be used in the implementation of portEXIT_CRITICAL
- * if port wants to maintain critical nesting count in TCB in single core FreeRTOS.
- * It should be used in the implementation of portEXIT_CRITICAL if port is running a
- * multiple core FreeRTOS.
+ * 此函数仅用于实现调度器移植，且仅在 portCRITICAL_NESTING_IN_TCB 设置为 1
+ * 或 configNUMBER_OF_CORES 大于 1 时可用。若移植层希望在单核 FreeRTOS 中
+ * 将临界区嵌套计数保存在 TCB 中，则可在 portEXIT_CRITICAL 的实现中
+ * 使用此函数。若移植层运行的是多核 FreeRTOS，则应在 portEXIT_CRITICAL
+ * 的实现中使用此函数。
  */
 #if ( ( portCRITICAL_NESTING_IN_TCB == 1 ) || ( configNUMBER_OF_CORES > 1 ) )
     void vTaskExitCritical( void );
 #endif
 
 /*
- * This function is only intended for use when implementing a port of the scheduler
- * and is only available when configNUMBER_OF_CORES is greater than 1. This function
- * should be used in the implementation of portENTER_CRITICAL_FROM_ISR if port is
- * running a multiple core FreeRTOS.
+ * 此函数仅用于实现调度器移植，且仅在 configNUMBER_OF_CORES 大于 1 时可用。
+ * 若移植层运行的是多核 FreeRTOS，则应在 portENTER_CRITICAL_FROM_ISR
+ * 的实现中使用此函数。
  */
 #if ( configNUMBER_OF_CORES > 1 )
     UBaseType_t vTaskEnterCriticalFromISR( void );
 #endif
 
 /*
- * This function is only intended for use when implementing a port of the scheduler
- * and is only available when configNUMBER_OF_CORES is greater than 1. This function
- * should be used in the implementation of portEXIT_CRITICAL_FROM_ISR if port is
- * running a multiple core FreeRTOS.
+ * 此函数仅用于实现调度器移植，且仅在 configNUMBER_OF_CORES 大于 1 时可用。
+ * 若移植层运行的是多核 FreeRTOS，则应在 portEXIT_CRITICAL_FROM_ISR
+ * 的实现中使用此函数。
  */
 #if ( configNUMBER_OF_CORES > 1 )
     void vTaskExitCriticalFromISR( UBaseType_t uxSavedInterruptStatus );
@@ -3869,17 +3522,17 @@ void vTaskInternalSetTimeOutState( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNC
 #if ( portUSING_MPU_WRAPPERS == 1 )
 
 /*
- * For internal use only.  Get MPU settings associated with a task.
+ * 仅供内部使用。获取与任务关联的 MPU 设置。
  */
     xMPU_SETTINGS * xTaskGetMPUSettings( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-#endif /* portUSING_MPU_WRAPPERS */
+#endif /* portUSING_MPU_WRAPPERS（MPU 封装使能条件） */
 
 
 #if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) )
 
 /*
- * For internal use only.  Grant/Revoke a task's access to a kernel object.
+ * 仅供内部使用。授予/撤销任务对内核对象的访问权限。
  */
     void vGrantAccessToKernelObject( TaskHandle_t xExternalTaskHandle,
                                      int32_t lExternalKernelObjectHandle ) PRIVILEGED_FUNCTION;
@@ -3887,18 +3540,18 @@ void vTaskInternalSetTimeOutState( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNC
                                       int32_t lExternalKernelObjectHandle ) PRIVILEGED_FUNCTION;
 
 /*
- * For internal use only.  Grant/Revoke a task's access to a kernel object.
+ * 仅供内部使用。授予/撤销任务对内核对象的访问权限。
  */
     void vPortGrantAccessToKernelObject( TaskHandle_t xInternalTaskHandle,
                                          int32_t lInternalIndexOfKernelObject ) PRIVILEGED_FUNCTION;
     void vPortRevokeAccessToKernelObject( TaskHandle_t xInternalTaskHandle,
                                           int32_t lInternalIndexOfKernelObject ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) ) */
+#endif /* #if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) )（MPU 访问控制条件） */
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
-#endif /* INC_TASK_H */
+/* *INDENT-ON* 恢复自动缩进 */
+#endif /* INC_TASK_H（头文件包含保护） */

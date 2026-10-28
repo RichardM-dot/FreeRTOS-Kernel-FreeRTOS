@@ -42,40 +42,38 @@
 
 #include "task.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
 /**
- * Type by which queues are referenced.  For example, a call to xQueueCreate()
- * returns a QueueHandle_t variable that can then be used as a parameter to
- * xQueueSend(), xQueueReceive(), etc.
+ * 用于引用队列的类型。例如，调用 xQueueCreate() 返回的
+ * QueueHandle_t 变量可作为参数传给 xQueueSend()、xQueueReceive() 等函数。
  */
-struct QueueDefinition; /* Using old naming convention so as not to break kernel aware debuggers. */
+struct QueueDefinition; /* 采用旧命名约定，以免破坏内核感知调试器。 */
 typedef struct QueueDefinition   * QueueHandle_t;
 
 /**
- * Type by which queue sets are referenced.  For example, a call to
- * xQueueCreateSet() returns an xQueueSet variable that can then be used as a
- * parameter to xQueueSelectFromSet(), xQueueAddToSet(), etc.
+ * 用于引用队列集的类型。例如，调用 xQueueCreateSet() 返回的 xQueueSet
+ * 变量可作为参数传给 xQueueSelectFromSet()、xQueueAddToSet() 等函数。
  */
 typedef struct QueueDefinition   * QueueSetHandle_t;
 
 /**
- * Queue sets can contain both queues and semaphores, so the
- * QueueSetMemberHandle_t is defined as a type to be used where a parameter or
- * return value can be either a QueueHandle_t or a SemaphoreHandle_t.
+ * 队列集中既可以包含队列，也可以包含信号量，因此定义
+ * QueueSetMemberHandle_t 类型，用于参数或返回值可能为 QueueHandle_t
+ * 或 SemaphoreHandle_t 的场合。
  */
 typedef struct QueueDefinition   * QueueSetMemberHandle_t;
 
-/* For internal use only. */
+/* 仅供内部使用。 */
 #define queueSEND_TO_BACK                     ( ( BaseType_t ) 0 )
 #define queueSEND_TO_FRONT                    ( ( BaseType_t ) 1 )
 #define queueOVERWRITE                        ( ( BaseType_t ) 2 )
 
-/* For internal use only.  These definitions *must* match those in queue.c. */
+/* 仅供内部使用。这些定义*必须*与 queue.c 中的定义一致。 */
 #define queueQUEUE_TYPE_BASE                  ( ( uint8_t ) 0U )
 #define queueQUEUE_TYPE_MUTEX                 ( ( uint8_t ) 1U )
 #define queueQUEUE_TYPE_COUNTING_SEMAPHORE    ( ( uint8_t ) 2U )
@@ -92,33 +90,27 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                        );
  * @endcode
  *
- * Creates a new queue instance, and returns a handle by which the new queue
- * can be referenced.
+ * 创建新的队列实例，并返回可用于引用该新队列的句柄。
  *
- * Internally, within the FreeRTOS implementation, queues use two blocks of
- * memory.  The first block is used to hold the queue's data structures.  The
- * second block is used to hold items placed into the queue.  If a queue is
- * created using xQueueCreate() then both blocks of memory are automatically
- * dynamically allocated inside the xQueueCreate() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a queue is created using
- * xQueueCreateStatic() then the application writer must provide the memory that
- * will get used by the queue.  xQueueCreateStatic() therefore allows a queue to
- * be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 实现内部，队列使用两块内存：第一块用于存放队列的数据结构，
+ * 第二块用于存放放入队列的项。若使用 xQueueCreate() 创建队列，这两块内存
+ * 将在 xQueueCreate() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xQueueCreateStatic() 创建
+ * 队列，则应用程序编写者必须提供队列所使用的内存。因此，
+ * xQueueCreateStatic() 允许在不使用任何动态内存分配的情况下创建队列。
  *
  * https://www.FreeRTOS.org/Embedded-RTOS-Queues.html
  *
- * @param uxQueueLength The maximum number of items that the queue can contain.
+ * @param uxQueueLength 队列可容纳的最大项数。
  *
- * @param uxItemSize The number of bytes each item in the queue will require.
- * Items are queued by copy, not by reference, so this is the number of bytes
- * that will be copied for each posted item.  Each item on the queue must be
- * the same size.
+ * @param uxItemSize 队列中每一项所需的字节数。项按值（拷贝）入队，而不是
+ * 按引用，因此该值为每投递一项所复制的字节数。队列中的每一项必须具有
+ * 相同的大小。
  *
- * @return If the queue is successfully create then a handle to the newly
- * created queue is returned.  If the queue cannot be created then NULL is
- * returned.
+ * @return 若队列创建成功，则返回新创建队列的句柄；若无法创建队列，
+ * 则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -130,22 +122,22 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * {
  * QueueHandle_t xQueue1, xQueue2;
  *
- *  // Create a queue capable of containing 10 uint32_t values.
+ *  // 创建可容纳 10 个 uint32_t 值的队列。
  *  xQueue1 = xQueueCreate( 10, sizeof( uint32_t ) );
  *  if( xQueue1 == NULL )
  *  {
- *      // Queue was not created and must not be used.
+ *      // 队列未创建成功，不得使用。
  *  }
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue2 = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *  if( xQueue2 == NULL )
  *  {
- *      // Queue was not created and must not be used.
+ *      // 队列未创建成功，不得使用。
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueCreate xQueueCreate
@@ -166,41 +158,35 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                        );
  * @endcode
  *
- * Creates a new queue instance, and returns a handle by which the new queue
- * can be referenced.
+ * 创建新的队列实例，并返回可用于引用该新队列的句柄。
  *
- * Internally, within the FreeRTOS implementation, queues use two blocks of
- * memory.  The first block is used to hold the queue's data structures.  The
- * second block is used to hold items placed into the queue.  If a queue is
- * created using xQueueCreate() then both blocks of memory are automatically
- * dynamically allocated inside the xQueueCreate() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a queue is created using
- * xQueueCreateStatic() then the application writer must provide the memory that
- * will get used by the queue.  xQueueCreateStatic() therefore allows a queue to
- * be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 实现内部，队列使用两块内存：第一块用于存放队列的数据结构，
+ * 第二块用于存放放入队列的项。若使用 xQueueCreate() 创建队列，这两块内存
+ * 将在 xQueueCreate() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xQueueCreateStatic() 创建
+ * 队列，则应用程序编写者必须提供队列所使用的内存。因此，
+ * xQueueCreateStatic() 允许在不使用任何动态内存分配的情况下创建队列。
  *
  * https://www.FreeRTOS.org/Embedded-RTOS-Queues.html
  *
- * @param uxQueueLength The maximum number of items that the queue can contain.
+ * @param uxQueueLength 队列可容纳的最大项数。
  *
- * @param uxItemSize The number of bytes each item in the queue will require.
- * Items are queued by copy, not by reference, so this is the number of bytes
- * that will be copied for each posted item.  Each item on the queue must be
- * the same size.
+ * @param uxItemSize 队列中每一项所需的字节数。项按值（拷贝）入队，而不是
+ * 按引用，因此该值为每投递一项所复制的字节数。队列中的每一项必须具有
+ * 相同的大小。
  *
- * @param pucQueueStorage If uxItemSize is not zero then
- * pucQueueStorage must point to a uint8_t array that is at least large
- * enough to hold the maximum number of items that can be in the queue at any
- * one time - which is ( uxQueueLength * uxItemSize ) bytes.  If uxItemSize is
- * zero then pucQueueStorage can be NULL.
+ * @param pucQueueStorage 若 uxItemSize 不为零，则 pucQueueStorage 必须指向
+ * 一个 uint8_t 数组，其大小至少足以容纳队列在任一时刻可包含的最大项数，
+ * 即 ( uxQueueLength * uxItemSize ) 字节。若 uxItemSize 为零，则
+ * pucQueueStorage 可为 NULL。
  *
- * @param pxQueueBuffer Must point to a variable of type StaticQueue_t, which
- * will be used to hold the queue's data structure.
+ * @param pxQueueBuffer 必须指向一个 StaticQueue_t 类型的变量，用于存放
+ * 队列的数据结构。
  *
- * @return If the queue is created then a handle to the created queue is
- * returned.  If pxQueueBuffer is NULL then NULL is returned.
+ * @return 若队列创建成功，则返回所创建队列的句柄；若 pxQueueBuffer 为 NULL，
+ * 则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -211,27 +197,27 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * #define QUEUE_LENGTH 10
  * #define ITEM_SIZE sizeof( uint32_t )
  *
- * // xQueueBuffer will hold the queue structure.
+ * // xQueueBuffer 用于存放队列结构体。
  * StaticQueue_t xQueueBuffer;
  *
- * // ucQueueStorage will hold the items posted to the queue.  Must be at least
- * // [(queue length) * ( queue item size)] bytes long.
+ * // ucQueueStorage 用于存放投递到队列的项。其长度至少应为
+ * // [(队列长度) * (队列项大小)] 字节。
  * uint8_t ucQueueStorage[ QUEUE_LENGTH * ITEM_SIZE ];
  *
  * void vATask( void *pvParameters )
  * {
  *  QueueHandle_t xQueue1;
  *
- *  // Create a queue capable of containing 10 uint32_t values.
- *  xQueue1 = xQueueCreateStatic( QUEUE_LENGTH,             // The number of items the queue can hold.
- *                                ITEM_SIZE,                // The size of each item in the queue.
- *                                &( ucQueueStorage[ 0 ] ), // The buffer that will hold the items in the queue.
- *                                &xQueueBuffer );          // The buffer that will hold the queue structure.
+ *  // 创建可容纳 10 个 uint32_t 值的队列。
+ *  xQueue1 = xQueueCreateStatic( QUEUE_LENGTH,             // 队列可容纳的项数。
+ *                                ITEM_SIZE,                // 队列中每一项的大小。
+ *                                &( ucQueueStorage[ 0 ] ), // 用于存放队列项的缓冲区。
+ *                                &xQueueBuffer );          // 用于存放队列结构体的缓冲区。
  *
- *  // The queue is guaranteed to be created successfully as no dynamic memory
- *  // allocation is used.  Therefore xQueue1 is now a handle to a valid queue.
+ *  // 由于未使用动态内存分配，可保证队列创建成功。
+ *  // 因此 xQueue1 现在是指向有效队列的句柄。
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueCreateStatic xQueueCreateStatic
@@ -239,7 +225,7 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     #define xQueueCreateStatic( uxQueueLength, uxItemSize, pucQueueStorage, pxQueueBuffer )    xQueueGenericCreateStatic( ( uxQueueLength ), ( uxItemSize ), ( pucQueueStorage ), ( pxQueueBuffer ), ( queueQUEUE_TYPE_BASE ) )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION（静态分配支持） */
 
 /**
  * queue. h
@@ -249,26 +235,23 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                                    StaticQueue_t ** ppxStaticQueue );
  * @endcode
  *
- * Retrieve pointers to a statically created queue's data structure buffer
- * and storage area buffer. These are the same buffers that are supplied
- * at the time of creation.
+ * 获取指向静态创建队列的数据结构缓冲区与存储区缓冲区的指针。
+ * 这些缓冲区与创建队列时提供的缓冲区相同。
  *
- * @param xQueue The queue for which to retrieve the buffers.
+ * @param xQueue 要获取缓冲区的队列。
  *
- * @param ppucQueueStorage Used to return a pointer to the queue's storage
- * area buffer.
+ * @param ppucQueueStorage 用于返回指向队列存储区缓冲区的指针。
  *
- * @param ppxStaticQueue Used to return a pointer to the queue's data
- * structure buffer.
+ * @param ppxStaticQueue 用于返回指向队列数据结构缓冲区的指针。
  *
- * @return pdTRUE if buffers were retrieved, pdFALSE otherwise.
+ * @return 若成功获取缓冲区则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xQueueGetStaticBuffers xQueueGetStaticBuffers
  * \ingroup QueueManagement
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     #define xQueueGetStaticBuffers( xQueue, ppucQueueStorage, ppxStaticQueue )    xQueueGenericGetStaticBuffers( ( xQueue ), ( ppucQueueStorage ), ( ppxStaticQueue ) )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION（静态分配支持） */
 
 /**
  * queue. h
@@ -280,27 +263,22 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                             );
  * @endcode
  *
- * Post an item to the front of a queue.  The item is queued by copy, not by
- * reference.  This function must not be called from an interrupt service
- * routine.  See xQueueSendFromISR () for an alternative which may be used
- * in an ISR.
+ * 向队列前端投递一项。项按值（拷贝）入队，而不是按引用。不得在中断服务
+ * 程序中调用此函数；可改用 xQueueSendFromISR()，它可在 ISR 中使用。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param xTicksToWait The maximum amount of time the task should block
- * waiting for space to become available on the queue, should it already
- * be full.  The call will return immediately if this is set to 0 and the
- * queue is full.  The time is defined in tick periods so the constant
- * portTICK_PERIOD_MS should be used to convert to real time if this is required.
+ * @param xTicksToWait 若队列已满，任务等待队列出现可用空间的最长时间。
+ * 若该值为 0 且队列已满，则调用立即返回。时间以 tick 周期为单位，
+ * 若需转换为实际时间，应使用常量 portTICK_PERIOD_MS。
  *
- * @return pdPASS if the item was successfully posted, otherwise errQUEUE_FULL.
+ * @return 若成功投递则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -315,34 +293,34 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * QueueHandle_t xQueue1, xQueue2;
  * struct AMessage *pxMessage;
  *
- *  // Create a queue capable of containing 10 uint32_t values.
+ *  // 创建可容纳 10 个 uint32_t 值的队列。
  *  xQueue1 = xQueueCreate( 10, sizeof( uint32_t ) );
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue2 = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *
  *  // ...
  *
  *  if( xQueue1 != 0 )
  *  {
- *      // Send an uint32_t.  Wait for 10 ticks for space to become
- *      // available if necessary.
+ *      // 发送一个 uint32_t。若有必要，等待 10 个 tick
+ *      // 直到出现可用空间。
  *      if( xQueueSendToFront( xQueue1, ( void * ) &ulVar, ( TickType_t ) 10 ) != pdPASS )
  *      {
- *          // Failed to post the message, even after 10 ticks.
+ *          // 即使等待 10 个 tick 后仍未能投递消息。
  *      }
  *  }
  *
  *  if( xQueue2 != 0 )
  *  {
- *      // Send a pointer to a struct AMessage object.  Don't block if the
- *      // queue is already full.
+ *      // 发送指向 struct AMessage 对象的指针。若队列已满，
+ *      // 不要阻塞。
  *      pxMessage = & xMessage;
  *      xQueueSendToFront( xQueue2, ( void * ) &pxMessage, ( TickType_t ) 0 );
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueSend xQueueSend
@@ -361,29 +339,24 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                             );
  * @endcode
  *
- * This is a macro that calls xQueueGenericSend().
+ * 此宏调用 xQueueGenericSend()。
  *
- * Post an item to the back of a queue.  The item is queued by copy, not by
- * reference.  This function must not be called from an interrupt service
- * routine.  See xQueueSendFromISR () for an alternative which may be used
- * in an ISR.
+ * 向队列后端投递一项。项按值（拷贝）入队，而不是按引用。不得在中断服务
+ * 程序中调用此函数；可改用 xQueueSendFromISR()，它可在 ISR 中使用。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param xTicksToWait The maximum amount of time the task should block
- * waiting for space to become available on the queue, should it already
- * be full.  The call will return immediately if this is set to 0 and the queue
- * is full.  The  time is defined in tick periods so the constant
- * portTICK_PERIOD_MS should be used to convert to real time if this is required.
+ * @param xTicksToWait 若队列已满，任务等待队列出现可用空间的最长时间。
+ * 若该值为 0 且队列已满，则调用立即返回。时间以 tick 周期为单位，
+ * 若需转换为实际时间，应使用常量 portTICK_PERIOD_MS。
  *
- * @return pdPASS if the item was successfully posted, otherwise errQUEUE_FULL.
+ * @return 若成功投递则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -398,34 +371,34 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * QueueHandle_t xQueue1, xQueue2;
  * struct AMessage *pxMessage;
  *
- *  // Create a queue capable of containing 10 uint32_t values.
+ *  // 创建可容纳 10 个 uint32_t 值的队列。
  *  xQueue1 = xQueueCreate( 10, sizeof( uint32_t ) );
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue2 = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *
  *  // ...
  *
  *  if( xQueue1 != 0 )
  *  {
- *      // Send an uint32_t.  Wait for 10 ticks for space to become
- *      // available if necessary.
+ *      // 发送一个 uint32_t。若有必要，等待 10 个 tick
+ *      // 直到出现可用空间。
  *      if( xQueueSendToBack( xQueue1, ( void * ) &ulVar, ( TickType_t ) 10 ) != pdPASS )
  *      {
- *          // Failed to post the message, even after 10 ticks.
+ *          // 即使等待 10 个 tick 后仍未能投递消息。
  *      }
  *  }
  *
  *  if( xQueue2 != 0 )
  *  {
- *      // Send a pointer to a struct AMessage object.  Don't block if the
- *      // queue is already full.
+ *      // 发送指向 struct AMessage 对象的指针。若队列已满，
+ *      // 不要阻塞。
  *      pxMessage = & xMessage;
  *      xQueueSendToBack( xQueue2, ( void * ) &pxMessage, ( TickType_t ) 0 );
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueSend xQueueSend
@@ -444,31 +417,26 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                       );
  * @endcode
  *
- * This is a macro that calls xQueueGenericSend().  It is included for
- * backward compatibility with versions of FreeRTOS.org that did not
- * include the xQueueSendToFront() and xQueueSendToBack() macros.  It is
- * equivalent to xQueueSendToBack().
+ * 此宏调用 xQueueGenericSend()。保留它是为了向后兼容未提供
+ * xQueueSendToFront() 和 xQueueSendToBack() 宏的 FreeRTOS.org 版本。
+ * 它等效于 xQueueSendToBack()。
  *
- * Post an item on a queue.  The item is queued by copy, not by reference.
- * This function must not be called from an interrupt service routine.
- * See xQueueSendFromISR () for an alternative which may be used in an ISR.
+ * 向队列投递一项。项按值（拷贝）入队，而不是按引用。不得在中断服务
+ * 程序中调用此函数；可改用 xQueueSendFromISR()，它可在 ISR 中使用。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param xTicksToWait The maximum amount of time the task should block
- * waiting for space to become available on the queue, should it already
- * be full.  The call will return immediately if this is set to 0 and the
- * queue is full.  The time is defined in tick periods so the constant
- * portTICK_PERIOD_MS should be used to convert to real time if this is required.
+ * @param xTicksToWait 若队列已满，任务等待队列出现可用空间的最长时间。
+ * 若该值为 0 且队列已满，则调用立即返回。时间以 tick 周期为单位，
+ * 若需转换为实际时间，应使用常量 portTICK_PERIOD_MS。
  *
- * @return pdPASS if the item was successfully posted, otherwise errQUEUE_FULL.
+ * @return 若成功投递则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -483,34 +451,34 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * QueueHandle_t xQueue1, xQueue2;
  * struct AMessage *pxMessage;
  *
- *  // Create a queue capable of containing 10 uint32_t values.
+ *  // 创建可容纳 10 个 uint32_t 值的队列。
  *  xQueue1 = xQueueCreate( 10, sizeof( uint32_t ) );
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue2 = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *
  *  // ...
  *
  *  if( xQueue1 != 0 )
  *  {
- *      // Send an uint32_t.  Wait for 10 ticks for space to become
- *      // available if necessary.
+ *      // 发送一个 uint32_t。若有必要，等待 10 个 tick
+ *      // 直到出现可用空间。
  *      if( xQueueSend( xQueue1, ( void * ) &ulVar, ( TickType_t ) 10 ) != pdPASS )
  *      {
- *          // Failed to post the message, even after 10 ticks.
+ *          // 即使等待 10 个 tick 后仍未能投递消息。
  *      }
  *  }
  *
  *  if( xQueue2 != 0 )
  *  {
- *      // Send a pointer to a struct AMessage object.  Don't block if the
- *      // queue is already full.
+ *      // 发送指向 struct AMessage 对象的指针。若队列已满，
+ *      // 不要阻塞。
  *      pxMessage = & xMessage;
  *      xQueueSend( xQueue2, ( void * ) &pxMessage, ( TickType_t ) 0 );
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueSend xQueueSend
@@ -528,28 +496,25 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                       );
  * @endcode
  *
- * Only for use with queues that have a length of one - so the queue is either
- * empty or full.
+ * 仅适用于长度为 1 的队列，即队列要么为空，要么已满。
  *
- * Post an item on a queue.  If the queue is already full then overwrite the
- * value held in the queue.  The item is queued by copy, not by reference.
+ * 向队列投递一项。若队列已满，则覆盖队列中保存的值。项按值（拷贝）
+ * 入队，而不是按引用。
  *
- * This function must not be called from an interrupt service routine.
- * See xQueueOverwriteFromISR () for an alternative which may be used in an ISR.
+ * 不得在中断服务程序中调用此函数。可改用 xQueueOverwriteFromISR()，
+ * 它可在 ISR 中使用。
  *
- * @param xQueue The handle of the queue to which the data is being sent.
+ * @param xQueue 数据要发送到的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @return xQueueOverwrite() is a macro that calls xQueueGenericSend(), and
- * therefore has the same return values as xQueueSendToFront().  However, pdPASS
- * is the only value that can be returned because xQueueOverwrite() will write
- * to the queue even when the queue is already full.
+ * @return xQueueOverwrite() 是调用 xQueueGenericSend() 的宏，因此返回值
+ * 与 xQueueSendToFront() 相同。但由于即使队列已满 xQueueOverwrite()
+ * 也会写入队列，所以唯一可能返回的值是 pdPASS。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  *
  * void vFunction( void *pvParameters )
@@ -557,41 +522,39 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * QueueHandle_t xQueue;
  * uint32_t ulVarToSend, ulValReceived;
  *
- *  // Create a queue to hold one uint32_t value.  It is strongly
- *  // recommended *not* to use xQueueOverwrite() on queues that can
- *  // contain more than one value, and doing so will trigger an assertion
- *  // if configASSERT() is defined.
+ *  // 创建用于保存一个 uint32_t 值的队列。强烈建议
+ *  // *不要*在可包含多个值的队列上使用 xQueueOverwrite()；
+ *  // 否则若定义了 configASSERT()，将触发断言。
  *  xQueue = xQueueCreate( 1, sizeof( uint32_t ) );
  *
- *  // Write the value 10 to the queue using xQueueOverwrite().
+ *  // 使用 xQueueOverwrite() 将值 10 写入队列。
  *  ulVarToSend = 10;
  *  xQueueOverwrite( xQueue, &ulVarToSend );
  *
- *  // Peeking the queue should now return 10, but leave the value 10 in
- *  // the queue.  A block time of zero is used as it is known that the
- *  // queue holds a value.
+ *  // 此时窥视（peek）队列应返回 10，但值 10 仍保留在
+ *  // 队列中。由于已知队列中有值，阻塞时间设为 0。
  *  ulValReceived = 0;
  *  xQueuePeek( xQueue, &ulValReceived, 0 );
  *
  *  if( ulValReceived != 10 )
  *  {
- *      // Error unless the item was removed by a different task.
+ *      // 除非该项已被其他任务移除，否则说明出错。
  *  }
  *
- *  // The queue is still full.  Use xQueueOverwrite() to overwrite the
- *  // value held in the queue with 100.
+ *  // 队列仍为满。使用 xQueueOverwrite() 将队列中保存的
+ *  // 值覆盖为 100。
  *  ulVarToSend = 100;
  *  xQueueOverwrite( xQueue, &ulVarToSend );
  *
- *  // This time read from the queue, leaving the queue empty once more.
- *  // A block time of 0 is used again.
+ *  // 这次从队列读取，使队列再次变为空。
+ *  // 阻塞时间同样设为 0。
  *  xQueueReceive( xQueue, &ulValReceived, 0 );
  *
- *  // The value read should be the last value written, even though the
- *  // queue was already full when the value was written.
+ *  // 读出的值应为最后写入的值，即使写入时
+ *  // 队列已经为满。
  *  if( ulValReceived != 100 )
  *  {
- *      // Error!
+ *      // 出错！
  *  }
  *
  *  // ...
@@ -615,33 +578,28 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  *                              );
  * @endcode
  *
- * It is preferred that the macros xQueueSend(), xQueueSendToFront() and
- * xQueueSendToBack() are used in place of calling this function directly.
+ * 建议使用宏 xQueueSend()、xQueueSendToFront() 和 xQueueSendToBack()，
+ * 而不是直接调用此函数。
  *
- * Post an item on a queue.  The item is queued by copy, not by reference.
- * This function must not be called from an interrupt service routine.
- * See xQueueSendFromISR () for an alternative which may be used in an ISR.
+ * 向队列投递一项。项按值（拷贝）入队，而不是按引用。不得在中断服务
+ * 程序中调用此函数；可改用 xQueueSendFromISR()，它可在 ISR 中使用。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param xTicksToWait The maximum amount of time the task should block
- * waiting for space to become available on the queue, should it already
- * be full.  The call will return immediately if this is set to 0 and the
- * queue is full.  The time is defined in tick periods so the constant
- * portTICK_PERIOD_MS should be used to convert to real time if this is required.
+ * @param xTicksToWait 若队列已满，任务等待队列出现可用空间的最长时间。
+ * 若该值为 0 且队列已满，则调用立即返回。时间以 tick 周期为单位，
+ * 若需转换为实际时间，应使用常量 portTICK_PERIOD_MS。
  *
- * @param xCopyPosition Can take the value queueSEND_TO_BACK to place the
- * item at the back of the queue, or queueSEND_TO_FRONT to place the item
- * at the front of the queue (for high priority messages).
+ * @param xCopyPosition 可取 queueSEND_TO_BACK，将项放入队列后端；
+ * 或取 queueSEND_TO_FRONT，将项放入队列前端（用于高优先级消息）。
  *
- * @return pdPASS if the item was successfully posted, otherwise errQUEUE_FULL.
+ * @return 若成功投递则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -656,34 +614,34 @@ typedef struct QueueDefinition   * QueueSetMemberHandle_t;
  * QueueHandle_t xQueue1, xQueue2;
  * struct AMessage *pxMessage;
  *
- *  // Create a queue capable of containing 10 uint32_t values.
+ *  // 创建可容纳 10 个 uint32_t 值的队列。
  *  xQueue1 = xQueueCreate( 10, sizeof( uint32_t ) );
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue2 = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *
  *  // ...
  *
  *  if( xQueue1 != 0 )
  *  {
- *      // Send an uint32_t.  Wait for 10 ticks for space to become
- *      // available if necessary.
+ *      // 发送一个 uint32_t。若有必要，等待 10 个 tick
+ *      // 直到出现可用空间。
  *      if( xQueueGenericSend( xQueue1, ( void * ) &ulVar, ( TickType_t ) 10, queueSEND_TO_BACK ) != pdPASS )
  *      {
- *          // Failed to post the message, even after 10 ticks.
+ *          // 即使等待 10 个 tick 后仍未能投递消息。
  *      }
  *  }
  *
  *  if( xQueue2 != 0 )
  *  {
- *      // Send a pointer to a struct AMessage object.  Don't block if the
- *      // queue is already full.
+ *      // 发送指向 struct AMessage 对象的指针。若队列已满，
+ *      // 不要阻塞。
  *      pxMessage = & xMessage;
  *      xQueueGenericSend( xQueue2, ( void * ) &pxMessage, ( TickType_t ) 0, queueSEND_TO_BACK );
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueSend xQueueSend
@@ -704,35 +662,26 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
  *                       );
  * @endcode
  *
- * Receive an item from a queue without removing the item from the queue.
- * The item is received by copy so a buffer of adequate size must be
- * provided.  The number of bytes copied into the buffer was defined when
- * the queue was created.
+ * 从队列读取一项，但不将其从队列中移除。项按值（拷贝）接收，因此必须
+ * 提供足够大的缓冲区。复制到缓冲区的字节数在创建队列时已确定。
  *
- * Successfully received items remain on the queue so will be returned again
- * by the next call, or a call to xQueueReceive().
+ * 成功接收的项仍保留在队列中，因此下一次调用或调用 xQueueReceive() 时
+ * 会再次返回。
  *
- * This macro must not be used in an interrupt service routine.  See
- * xQueuePeekFromISR() for an alternative that can be called from an interrupt
- * service routine.
+ * 不得在中断服务程序中使用此宏。可改用 xQueuePeekFromISR()。
  *
- * @param xQueue The handle to the queue from which the item is to be
- * received.
+ * @param xQueue 要从中接收项的队列句柄。
  *
- * @param pvBuffer Pointer to the buffer into which the received item will
- * be copied.
+ * @param pvBuffer 指向用于接收所读取项的缓冲区的指针。
  *
- * @param xTicksToWait The maximum amount of time the task should block
- * waiting for an item to receive should the queue be empty at the time
- * of the call. The time is defined in tick periods so the constant
- * portTICK_PERIOD_MS should be used to convert to real time if this is required.
- * xQueuePeek() will return immediately if xTicksToWait is 0 and the queue
- * is empty.
+ * @param xTicksToWait 若调用时队列为空，任务等待可接收项的最长时间。
+ * 时间以 tick 周期为单位，若需转换为实际时间，应使用常量
+ * portTICK_PERIOD_MS。若 xTicksToWait 为 0 且队列为空，
+ * xQueuePeek() 将立即返回。
  *
- * @return pdPASS if an item was successfully received from the queue,
- * otherwise errQUEUE_EMPTY.
+ * @return 若成功从队列接收到项则返回 pdPASS，否则返回 errQUEUE_EMPTY。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -742,46 +691,46 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
  *
  * QueueHandle_t xQueue;
  *
- * // Task to create a queue and post a value.
+ * // 用于创建队列并投递值的任务。
  * void vATask( void *pvParameters )
  * {
  * struct AMessage *pxMessage;
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *  if( xQueue == 0 )
  *  {
- *      // Failed to create the queue.
+ *      // 队列创建失败。
  *  }
  *
  *  // ...
  *
- *  // Send a pointer to a struct AMessage object.  Don't block if the
- *  // queue is already full.
+ *  // 发送指向 struct AMessage 对象的指针。若队列已满，
+ *  // 不要阻塞。
  *  pxMessage = & xMessage;
  *  xQueueSend( xQueue, ( void * ) &pxMessage, ( TickType_t ) 0 );
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  *
- * // Task to peek the data from the queue.
+ * // 用于从队列窥视（peek）数据的任务。
  * void vADifferentTask( void *pvParameters )
  * {
  * struct AMessage *pxRxedMessage;
  *
  *  if( xQueue != 0 )
  *  {
- *      // Peek a message on the created queue.  Block for 10 ticks if a
- *      // message is not immediately available.
+ *      // 在已创建的队列上窥视消息。若消息不能立即获取，
+ *      // 则阻塞 10 个 tick。
  *      if( xQueuePeek( xQueue, &( pxRxedMessage ), ( TickType_t ) 10 ) )
  *      {
- *          // pcRxedMessage now points to the struct AMessage variable posted
- *          // by vATask, but the item still remains on the queue.
+ *          // 此时 pcRxedMessage 指向 vATask 投递的 struct AMessage
+ *          // 变量，但该项仍保留在队列中。
  *      }
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueuePeek xQueuePeek
@@ -800,25 +749,19 @@ BaseType_t xQueuePeek( QueueHandle_t xQueue,
  *                              );
  * @endcode
  *
- * A version of xQueuePeek() that can be called from an interrupt service
- * routine (ISR).
+ * 可在中断服务程序（ISR）中调用的 xQueuePeek() 版本。
  *
- * Receive an item from a queue without removing the item from the queue.
- * The item is received by copy so a buffer of adequate size must be
- * provided.  The number of bytes copied into the buffer was defined when
- * the queue was created.
+ * 从队列读取一项，但不将其从队列中移除。项按值（拷贝）接收，因此必须
+ * 提供足够大的缓冲区。复制到缓冲区的字节数在创建队列时已确定。
  *
- * Successfully received items remain on the queue so will be returned again
- * by the next call, or a call to xQueueReceive().
+ * 成功接收的项仍保留在队列中，因此下一次调用或调用 xQueueReceive() 时
+ * 会再次返回。
  *
- * @param xQueue The handle to the queue from which the item is to be
- * received.
+ * @param xQueue 要从中接收项的队列句柄。
  *
- * @param pvBuffer Pointer to the buffer into which the received item will
- * be copied.
+ * @param pvBuffer 指向用于接收所读取项的缓冲区的指针。
  *
- * @return pdPASS if an item was successfully received from the queue,
- * otherwise pdFAIL.
+ * @return 若成功从队列接收到项则返回 pdPASS，否则返回 pdFAIL。
  *
  * \defgroup xQueuePeekFromISR xQueuePeekFromISR
  * \ingroup QueueManagement
@@ -836,32 +779,25 @@ BaseType_t xQueuePeekFromISR( QueueHandle_t xQueue,
  *                          );
  * @endcode
  *
- * Receive an item from a queue.  The item is received by copy so a buffer of
- * adequate size must be provided.  The number of bytes copied into the buffer
- * was defined when the queue was created.
+ * 从队列接收一项。项按值（拷贝）接收，因此必须提供足够大的缓冲区。
+ * 复制到缓冲区的字节数在创建队列时已确定。
  *
- * Successfully received items are removed from the queue.
+ * 成功接收的项将从队列中移除。
  *
- * This function must not be used in an interrupt service routine.  See
- * xQueueReceiveFromISR for an alternative that can.
+ * 不得在中断服务程序中使用此函数。可改用 xQueueReceiveFromISR。
  *
- * @param xQueue The handle to the queue from which the item is to be
- * received.
+ * @param xQueue 要从中接收项的队列句柄。
  *
- * @param pvBuffer Pointer to the buffer into which the received item will
- * be copied.
+ * @param pvBuffer 指向用于接收所读取项的缓冲区的指针。
  *
- * @param xTicksToWait The maximum amount of time the task should block
- * waiting for an item to receive should the queue be empty at the time
- * of the call. xQueueReceive() will return immediately if xTicksToWait
- * is zero and the queue is empty.  The time is defined in tick periods so the
- * constant portTICK_PERIOD_MS should be used to convert to real time if this is
- * required.
+ * @param xTicksToWait 若调用时队列为空，任务等待可接收项的最长时间。
+ * 若 xTicksToWait 为零且队列为空，xQueueReceive() 将立即返回。
+ * 时间以 tick 周期为单位，若需转换为实际时间，应使用常量
+ * portTICK_PERIOD_MS。
  *
- * @return pdPASS if an item was successfully received from the queue,
- * otherwise errQUEUE_EMPTY.
+ * @return 若成功从队列接收到项则返回 pdPASS，否则返回 errQUEUE_EMPTY。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * struct AMessage
  * {
@@ -871,46 +807,46 @@ BaseType_t xQueuePeekFromISR( QueueHandle_t xQueue,
  *
  * QueueHandle_t xQueue;
  *
- * // Task to create a queue and post a value.
+ * // 用于创建队列并投递值的任务。
  * void vATask( void *pvParameters )
  * {
  * struct AMessage *pxMessage;
  *
- *  // Create a queue capable of containing 10 pointers to AMessage structures.
- *  // These should be passed by pointer as they contain a lot of data.
+ *  // 创建可容纳 10 个指向 AMessage 结构体指针的队列。
+ *  // 这些结构体包含大量数据，应通过指针传递。
  *  xQueue = xQueueCreate( 10, sizeof( struct AMessage * ) );
  *  if( xQueue == 0 )
  *  {
- *      // Failed to create the queue.
+ *      // 队列创建失败。
  *  }
  *
  *  // ...
  *
- *  // Send a pointer to a struct AMessage object.  Don't block if the
- *  // queue is already full.
+ *  // 发送指向 struct AMessage 对象的指针。若队列已满，
+ *  // 不要阻塞。
  *  pxMessage = & xMessage;
  *  xQueueSend( xQueue, ( void * ) &pxMessage, ( TickType_t ) 0 );
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  *
- * // Task to receive from the queue.
+ * // 用于从队列接收数据的任务。
  * void vADifferentTask( void *pvParameters )
  * {
  * struct AMessage *pxRxedMessage;
  *
  *  if( xQueue != 0 )
  *  {
- *      // Receive a message on the created queue.  Block for 10 ticks if a
- *      // message is not immediately available.
+ *      // 在已创建的队列上接收消息。若消息不能立即获取，
+ *      // 则阻塞 10 个 tick。
  *      if( xQueueReceive( xQueue, &( pxRxedMessage ), ( TickType_t ) 10 ) )
  *      {
- *          // pcRxedMessage now points to the struct AMessage variable posted
- *          // by vATask.
+ *          // 此时 pcRxedMessage 指向 vATask 投递的 struct AMessage
+ *          // 变量。
  *      }
  *  }
  *
- *  // ... Rest of task code.
+ *  // ... 任务其余代码。
  * }
  * @endcode
  * \defgroup xQueueReceive xQueueReceive
@@ -926,11 +862,11 @@ BaseType_t xQueueReceive( QueueHandle_t xQueue,
  * UBaseType_t uxQueueMessagesWaiting( const QueueHandle_t xQueue );
  * @endcode
  *
- * Return the number of messages stored in a queue.
+ * 返回队列中保存的消息数量。
  *
- * @param xQueue A handle to the queue being queried.
+ * @param xQueue 要查询的队列句柄。
  *
- * @return The number of messages available in the queue.
+ * @return 队列中可用的消息数量。
  *
  * \defgroup uxQueueMessagesWaiting uxQueueMessagesWaiting
  * \ingroup QueueManagement
@@ -943,13 +879,12 @@ UBaseType_t uxQueueMessagesWaiting( const QueueHandle_t xQueue ) PRIVILEGED_FUNC
  * UBaseType_t uxQueueSpacesAvailable( const QueueHandle_t xQueue );
  * @endcode
  *
- * Return the number of free spaces available in a queue.  This is equal to the
- * number of items that can be sent to the queue before the queue becomes full
- * if no items are removed.
+ * 返回队列中可用的空闲空间数量。若不移除任何项，该值等于在队列变满之前
+ * 可发送到队列的项数。
  *
- * @param xQueue A handle to the queue being queried.
+ * @param xQueue 要查询的队列句柄。
  *
- * @return The number of spaces available in the queue.
+ * @return 队列中可用的空间数量。
  *
  * \defgroup uxQueueMessagesWaiting uxQueueMessagesWaiting
  * \ingroup QueueManagement
@@ -962,10 +897,9 @@ UBaseType_t uxQueueSpacesAvailable( const QueueHandle_t xQueue ) PRIVILEGED_FUNC
  * void vQueueDelete( QueueHandle_t xQueue );
  * @endcode
  *
- * Delete a queue - freeing all the memory allocated for storing of items
- * placed on the queue.
+ * 删除队列，并释放为存储放入队列的项而分配的所有内存。
  *
- * @param xQueue A handle to the queue to be deleted.
+ * @param xQueue 要删除的队列句柄。
  *
  * \defgroup vQueueDelete vQueueDelete
  * \ingroup QueueManagement
@@ -982,60 +916,55 @@ void vQueueDelete( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
  *                                    );
  * @endcode
  *
- * This is a macro that calls xQueueGenericSendFromISR().
+ * 此宏调用 xQueueGenericSendFromISR()。
  *
- * Post an item to the front of a queue.  It is safe to use this macro from
- * within an interrupt service routine.
+ * 向队列前端投递一项。在中断服务程序中使用此宏是安全的。
  *
- * Items are queued by copy not reference so it is preferable to only
- * queue small items, especially when called from an ISR.  In most cases
- * it would be preferable to store a pointer to the item being queued.
+ * 项按值（拷贝）入队，而不是按引用，因此最好只入队小项，尤其是在 ISR
+ * 中调用时。大多数情况下，最好改为保存指向所入队项的指针。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param pxHigherPriorityTaskWoken xQueueSendToFrontFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending to the queue caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xQueueSendToFrontFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若向队列发送导致某个任务解除阻塞，且
+ * 被解除阻塞的任务优先级高于当前正在运行的任务，
+ * xQueueSendToFrontFromISR() 会将 *pxHigherPriorityTaskWoken 置为 pdTRUE。
+ * 若 xQueueSendToFrontFromISR() 将该值置为 pdTRUE，则应在退出中断前
+ * 请求一次上下文切换。
  *
- * @return pdPASS if the data was successfully sent to the queue, otherwise
- * errQUEUE_FULL.
+ * @return 若数据成功发送到队列则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage for buffered IO (where the ISR can obtain more than one value
- * per call):
+ * 带缓冲 IO 的示例用法（ISR 每次调用可获取多个值）：
  * @code{c}
  * void vBufferISR( void )
  * {
  * char cIn;
  * BaseType_t xHigherPriorityTaskWoken;
  *
- *  // We have not woken a task at the start of the ISR.
+ *  // ISR 开始时尚未唤醒任何任务。
  *  xHigherPriorityTaskWoken = pdFALSE;
  *
- *  // Loop until the buffer is empty.
+ *  // 循环直到缓冲区为空。
  *  do
  *  {
- *      // Obtain a byte from the buffer.
+ *      // 从缓冲区获取一个字节。
  *      cIn = portINPUT_BYTE( RX_REGISTER_ADDRESS );
  *
- *      // Post the byte.
+ *      // 投递该字节。
  *      xQueueSendToFrontFromISR( xRxQueue, &cIn, &xHigherPriorityTaskWoken );
  *
  *  } while( portINPUT_BYTE( BUFFER_COUNT ) );
  *
- *  // Now the buffer is empty we can switch context if necessary.
+ *  // 缓冲区现已为空，如有必要可切换上下文。
  *  if( xHigherPriorityTaskWoken )
  *  {
- *      // As xHigherPriorityTaskWoken is now set to pdTRUE then a context
- *      // switch should be requested. The macro used is port specific and
- *      // will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() -
- *      // refer to the documentation page for the port being used.
+ *      // 由于 xHigherPriorityTaskWoken 现已置为 pdTRUE，
+ *      // 应请求一次上下文切换。所用宏与移植层相关，
+ *      // 可能是 portYIELD_FROM_ISR() 或 portEND_SWITCHING_ISR()，
+ *      // 请参阅所用移植层的文档。
  *      portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  *  }
  * }
@@ -1058,60 +987,55 @@ void vQueueDelete( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
  *                                    );
  * @endcode
  *
- * This is a macro that calls xQueueGenericSendFromISR().
+ * 此宏调用 xQueueGenericSendFromISR()。
  *
- * Post an item to the back of a queue.  It is safe to use this macro from
- * within an interrupt service routine.
+ * 向队列后端投递一项。在中断服务程序中使用此宏是安全的。
  *
- * Items are queued by copy not reference so it is preferable to only
- * queue small items, especially when called from an ISR.  In most cases
- * it would be preferable to store a pointer to the item being queued.
+ * 项按值（拷贝）入队，而不是按引用，因此最好只入队小项，尤其是在 ISR
+ * 中调用时。大多数情况下，最好改为保存指向所入队项的指针。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param pxHigherPriorityTaskWoken xQueueSendToBackFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending to the queue caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xQueueSendToBackFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若向队列发送导致某个任务解除阻塞，且
+ * 被解除阻塞的任务优先级高于当前正在运行的任务，
+ * xQueueSendToBackFromISR() 会将 *pxHigherPriorityTaskWoken 置为 pdTRUE。
+ * 若 xQueueSendToBackFromISR() 将该值置为 pdTRUE，则应在退出中断前
+ * 请求一次上下文切换。
  *
- * @return pdPASS if the data was successfully sent to the queue, otherwise
- * errQUEUE_FULL.
+ * @return 若数据成功发送到队列则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage for buffered IO (where the ISR can obtain more than one value
- * per call):
+ * 带缓冲 IO 的示例用法（ISR 每次调用可获取多个值）：
  * @code{c}
  * void vBufferISR( void )
  * {
  * char cIn;
  * BaseType_t xHigherPriorityTaskWoken;
  *
- *  // We have not woken a task at the start of the ISR.
+ *  // ISR 开始时尚未唤醒任何任务。
  *  xHigherPriorityTaskWoken = pdFALSE;
  *
- *  // Loop until the buffer is empty.
+ *  // 循环直到缓冲区为空。
  *  do
  *  {
- *      // Obtain a byte from the buffer.
+ *      // 从缓冲区获取一个字节。
  *      cIn = portINPUT_BYTE( RX_REGISTER_ADDRESS );
  *
- *      // Post the byte.
+ *      // 投递该字节。
  *      xQueueSendToBackFromISR( xRxQueue, &cIn, &xHigherPriorityTaskWoken );
  *
  *  } while( portINPUT_BYTE( BUFFER_COUNT ) );
  *
- *  // Now the buffer is empty we can switch context if necessary.
+ *  // 缓冲区现已为空，如有必要可切换上下文。
  *  if( xHigherPriorityTaskWoken )
  *  {
- *      // As xHigherPriorityTaskWoken is now set to pdTRUE then a context
- *      // switch should be requested. The macro used is port specific and
- *      // will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() -
- *      // refer to the documentation page for the port being used.
+ *      // 由于 xHigherPriorityTaskWoken 现已置为 pdTRUE，
+ *      // 应请求一次上下文切换。所用宏与移植层相关，
+ *      // 可能是 portYIELD_FROM_ISR() 或 portEND_SWITCHING_ISR()，
+ *      // 请参阅所用移植层的文档。
  *      portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  *  }
  * }
@@ -1133,77 +1057,71 @@ void vQueueDelete( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
  *                       );
  * @endcode
  *
- * A version of xQueueOverwrite() that can be used in an interrupt service
- * routine (ISR).
+ * 可在中断服务程序（ISR）中使用的 xQueueOverwrite() 版本。
  *
- * Only for use with queues that can hold a single item - so the queue is either
- * empty or full.
+ * 仅适用于只能保存一个项的队列，即队列要么为空，要么已满。
  *
- * Post an item on a queue.  If the queue is already full then overwrite the
- * value held in the queue.  The item is queued by copy, not by reference.
+ * 向队列投递一项。若队列已满，则覆盖队列中保存的值。项按值（拷贝）
+ * 入队，而不是按引用。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param pxHigherPriorityTaskWoken xQueueOverwriteFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending to the queue caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xQueueOverwriteFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若向队列发送导致某个任务解除阻塞，且
+ * 被解除阻塞的任务优先级高于当前正在运行的任务，
+ * xQueueOverwriteFromISR() 会将 *pxHigherPriorityTaskWoken 置为 pdTRUE。
+ * 若 xQueueOverwriteFromISR() 将该值置为 pdTRUE，则应在退出中断前
+ * 请求一次上下文切换。
  *
- * @return xQueueOverwriteFromISR() is a macro that calls
- * xQueueGenericSendFromISR(), and therefore has the same return values as
- * xQueueSendToFrontFromISR().  However, pdPASS is the only value that can be
- * returned because xQueueOverwriteFromISR() will write to the queue even when
- * the queue is already full.
+ * @return xQueueOverwriteFromISR() 是调用 xQueueGenericSendFromISR() 的宏，
+ * 因此返回值与 xQueueSendToFrontFromISR() 相同。但由于即使队列已满
+ * xQueueOverwriteFromISR() 也会写入队列，所以唯一可能返回的值是 pdPASS。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  *
  * QueueHandle_t xQueue;
  *
  * void vFunction( void *pvParameters )
  * {
- *  // Create a queue to hold one uint32_t value.  It is strongly
- *  // recommended *not* to use xQueueOverwriteFromISR() on queues that can
- *  // contain more than one value, and doing so will trigger an assertion
- *  // if configASSERT() is defined.
+ *  // 创建用于保存一个 uint32_t 值的队列。强烈建议
+ *  // *不要*在可包含多个值的队列上使用 xQueueOverwriteFromISR()；
+ *  // 否则若定义了 configASSERT()，将触发断言。
  *  xQueue = xQueueCreate( 1, sizeof( uint32_t ) );
  * }
  *
  * void vAnInterruptHandler( void )
  * {
- * // xHigherPriorityTaskWoken must be set to pdFALSE before it is used.
+ * // 使用前必须将 xHigherPriorityTaskWoken 置为 pdFALSE。
  * BaseType_t xHigherPriorityTaskWoken = pdFALSE;
  * uint32_t ulVarToSend, ulValReceived;
  *
- *  // Write the value 10 to the queue using xQueueOverwriteFromISR().
+ *  // 使用 xQueueOverwriteFromISR() 将值 10 写入队列。
  *  ulVarToSend = 10;
  *  xQueueOverwriteFromISR( xQueue, &ulVarToSend, &xHigherPriorityTaskWoken );
  *
- *  // The queue is full, but calling xQueueOverwriteFromISR() again will still
- *  // pass because the value held in the queue will be overwritten with the
- *  // new value.
+ *  // 队列已满，但再次调用 xQueueOverwriteFromISR() 仍会
+ *  // 成功，因为队列中保存的值将被
+ *  // 新值覆盖。
  *  ulVarToSend = 100;
  *  xQueueOverwriteFromISR( xQueue, &ulVarToSend, &xHigherPriorityTaskWoken );
  *
- *  // Reading from the queue will now return 100.
+ *  // 此时从队列读取将返回 100。
  *
  *  // ...
  *
  *  if( xHigherPriorityTaskWoken == pdTRUE )
  *  {
- *      // Writing to the queue caused a task to unblock and the unblocked task
- *      // has a priority higher than or equal to the priority of the currently
- *      // executing task (the task this interrupt interrupted). Perform a context
- *      // switch so this interrupt returns directly to the unblocked task.
- *      // The macro used is port specific and will be either
- *      // portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() - refer to the documentation
- *      // page for the port being used.
+ *      // 写入队列使某个任务解除阻塞，且被解除阻塞的任务
+ *      // 优先级高于或等于当前正在执行的任务（即本中断所打断
+ *      // 的任务）的优先级。应执行一次上下文切换，
+ *      // 使本中断直接返回到被解除阻塞的任务。
+ *      // 所用宏与移植层相关，可能是
+ *      // portYIELD_FROM_ISR() 或 portEND_SWITCHING_ISR()，请参阅
+ *      // 所用移植层的文档。
  *      portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  *  }
  * }
@@ -1224,63 +1142,56 @@ void vQueueDelete( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
  *                              );
  * @endcode
  *
- * This is a macro that calls xQueueGenericSendFromISR().  It is included
- * for backward compatibility with versions of FreeRTOS.org that did not
- * include the xQueueSendToBackFromISR() and xQueueSendToFrontFromISR()
- * macros.
+ * 此宏调用 xQueueGenericSendFromISR()。保留它是为了向后兼容未提供
+ * xQueueSendToBackFromISR() 和 xQueueSendToFrontFromISR() 宏的
+ * FreeRTOS.org 版本。
  *
- * Post an item to the back of a queue.  It is safe to use this function from
- * within an interrupt service routine.
+ * 向队列后端投递一项。在中断服务程序中使用此函数是安全的。
  *
- * Items are queued by copy not reference so it is preferable to only
- * queue small items, especially when called from an ISR.  In most cases
- * it would be preferable to store a pointer to the item being queued.
+ * 项按值（拷贝）入队，而不是按引用，因此最好只入队小项，尤其是在 ISR
+ * 中调用时。大多数情况下，最好改为保存指向所入队项的指针。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param pxHigherPriorityTaskWoken xQueueSendFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending to the queue caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xQueueSendFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若向队列发送导致某个任务解除阻塞，且
+ * 被解除阻塞的任务优先级高于当前正在运行的任务，xQueueSendFromISR()
+ * 会将 *pxHigherPriorityTaskWoken 置为 pdTRUE。若 xQueueSendFromISR()
+ * 将该值置为 pdTRUE，则应在退出中断前请求一次上下文切换。
  *
- * @return pdPASS if the data was successfully sent to the queue, otherwise
- * errQUEUE_FULL.
+ * @return 若数据成功发送到队列则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage for buffered IO (where the ISR can obtain more than one value
- * per call):
+ * 带缓冲 IO 的示例用法（ISR 每次调用可获取多个值）：
  * @code{c}
  * void vBufferISR( void )
  * {
  * char cIn;
  * BaseType_t xHigherPriorityTaskWoken;
  *
- *  // We have not woken a task at the start of the ISR.
+ *  // ISR 开始时尚未唤醒任何任务。
  *  xHigherPriorityTaskWoken = pdFALSE;
  *
- *  // Loop until the buffer is empty.
+ *  // 循环直到缓冲区为空。
  *  do
  *  {
- *      // Obtain a byte from the buffer.
+ *      // 从缓冲区获取一个字节。
  *      cIn = portINPUT_BYTE( RX_REGISTER_ADDRESS );
  *
- *      // Post the byte.
+ *      // 投递该字节。
  *      xQueueSendFromISR( xRxQueue, &cIn, &xHigherPriorityTaskWoken );
  *
  *  } while( portINPUT_BYTE( BUFFER_COUNT ) );
  *
- *  // Now the buffer is empty we can switch context if necessary.
+ *  // 缓冲区现已为空，如有必要可切换上下文。
  *  if( xHigherPriorityTaskWoken )
  *  {
- *       // As xHigherPriorityTaskWoken is now set to pdTRUE then a context
- *       // switch should be requested. The macro used is port specific and
- *       // will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() -
- *       // refer to the documentation page for the port being used.
+ *       // 由于 xHigherPriorityTaskWoken 现已置为 pdTRUE，
+ *       // 应请求一次上下文切换。所用宏与移植层相关，
+ *       // 可能是 portYIELD_FROM_ISR() 或 portEND_SWITCHING_ISR()，
+ *       // 请参阅所用移植层的文档。
  *       portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  *  }
  * }
@@ -1303,67 +1214,60 @@ void vQueueDelete( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
  *                                     );
  * @endcode
  *
- * It is preferred that the macros xQueueSendFromISR(),
- * xQueueSendToFrontFromISR() and xQueueSendToBackFromISR() be used in place
- * of calling this function directly.  xQueueGiveFromISR() is an
- * equivalent for use by semaphores that don't actually copy any data.
+ * 建议使用宏 xQueueSendFromISR()、xQueueSendToFrontFromISR() 和
+ * xQueueSendToBackFromISR()，而不是直接调用此函数。对于不实际复制任何
+ * 数据的信号量，xQueueGiveFromISR() 是等效函数。
  *
- * Post an item on a queue.  It is safe to use this function from within an
- * interrupt service routine.
+ * 向队列投递一项。在中断服务程序中使用此函数是安全的。
  *
- * Items are queued by copy not reference so it is preferable to only
- * queue small items, especially when called from an ISR.  In most cases
- * it would be preferable to store a pointer to the item being queued.
+ * 项按值（拷贝）入队，而不是按引用，因此最好只入队小项，尤其是在 ISR
+ * 中调用时。大多数情况下，最好改为保存指向所入队项的指针。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 要投递项的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的项的指针。队列可容纳项的大小在
+ * 创建队列时已确定，因此将从 pvItemToQueue 复制该数量的字节到队列
+ * 存储区。
  *
- * @param pxHigherPriorityTaskWoken xQueueGenericSendFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if sending to the queue caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xQueueGenericSendFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若向队列发送导致某个任务解除阻塞，且
+ * 被解除阻塞的任务优先级高于当前正在运行的任务，
+ * xQueueGenericSendFromISR() 会将 *pxHigherPriorityTaskWoken 置为 pdTRUE。
+ * 若 xQueueGenericSendFromISR() 将该值置为 pdTRUE，则应在退出中断前
+ * 请求一次上下文切换。
  *
- * @param xCopyPosition Can take the value queueSEND_TO_BACK to place the
- * item at the back of the queue, or queueSEND_TO_FRONT to place the item
- * at the front of the queue (for high priority messages).
+ * @param xCopyPosition 可取 queueSEND_TO_BACK，将项放入队列后端；
+ * 或取 queueSEND_TO_FRONT，将项放入队列前端（用于高优先级消息）。
  *
- * @return pdPASS if the data was successfully sent to the queue, otherwise
- * errQUEUE_FULL.
+ * @return 若数据成功发送到队列则返回 pdPASS，否则返回 errQUEUE_FULL。
  *
- * Example usage for buffered IO (where the ISR can obtain more than one value
- * per call):
+ * 带缓冲 IO 的示例用法（ISR 每次调用可获取多个值）：
  * @code{c}
  * void vBufferISR( void )
  * {
  * char cIn;
  * BaseType_t xHigherPriorityTaskWokenByPost;
  *
- *  // We have not woken a task at the start of the ISR.
+ *  // ISR 开始时尚未唤醒任何任务。
  *  xHigherPriorityTaskWokenByPost = pdFALSE;
  *
- *  // Loop until the buffer is empty.
+ *  // 循环直到缓冲区为空。
  *  do
  *  {
- *      // Obtain a byte from the buffer.
+ *      // 从缓冲区获取一个字节。
  *      cIn = portINPUT_BYTE( RX_REGISTER_ADDRESS );
  *
- *      // Post each byte.
+ *      // 投递每个字节。
  *      xQueueGenericSendFromISR( xRxQueue, &cIn, &xHigherPriorityTaskWokenByPost, queueSEND_TO_BACK );
  *
  *  } while( portINPUT_BYTE( BUFFER_COUNT ) );
  *
- *  // Now the buffer is empty we can switch context if necessary.
+ *  // 缓冲区现已为空，如有必要可切换上下文。
  *  if( xHigherPriorityTaskWokenByPost )
  *  {
- *       // As xHigherPriorityTaskWokenByPost is now set to pdTRUE then a context
- *       // switch should be requested. The macro used is port specific and
- *       // will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() -
- *       // refer to the documentation page for the port being used.
+ *       // 由于 xHigherPriorityTaskWokenByPost 现已置为 pdTRUE，
+ *       // 应请求一次上下文切换。所用宏与移植层相关，
+ *       // 可能是 portYIELD_FROM_ISR() 或 portEND_SWITCHING_ISR()，
+ *       // 请参阅所用移植层的文档。
  *       portYIELD_FROM_ISR( xHigherPriorityTaskWokenByPost );
  *  }
  * }
@@ -1389,58 +1293,53 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
  *                                 );
  * @endcode
  *
- * Receive an item from a queue.  It is safe to use this function from within an
- * interrupt service routine.
+ * 从队列接收一项。在中断服务程序中使用此函数是安全的。
  *
- * @param xQueue The handle to the queue from which the item is to be
- * received.
+ * @param xQueue 要从中接收项的队列句柄。
  *
- * @param pvBuffer Pointer to the buffer into which the received item will
- * be copied.
+ * @param pvBuffer 指向用于接收所读取项的缓冲区的指针。
  *
- * @param pxHigherPriorityTaskWoken A task may be blocked waiting for space to
- * become available on the queue.  If xQueueReceiveFromISR causes such a task
- * to unblock *pxTaskWoken will get set to pdTRUE, otherwise *pxTaskWoken will
- * remain unchanged.
+ * @param pxHigherPriorityTaskWoken 可能有任务正阻塞等待队列出现可用空间。
+ * 若 xQueueReceiveFromISR 使此类任务解除阻塞，*pxTaskWoken 将被置为
+ * pdTRUE，否则 *pxTaskWoken 保持不变。
  *
- * @return pdPASS if an item was successfully received from the queue,
- * otherwise pdFAIL.
+ * @return 若成功从队列接收到项则返回 pdPASS，否则返回 pdFAIL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  *
  * QueueHandle_t xQueue;
  *
- * // Function to create a queue and post some values.
+ * // 用于创建队列并投递一些值的函数。
  * void vAFunction( void *pvParameters )
  * {
  * char cValueToPost;
  * const TickType_t xTicksToWait = ( TickType_t )0xff;
  *
- *  // Create a queue capable of containing 10 characters.
+ *  // 创建可容纳 10 个字符的队列。
  *  xQueue = xQueueCreate( 10, sizeof( char ) );
  *  if( xQueue == 0 )
  *  {
- *      // Failed to create the queue.
+ *      // 队列创建失败。
  *  }
  *
  *  // ...
  *
- *  // Post some characters that will be used within an ISR.  If the queue
- *  // is full then this task will block for xTicksToWait ticks.
+ *  // 投递一些将在 ISR 中使用的字符。若队列
+ *  // 已满，此任务将阻塞 xTicksToWait 个 tick。
  *  cValueToPost = 'a';
  *  xQueueSend( xQueue, ( void * ) &cValueToPost, xTicksToWait );
  *  cValueToPost = 'b';
  *  xQueueSend( xQueue, ( void * ) &cValueToPost, xTicksToWait );
  *
- *  // ... keep posting characters ... this task may block when the queue
- *  // becomes full.
+ *  // ... 继续投递字符 ... 若队列变满，此任务
+ *  // 可能会阻塞。
  *
  *  cValueToPost = 'c';
  *  xQueueSend( xQueue, ( void * ) &cValueToPost, xTicksToWait );
  * }
  *
- * // ISR that outputs all the characters received on the queue.
+ * // 用于输出队列中接收到的所有字符的 ISR。
  * void vISR_Routine( void )
  * {
  * BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -1448,21 +1347,21 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
  *
  *  while( xQueueReceiveFromISR( xQueue, ( void * ) &cRxedChar, &xHigherPriorityTaskWoken) )
  *  {
- *      // A character was received.  Output the character now.
+ *      // 已接收到一个字符。立即输出该字符。
  *      vOutputCharacter( cRxedChar );
  *
- *      // If removing the character from the queue woke the task that was
- *      // posting onto the queue xHigherPriorityTaskWoken will have been set to
- *      // pdTRUE.  No matter how many times this loop iterates only one
- *      // task will be woken.
+ *      // 若从队列移除字符唤醒了正在向队列
+ *      // 投递的任务，则 xHigherPriorityTaskWoken 将被置为
+ *      // pdTRUE。无论此循环迭代多少次，
+ *      // 都只会唤醒一个任务。
  *  }
  *
  *  if( xHigherPriorityTaskWoken == pdTRUE )
  *  {
- *      // As xHigherPriorityTaskWoken is now set to pdTRUE then a context
- *      // switch should be requested. The macro used is port specific and
- *      // will be either portYIELD_FROM_ISR() or portEND_SWITCHING_ISR() -
- *      // refer to the documentation page for the port being used.
+ *      // 由于 xHigherPriorityTaskWoken 现已置为 pdTRUE，
+ *      // 应请求一次上下文切换。所用宏与移植层相关，
+ *      // 可能是 portYIELD_FROM_ISR() 或 portEND_SWITCHING_ISR()，
+ *      // 请参阅所用移植层的文档。
  *      portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  *  }
  * }
@@ -1475,8 +1374,8 @@ BaseType_t xQueueReceiveFromISR( QueueHandle_t xQueue,
                                  BaseType_t * const pxHigherPriorityTaskWoken ) PRIVILEGED_FUNCTION;
 
 /*
- * Utilities to query queues that are safe to use from an ISR.  These utilities
- * should be used only from within an ISR, or within a critical section.
+ * 可在中断服务程序中安全使用的队列查询工具函数。这些工具函数只能
+ * 在 ISR 内部或临界区内使用。
  */
 BaseType_t xQueueIsQueueEmptyFromISR( const QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
@@ -1485,13 +1384,11 @@ UBaseType_t uxQueueMessagesWaitingFromISR( const QueueHandle_t xQueue ) PRIVILEG
 #if ( configUSE_CO_ROUTINES == 1 )
 
 /*
- * The functions defined above are for passing data to and from tasks.  The
- * functions below are the equivalents for passing data to and from
- * co-routines.
+ * 上述函数用于在任务之间传递数据。下面的函数则是用于
+ * 在协程之间传递数据的等效函数。
  *
- * These functions are called from the co-routine macro implementation and
- * should not be called directly from application code.  Instead use the macro
- * wrappers defined within croutine.h.
+ * 这些函数由协程宏实现调用，不应由应用程序代码直接调用。
+ * 请改用 croutine.h 中定义的宏封装。
  */
     BaseType_t xQueueCRSendFromISR( QueueHandle_t xQueue,
                                     const void * pvItemToQueue,
@@ -1506,12 +1403,12 @@ UBaseType_t uxQueueMessagesWaitingFromISR( const QueueHandle_t xQueue ) PRIVILEG
                                 void * pvBuffer,
                                 TickType_t xTicksToWait );
 
-#endif /* if ( configUSE_CO_ROUTINES == 1 ) */
+#endif /* if ( configUSE_CO_ROUTINES == 1 )（协程功能使能条件） */
 
 /*
- * For internal use only.  Use xSemaphoreCreateMutex(),
- * xSemaphoreCreateCounting() or xSemaphoreGetMutexHolder() instead of calling
- * these functions directly.
+ * 仅供内部使用。请改用 xSemaphoreCreateMutex()、
+ * xSemaphoreCreateCounting() 或 xSemaphoreGetMutexHolder()，
+ * 不要直接调用这些函数。
  */
 QueueHandle_t xQueueCreateMutex( const uint8_t ucQueueType ) PRIVILEGED_FUNCTION;
 
@@ -1540,44 +1437,38 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
 #endif
 
 /*
- * For internal use only.  Use xSemaphoreTakeRecursive() or
- * xSemaphoreGiveRecursive() instead of calling these functions directly.
+ * 仅供内部使用。请改用 xSemaphoreTakeRecursive() 或
+ * xSemaphoreGiveRecursive()，不要直接调用这些函数。
  */
 BaseType_t xQueueTakeMutexRecursive( QueueHandle_t xMutex,
                                      TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
 BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 
 /*
- * Reset a queue back to its original empty state.  The return value is now
- * obsolete and is always set to pdPASS.
+ * 将队列重置为初始的空状态。返回值现已废弃，始终为 pdPASS。
  */
 #define xQueueReset( xQueue )    xQueueGenericReset( ( xQueue ), pdFALSE )
 
 /*
- * The registry is provided as a means for kernel aware debuggers to
- * locate queues, semaphores and mutexes.  Call vQueueAddToRegistry() add
- * a queue, semaphore or mutex handle to the registry if you want the handle
- * to be available to a kernel aware debugger.  If you are not using a kernel
- * aware debugger then this function can be ignored.
+ * 队列注册表为内核感知调试器提供定位队列、信号量和互斥量的手段。
+ * 若希望句柄可供内核感知调试器使用，可调用 vQueueAddToRegistry()
+ * 将队列、信号量或互斥量句柄添加到注册表。若未使用内核感知调试器，
+ * 则可忽略此函数。
  *
- * configQUEUE_REGISTRY_SIZE defines the maximum number of handles the
- * registry can hold.  configQUEUE_REGISTRY_SIZE must be greater than 0
- * within FreeRTOSConfig.h for the registry to be available.  Its value
- * does not affect the number of queues, semaphores and mutexes that can be
- * created - just the number that the registry can hold.
+ * configQUEUE_REGISTRY_SIZE 定义注册表能够保存的最大句柄数。
+ * 要使注册表可用，FreeRTOSConfig.h 中的 configQUEUE_REGISTRY_SIZE
+ * 必须大于 0。该值不影响可创建的队列、信号量和互斥量数量，
+ * 仅影响注册表能够保存的数量。
  *
- * If vQueueAddToRegistry is called more than once with the same xQueue
- * parameter, the registry will store the pcQueueName parameter from the
- * most recent call to vQueueAddToRegistry.
+ * 若使用相同的 xQueue 参数多次调用 vQueueAddToRegistry，注册表将保存
+ * 最近一次调用 vQueueAddToRegistry 时传入的 pcQueueName 参数。
  *
- * @param xQueue The handle of the queue being added to the registry.  This
- * is the handle returned by a call to xQueueCreate().  Semaphore and mutex
- * handles can also be passed in here.
+ * @param xQueue 要添加到注册表的队列句柄。该句柄由 xQueueCreate()
+ * 调用返回。此处也可以传入信号量和互斥量句柄。
  *
- * @param pcQueueName The name to be associated with the handle.  This is the
- * name that the kernel aware debugger will display.  The queue registry only
- * stores a pointer to the string - so the string must be persistent (global or
- * preferably in ROM/Flash), not on the stack.
+ * @param pcQueueName 要与句柄关联的名称。该名称将显示在内核感知
+ * 调试器中。队列注册表仅保存指向该字符串的指针，因此字符串必须
+ * 持久存在（全局变量，最好位于 ROM/Flash 中），不能位于栈上。
  */
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
     void vQueueAddToRegistry( QueueHandle_t xQueue,
@@ -1585,38 +1476,34 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * The registry is provided as a means for kernel aware debuggers to
- * locate queues, semaphores and mutexes.  Call vQueueAddToRegistry() add
- * a queue, semaphore or mutex handle to the registry if you want the handle
- * to be available to a kernel aware debugger, and vQueueUnregisterQueue() to
- * remove the queue, semaphore or mutex from the register.  If you are not using
- * a kernel aware debugger then this function can be ignored.
+ * 队列注册表为内核感知调试器提供定位队列、信号量和互斥量的手段。
+ * 若希望句柄可供内核感知调试器使用，可调用 vQueueAddToRegistry()
+ * 将队列、信号量或互斥量句柄添加到注册表，并调用
+ * vQueueUnregisterQueue() 将其从注册表中移除。若未使用内核感知
+ * 调试器，则可忽略此函数。
  *
- * @param xQueue The handle of the queue being removed from the registry.
+ * @param xQueue 要从注册表中移除的队列句柄。
  */
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
     void vQueueUnregisterQueue( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * The queue registry is provided as a means for kernel aware debuggers to
- * locate queues, semaphores and mutexes.  Call pcQueueGetName() to look
- * up and return the name of a queue in the queue registry from the queue's
- * handle.
+ * 队列注册表为内核感知调试器提供定位队列、信号量和互斥量的手段。
+ * 调用 pcQueueGetName() 可根据队列句柄查找并返回队列在
+ * 队列注册表中的名称。
  *
- * @param xQueue The handle of the queue the name of which will be returned.
- * @return If the queue is in the registry then a pointer to the name of the
- * queue is returned.  If the queue is not in the registry then NULL is
- * returned.
+ * @param xQueue 要返回其名称的队列句柄。
+ * @return 若队列位于注册表中，则返回指向队列名称的指针；
+ * 若队列不在注册表中，则返回 NULL。
  */
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
     const char * pcQueueGetName( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Generic version of the function used to create a queue using dynamic memory
- * allocation.  This is called by other functions and macros that create other
- * RTOS objects that use the queue structure as their base.
+ * 使用动态内存分配创建队列的通用函数。创建其他以队列结构为基础的
+ * RTOS 对象的函数和宏会调用此函数。
  */
 #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
     QueueHandle_t xQueueGenericCreate( const UBaseType_t uxQueueLength,
@@ -1625,9 +1512,8 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Generic version of the function used to create a queue using dynamic memory
- * allocation.  This is called by other functions and macros that create other
- * RTOS objects that use the queue structure as their base.
+ * 使用动态内存分配创建队列的通用函数。创建其他以队列结构为基础的
+ * RTOS 对象的函数和宏会调用此函数。
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     QueueHandle_t xQueueGenericCreateStatic( const UBaseType_t uxQueueLength,
@@ -1638,10 +1524,8 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Generic version of the function used to retrieve the buffers of statically
- * created queues. This is called by other functions and macros that retrieve
- * the buffers of other statically created RTOS objects that use the queue
- * structure as their base.
+ * 用于获取静态创建队列缓冲区的通用函数。获取其他以队列结构为基础的
+ * 静态创建 RTOS 对象缓冲区的函数和宏会调用此函数。
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     BaseType_t xQueueGenericGetStaticBuffers( QueueHandle_t xQueue,
@@ -1650,110 +1534,101 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Queue sets provide a mechanism to allow a task to block (pend) on a read
- * operation from multiple queues or semaphores simultaneously.
+ * 队列集提供一种机制，使任务能够同时在多个队列或信号量的读操作上
+ * 阻塞（挂起）。
  *
- * See FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c for an example using this
- * function.
+ * 使用此函数的示例参见 FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c。
  *
- * A queue set must be explicitly created using a call to xQueueCreateSet() or
- * xQueueCreateSetStatic() before it can be used.  Once created, standard
- * FreeRTOS queues and semaphores can be added to the set using calls to
- * xQueueAddToSet().  xQueueSelectFromSet() is then used to determine which, if
- * any, of the queues or semaphores contained in the set is in a state where a
- * queue read or semaphore take operation would be successful.
+ * 必须先调用 xQueueCreateSet() 或 xQueueCreateSetStatic() 显式创建
+ * 队列集，然后才能使用。创建后，可通过 xQueueAddToSet() 将标准
+ * FreeRTOS 队列和信号量添加到队列集中。随后使用
+ * xQueueSelectFromSet() 确定集合中是否有队列或信号量处于可成功
+ * 执行队列读取或信号量获取（take）操作的状态。
  *
- * Note 1:  See the documentation on https://www.freertos.org/Documentation/02-Kernel/04-API-references/07-Queue-sets/00-RTOS-queue-sets
- * for reasons why queue sets are very rarely needed in practice as there are
- * simpler methods of blocking on multiple objects.
+ * 注 1：关于为什么实践中很少需要队列集（因为存在更简单的多对象
+ * 阻塞方法），请参阅
+ * https://www.freertos.org/Documentation/02-Kernel/04-API-references/07-Queue-sets/00-RTOS-queue-sets
+ * 上的文档。
  *
- * Note 2:  Blocking on a queue set that contains a mutex will not cause the
- * mutex holder to inherit the priority of the blocked task.
+ * 注 2：在包含互斥量的队列集上阻塞，不会使互斥量持有者继承
+ * 被阻塞任务的优先级。
  *
- * Note 3:  An additional 4 bytes of RAM is required for each space in every
- * queue added to a queue set.  Therefore counting semaphores that have a high
- * maximum count value should not be added to a queue set.
+ * 注 3：加入队列集的每个队列的每个空间都需要额外 4 字节 RAM。
+ * 因此，最大计数值较高的计数信号量不应加入队列集。
  *
- * Note 4:  A receive (in the case of a queue) or take (in the case of a
- * semaphore) operation must not be performed on a member of a queue set unless
- * a call to xQueueSelectFromSet() has first returned a handle to that set member.
+ * 注 4：除非 xQueueSelectFromSet() 已先返回某个集合成员的句柄，
+ * 否则不得对该队列集成员执行接收（针对队列）或获取（针对信号量）
+ * 操作。
  *
- * @param uxEventQueueLength Queue sets store events that occur on
- * the queues and semaphores contained in the set.  uxEventQueueLength specifies
- * the maximum number of events that can be queued at once.  To be absolutely
- * certain that events are not lost uxEventQueueLength should be set to the
- * total sum of the length of the queues added to the set, where binary
- * semaphores and mutexes have a length of 1, and counting semaphores have a
- * length set by their maximum count value.  Examples:
- *  + If a queue set is to hold a queue of length 5, another queue of length 12,
- *    and a binary semaphore, then uxEventQueueLength should be set to
- *    (5 + 12 + 1), or 18.
- *  + If a queue set is to hold three binary semaphores then uxEventQueueLength
- *    should be set to (1 + 1 + 1 ), or 3.
- *  + If a queue set is to hold a counting semaphore that has a maximum count of
- *    5, and a counting semaphore that has a maximum count of 3, then
- *    uxEventQueueLength should be set to (5 + 3), or 8.
+ * @param uxEventQueueLength 队列集会保存集合中队列和信号量上发生的
+ * 事件。uxEventQueueLength 指定一次最多可排队的事件数。若要绝对
+ * 确保事件不丢失，uxEventQueueLength 应设置为加入集合的各队列长度
+ * 之和，其中二值信号量和互斥量的长度为 1，计数信号量的长度由其
+ * 最大计数值决定。示例：
+ *  + 若队列集要包含一个长度为 5 的队列、另一个长度为 12 的队列
+ *    以及一个二值信号量，则 uxEventQueueLength 应设为
+ *    (5 + 12 + 1)，即 18。
+ *  + 若队列集要包含三个二值信号量，则 uxEventQueueLength
+ *    应设为 (1 + 1 + 1 )，即 3。
+ *  + 若队列集要包含一个最大计数值为 5 的计数信号量，以及一个
+ *    最大计数值为 3 的计数信号量，则 uxEventQueueLength 应设为
+ *    (5 + 3)，即 8。
  *
- * @return If the queue set is created successfully then a handle to the created
- * queue set is returned.  Otherwise NULL is returned.
+ * @return 若队列集创建成功，则返回所创建队列集的句柄；否则返回 NULL。
  */
 #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
     QueueSetHandle_t xQueueCreateSet( const UBaseType_t uxEventQueueLength ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Queue sets provide a mechanism to allow a task to block (pend) on a read
- * operation from multiple queues or semaphores simultaneously.
+ * 队列集提供一种机制，使任务能够同时在多个队列或信号量的读操作上
+ * 阻塞（挂起）。
  *
- * See FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c for an example using this
- * function.
+ * 使用此函数的示例参见 FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c。
  *
- * A queue set must be explicitly created using a call to xQueueCreateSet()
- * or xQueueCreateSetStatic() before it can be used.  Once created, standard
- * FreeRTOS queues and semaphores can be added to the set using calls to
- * xQueueAddToSet().  xQueueSelectFromSet() is then used to determine which, if
- * any, of the queues or semaphores contained in the set is in a state where a
- * queue read or semaphore take operation would be successful.
+ * 必须先调用 xQueueCreateSet() 或 xQueueCreateSetStatic() 显式创建
+ * 队列集，然后才能使用。创建后，可通过 xQueueAddToSet() 将标准
+ * FreeRTOS 队列和信号量添加到队列集中。随后使用
+ * xQueueSelectFromSet() 确定集合中是否有队列或信号量处于可成功
+ * 执行队列读取或信号量获取（take）操作的状态。
  *
- * Note 1:  See the documentation on https://www.freertos.org/Documentation/02-Kernel/04-API-references/07-Queue-sets/00-RTOS-queue-sets
- * for reasons why queue sets are very rarely needed in practice as there are
- * simpler methods of blocking on multiple objects.
+ * 注 1：关于为什么实践中很少需要队列集（因为存在更简单的多对象
+ * 阻塞方法），请参阅
+ * https://www.freertos.org/Documentation/02-Kernel/04-API-references/07-Queue-sets/00-RTOS-queue-sets
+ * 上的文档。
  *
- * Note 2:  Blocking on a queue set that contains a mutex will not cause the
- * mutex holder to inherit the priority of the blocked task.
+ * 注 2：在包含互斥量的队列集上阻塞，不会使互斥量持有者继承
+ * 被阻塞任务的优先级。
  *
- * Note 3:  An additional 4 bytes of RAM is required for each space in every
- * queue added to a queue set.  Therefore counting semaphores that have a high
- * maximum count value should not be added to a queue set.
+ * 注 3：加入队列集的每个队列的每个空间都需要额外 4 字节 RAM。
+ * 因此，最大计数值较高的计数信号量不应加入队列集。
  *
- * Note 4:  A receive (in the case of a queue) or take (in the case of a
- * semaphore) operation must not be performed on a member of a queue set unless
- * a call to xQueueSelectFromSet() has first returned a handle to that set member.
+ * 注 4：除非 xQueueSelectFromSet() 已先返回某个集合成员的句柄，
+ * 否则不得对该队列集成员执行接收（针对队列）或获取（针对信号量）
+ * 操作。
  *
- * @param uxEventQueueLength Queue sets store events that occur on
- * the queues and semaphores contained in the set.  uxEventQueueLength specifies
- * the maximum number of events that can be queued at once.  To be absolutely
- * certain that events are not lost uxEventQueueLength should be set to the
- * total sum of the length of the queues added to the set, where binary
- * semaphores and mutexes have a length of 1, and counting semaphores have a
- * length set by their maximum count value.  Examples:
- *  + If a queue set is to hold a queue of length 5, another queue of length 12,
- *    and a binary semaphore, then uxEventQueueLength should be set to
- *    (5 + 12 + 1), or 18.
- *  + If a queue set is to hold three binary semaphores then uxEventQueueLength
- *    should be set to (1 + 1 + 1 ), or 3.
- *  + If a queue set is to hold a counting semaphore that has a maximum count of
- *    5, and a counting semaphore that has a maximum count of 3, then
- *    uxEventQueueLength should be set to (5 + 3), or 8.
+ * @param uxEventQueueLength 队列集会保存集合中队列和信号量上发生的
+ * 事件。uxEventQueueLength 指定一次最多可排队的事件数。若要绝对
+ * 确保事件不丢失，uxEventQueueLength 应设置为加入集合的各队列长度
+ * 之和，其中二值信号量和互斥量的长度为 1，计数信号量的长度由其
+ * 最大计数值决定。示例：
+ *  + 若队列集要包含一个长度为 5 的队列、另一个长度为 12 的队列
+ *    以及一个二值信号量，则 uxEventQueueLength 应设为
+ *    (5 + 12 + 1)，即 18。
+ *  + 若队列集要包含三个二值信号量，则 uxEventQueueLength
+ *    应设为 (1 + 1 + 1 )，即 3。
+ *  + 若队列集要包含一个最大计数值为 5 的计数信号量，以及一个
+ *    最大计数值为 3 的计数信号量，则 uxEventQueueLength 应设为
+ *    (5 + 3)，即 8。
  *
- * @param pucQueueStorage pucQueueStorage must point to a uint8_t array that is
- * at least large enough to hold uxEventQueueLength events.
+ * @param pucQueueStorage pucQueueStorage 必须指向一个 uint8_t 数组，
+ * 其大小至少足以容纳 uxEventQueueLength 个事件。
  *
- * @param pxQueueBuffer Must point to a variable of type StaticQueue_t, which
- * will be used to hold the queue's data structure.
+ * @param pxQueueBuffer 必须指向一个 StaticQueue_t 类型的变量，用于
+ * 存放队列的数据结构。
  *
- * @return If the queue set is created successfully then a handle to the created
- * queue set is returned.  If pxQueueBuffer is NULL then NULL is returned.
+ * @return 若队列集创建成功，则返回所创建队列集的句柄；若
+ * pxQueueBuffer 为 NULL，则返回 NULL。
  */
 #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
     QueueSetHandle_t xQueueCreateSetStatic( const UBaseType_t uxEventQueueLength,
@@ -1762,26 +1637,22 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Adds a queue or semaphore to a queue set that was previously created by a
- * call to xQueueCreateSet() or xQueueCreateSetStatic().
+ * 将队列或信号量添加到先前由 xQueueCreateSet() 或
+ * xQueueCreateSetStatic() 调用创建的队列集。
  *
- * See FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c for an example using this
- * function.
+ * 使用此函数的示例参见 FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c。
  *
- * Note 1:  A receive (in the case of a queue) or take (in the case of a
- * semaphore) operation must not be performed on a member of a queue set unless
- * a call to xQueueSelectFromSet() has first returned a handle to that set member.
+ * 注 1：除非 xQueueSelectFromSet() 已先返回某个集合成员的句柄，
+ * 否则不得对该队列集成员执行接收（针对队列）或获取（针对信号量）
+ * 操作。
  *
- * @param xQueueOrSemaphore The handle of the queue or semaphore being added to
- * the queue set (cast to a QueueSetMemberHandle_t type).
+ * @param xQueueOrSemaphore 要添加到队列集的队列或信号量句柄
+ * （强制转换为 QueueSetMemberHandle_t 类型）。
  *
- * @param xQueueSet The handle of the queue set to which the queue or semaphore
- * is being added.
+ * @param xQueueSet 队列或信号量要添加到的队列集句柄。
  *
- * @return If the queue or semaphore was successfully added to the queue set
- * then pdPASS is returned.  If the queue could not be successfully added to the
- * queue set because it is already a member of a different queue set then pdFAIL
- * is returned.
+ * @return 若队列或信号量成功添加到队列集，则返回 pdPASS。若该队列
+ * 已属于另一个队列集而无法成功添加，则返回 pdFAIL。
  */
 #if ( configUSE_QUEUE_SETS == 1 )
     BaseType_t xQueueAddToSet( QueueSetMemberHandle_t xQueueOrSemaphore,
@@ -1789,21 +1660,18 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Removes a queue or semaphore from a queue set.  A queue or semaphore can only
- * be removed from a set if the queue or semaphore is empty.
+ * 从队列集中移除队列或信号量。只有当队列或信号量为空时，
+ * 才能将其从集合中移除。
  *
- * See FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c for an example using this
- * function.
+ * 使用此函数的示例参见 FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c。
  *
- * @param xQueueOrSemaphore The handle of the queue or semaphore being removed
- * from the queue set (cast to a QueueSetMemberHandle_t type).
+ * @param xQueueOrSemaphore 要从队列集移除的队列或信号量句柄
+ * （强制转换为 QueueSetMemberHandle_t 类型）。
  *
- * @param xQueueSet The handle of the queue set in which the queue or semaphore
- * is included.
+ * @param xQueueSet 包含该队列或信号量的队列集句柄。
  *
- * @return If the queue or semaphore was successfully removed from the queue set
- * then pdPASS is returned.  If the queue was not in the queue set, or the
- * queue (or semaphore) was not empty, then pdFAIL is returned.
+ * @return 若队列或信号量成功从队列集移除，则返回 pdPASS。若该队列
+ * 不在队列集中，或队列（或信号量）非空，则返回 pdFAIL。
  */
 #if ( configUSE_QUEUE_SETS == 1 )
     BaseType_t xQueueRemoveFromSet( QueueSetMemberHandle_t xQueueOrSemaphore,
@@ -1811,38 +1679,34 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * xQueueSelectFromSet() selects from the members of a queue set a queue or
- * semaphore that either contains data (in the case of a queue) or is available
- * to take (in the case of a semaphore).  xQueueSelectFromSet() effectively
- * allows a task to block (pend) on a read operation on all the queues and
- * semaphores in a queue set simultaneously.
+ * xQueueSelectFromSet() 从队列集的成员中选择一个包含数据（针对队列）
+ * 或可获取（针对信号量）的队列或信号量。xQueueSelectFromSet() 实际上
+ * 允许任务同时在队列集中所有队列和信号量的读操作上阻塞（挂起）。
  *
- * See FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c for an example using this
- * function.
+ * 使用此函数的示例参见 FreeRTOS/Source/Demo/Common/Minimal/QueueSet.c。
  *
- * Note 1:  See the documentation on https://www.freertos.org/Documentation/02-Kernel/04-API-references/07-Queue-sets/00-RTOS-queue-sets
- * for reasons why queue sets are very rarely needed in practice as there are
- * simpler methods of blocking on multiple objects.
+ * 注 1：关于为什么实践中很少需要队列集（因为存在更简单的多对象阻塞
+ * 方法），请参阅
+ * https://www.freertos.org/Documentation/02-Kernel/04-API-references/07-Queue-sets/00-RTOS-queue-sets
+ * 上的文档。
  *
- * Note 2:  Blocking on a queue set that contains a mutex will not cause the
- * mutex holder to inherit the priority of the blocked task.
+ * 注 2：在包含互斥量的队列集上阻塞，不会使互斥量持有者继承
+ * 被阻塞任务的优先级。
  *
- * Note 3:  A receive (in the case of a queue) or take (in the case of a
- * semaphore) operation must not be performed on a member of a queue set unless
- * a call to xQueueSelectFromSet() has first returned a handle to that set member.
+ * 注 3：除非 xQueueSelectFromSet() 已先返回某个集合成员的句柄，
+ * 否则不得对该队列集成员执行接收（针对队列）或获取（针对信号量）
+ * 操作。
  *
- * @param xQueueSet The queue set on which the task will (potentially) block.
+ * @param xQueueSet 任务将（可能）在其上阻塞的队列集。
  *
- * @param xTicksToWait The maximum time, in ticks, that the calling task will
- * remain in the Blocked state (with other tasks executing) to wait for a member
- * of the queue set to be ready for a successful queue read or semaphore take
- * operation.
+ * @param xTicksToWait 调用任务在阻塞状态（允许其他任务运行）下等待
+ * 队列集某个成员变为可成功执行队列读取或信号量获取操作的最长时间，
+ * 单位为 tick。
  *
- * @return xQueueSelectFromSet() will return the handle of a queue (cast to
- * a QueueSetMemberHandle_t type) contained in the queue set that contains data,
- * or the handle of a semaphore (cast to a QueueSetMemberHandle_t type) contained
- * in the queue set that is available, or NULL if no such queue or semaphore
- * exists before the specified block time expires.
+ * @return xQueueSelectFromSet() 将返回队列集中包含数据的队列句柄
+ * （强制转换为 QueueSetMemberHandle_t 类型），或队列集中可用的
+ * 信号量句柄（强制转换为 QueueSetMemberHandle_t 类型）；若在指定
+ * 阻塞时间到期前不存在这样的队列或信号量，则返回 NULL。
  */
 #if ( configUSE_QUEUE_SETS == 1 )
     QueueSetMemberHandle_t xQueueSelectFromSet( QueueSetHandle_t xQueueSet,
@@ -1850,13 +1714,13 @@ BaseType_t xQueueGiveMutexRecursive( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * A version of xQueueSelectFromSet() that can be used from an ISR.
+ * 可在 ISR 中使用的 xQueueSelectFromSet() 版本。
  */
 #if ( configUSE_QUEUE_SETS == 1 )
     QueueSetMemberHandle_t xQueueSelectFromSetFromISR( QueueSetHandle_t xQueueSet ) PRIVILEGED_FUNCTION;
 #endif
 
-/* Not public API functions. */
+/* 非公共 API 函数。 */
 void vQueueWaitForMessageRestricted( QueueHandle_t xQueue,
                                      TickType_t xTicksToWait,
                                      const BaseType_t xWaitIndefinitely ) PRIVILEGED_FUNCTION;
@@ -1879,10 +1743,10 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
 UBaseType_t uxQueueGetQueueItemSize( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 UBaseType_t uxQueueGetQueueLength( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* QUEUE_H */
+#endif /* QUEUE_H（头文件保护宏） */

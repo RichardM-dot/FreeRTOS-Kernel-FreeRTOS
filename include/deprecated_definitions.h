@@ -30,14 +30,14 @@
 #define DEPRECATED_DEFINITIONS_H
 
 
-/* Each FreeRTOS port has a unique portmacro.h header file.  Originally a
- * pre-processor definition was used to ensure the pre-processor found the correct
- * portmacro.h file for the port being used.  That scheme was deprecated in favour
- * of setting the compiler's include path such that it found the correct
- * portmacro.h file - removing the need for the constant and allowing the
- * portmacro.h file to be located anywhere in relation to the port being used.  The
- * definitions below remain in the code for backward compatibility only.  New
- * projects should not use them. */
+/*
+ * 每个 FreeRTOS 移植层都有唯一的 portmacro.h 头文件。最初使用
+ * 预处理器定义来确保预处理器找到所用移植层对应的正确 portmacro.h
+ * 文件。该方案已被弃用，改为设置编译器的包含路径，使其找到正确的
+ * portmacro.h 文件——这样就不再需要该常量，并允许 portmacro.h 文件
+ * 位于与所用移植层相关的任意位置。下面的定义仅出于向后兼容性
+ * 保留在代码中。新项目不应使用它们。
+ */
 
 #ifdef OPEN_WATCOM_INDUSTRIAL_PC_PORT
     #include "..\..\Source\portable\owatcom\16bitdos\pc\portmacro.h"
@@ -211,8 +211,10 @@
 
 #ifdef BCC_INDUSTRIAL_PC_PORT
 
-/* A short file name has to be used in place of the normal
- * FreeRTOSConfig.h when using the Borland compiler. */
+/*
+ * 使用 Borland 编译器时，必须用短文件名代替通常的
+ * FreeRTOSConfig.h。
+ */
     #include "frconfig.h"
     #include "..\portable\BCC\16BitDOS\PC\prtmacro.h"
     typedef void ( __interrupt __far * pxISR )();
@@ -220,8 +222,10 @@
 
 #ifdef BCC_FLASH_LITE_186_PORT
 
-/* A short file name has to be used in place of the normal
- * FreeRTOSConfig.h when using the Borland compiler. */
+/*
+ * 使用 Borland 编译器时，必须用短文件名代替通常的
+ * FreeRTOSConfig.h。
+ */
     #include "frconfig.h"
     #include "..\portable\BCC\16BitDOS\flsh186\prtmacro.h"
     typedef void ( __interrupt __far * pxISR )();
@@ -278,4 +282,4 @@
     #include "../../Source/portable/IAR/78K0R/portmacro.h"
 #endif
 
-#endif /* DEPRECATED_DEFINITIONS_H */
+#endif /* 头文件保护：DEPRECATED_DEFINITIONS_H */

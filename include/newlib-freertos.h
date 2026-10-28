@@ -29,15 +29,16 @@
 #ifndef INC_NEWLIB_FREERTOS_H
 #define INC_NEWLIB_FREERTOS_H
 
-/* Note Newlib support has been included by popular demand, but is not
- * used by the FreeRTOS maintainers themselves.  FreeRTOS is not
- * responsible for resulting newlib operation.  User must be familiar with
- * newlib and must provide system-wide implementations of the necessary
- * stubs. Be warned that (at the time of writing) the current newlib design
- * implements a system-wide malloc() that must be provided with locks.
+/*
+ * 注意：Newlib 支持是应广泛需求而加入的，但 FreeRTOS 维护者
+ * 自身并不使用它。FreeRTOS 不对由此产生的 newlib 运行行为负责。
+ * 用户必须熟悉 newlib，并必须提供必要的系统级桩函数实现。
+ * 请注意（撰写本文时）当前 newlib 设计实现了一个系统级 malloc()，
+ * 必须为其提供锁。
  *
- * See the third party link http://www.nadler.com/embedded/newlibAndFreeRTOS.html
- * for additional information. */
+ * 更多信息请参见第三方链接
+ * http://www.nadler.com/embedded/newlibAndFreeRTOS.html。
+ */
 
 #include <reent.h>
 
@@ -59,4 +60,4 @@
     #define configDEINIT_TLS_BLOCK( xTLSBlock )    _reclaim_reent( &( xTLSBlock ) )
 #endif
 
-#endif /* INC_NEWLIB_FREERTOS_H */
+#endif /* 头文件保护：INC_NEWLIB_FREERTOS_H */

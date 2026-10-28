@@ -48,45 +48,40 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * vSemaphoreCreateBinary( SemaphoreHandle_t xSemaphore );
  * @endcode
  *
- * In many usage scenarios it is faster and more memory efficient to use a
- * direct to task notification in place of a binary semaphore!
+ * 在许多使用场景中，使用直接任务通知代替二值信号量速度更快、内存效率更高！
  * https://www.FreeRTOS.org/RTOS-task-notifications.html
  *
- * This old vSemaphoreCreateBinary() macro is now deprecated in favour of the
- * xSemaphoreCreateBinary() function.  Note that binary semaphores created using
- * the vSemaphoreCreateBinary() macro are created in a state such that the
- * first call to 'take' the semaphore would pass, whereas binary semaphores
- * created using xSemaphoreCreateBinary() are created in a state such that the
- * the semaphore must first be 'given' before it can be 'taken'.
+ * 旧的 vSemaphoreCreateBinary() 宏现已弃用，建议改用 xSemaphoreCreateBinary() 函数。
+ * 注意：使用 vSemaphoreCreateBinary() 宏创建的二值信号量处于这样一种状态——
+ * 第一次“获取（take）”该信号量会成功；而使用 xSemaphoreCreateBinary() 创建的
+ * 二值信号量处于另一种状态——必须先“释放（give）”该信号量，然后才能“获取（take）”。
  *
- * <i>Macro</i> that implements a semaphore by using the existing queue mechanism.
- * The queue length is 1 as this is a binary semaphore.  The data size is 0
- * as we don't want to actually store any data - we just want to know if the
- * queue is empty or full.
+ * <i>宏</i>，利用现有的队列机制实现信号量。
+ * 由于这是二值信号量，队列长度设为 1。数据大小设为 0，
+ * 因为并不需要真正存储任何数据——只需判断队列是空还是满。
  *
- * This type of semaphore can be used for pure synchronisation between tasks or
- * between an interrupt and a task.  The semaphore need not be given back once
- * obtained, so one task/interrupt can continuously 'give' the semaphore while
- * another continuously 'takes' the semaphore.  For this reason this type of
- * semaphore does not use a priority inheritance mechanism.  For an alternative
- * that does use priority inheritance see xSemaphoreCreateMutex().
+ * 这种信号量可用于任务之间或中断与任务之间的纯同步。
+ * 信号量获取后无需归还，因此一个任务或中断可以持续“释放（give）”信号量，
+ * 而另一个任务持续“获取（take）”信号量。正因如此，这种信号量
+ * 不使用优先级继承机制。若需要采用优先级继承的替代方案，
+ * 参见 xSemaphoreCreateMutex()。
  *
- * @param xSemaphore Handle to the created semaphore.  Should be of type SemaphoreHandle_t.
+ * @param xSemaphore 所创建信号量的句柄。类型应为 SemaphoreHandle_t。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore = NULL;
  *
  * void vATask( void * pvParameters )
  * {
- *  // Semaphore cannot be used before a call to vSemaphoreCreateBinary ().
- *  // This is a macro so pass the variable in directly.
+ *  // 在调用 vSemaphoreCreateBinary() 之前不能使用信号量。
+ *  // 该接口是宏，因此直接传入变量。
  *  vSemaphoreCreateBinary( xSemaphore );
  *
  *  if( xSemaphore != NULL )
  *  {
- *      // The semaphore was created successfully.
- *      // The semaphore can now be used.
+ *      // 信号量创建成功。
+ *      // 现在可以使用该信号量。
  *  }
  * }
  * @endcode
@@ -110,53 +105,47 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateBinary( void );
  * @endcode
  *
- * Creates a new binary semaphore instance, and returns a handle by which the
- * new semaphore can be referenced.
+ * 创建一个新的二值信号量实例，并返回可用于引用该新信号量的句柄。
  *
- * In many usage scenarios it is faster and more memory efficient to use a
- * direct to task notification in place of a binary semaphore!
+ * 在许多使用场景中，使用直接任务通知代替二值信号量速度更快、内存效率更高！
  * https://www.FreeRTOS.org/RTOS-task-notifications.html
  *
- * Internally, within the FreeRTOS implementation, binary semaphores use a block
- * of memory, in which the semaphore structure is stored.  If a binary semaphore
- * is created using xSemaphoreCreateBinary() then the required memory is
- * automatically dynamically allocated inside the xSemaphoreCreateBinary()
- * function.  (see https://www.FreeRTOS.org/a00111.html).  If a binary semaphore
- * is created using xSemaphoreCreateBinaryStatic() then the application writer
- * must provide the memory.  xSemaphoreCreateBinaryStatic() therefore allows a
- * binary semaphore to be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，二值信号量使用一块内存来存储信号量结构。
+ * 若使用 xSemaphoreCreateBinary() 创建二值信号量，则所需内存会在
+ * xSemaphoreCreateBinary() 函数内部自动动态分配
+ * （参见 https://www.FreeRTOS.org/a00111.html）。若使用
+ * xSemaphoreCreateBinaryStatic() 创建二值信号量，则应用程序编写者
+ * 必须提供内存。因此，xSemaphoreCreateBinaryStatic() 允许在不使用
+ * 任何动态内存分配的情况下创建二值信号量。
  *
- * The old vSemaphoreCreateBinary() macro is now deprecated in favour of this
- * xSemaphoreCreateBinary() function.  Note that binary semaphores created using
- * the vSemaphoreCreateBinary() macro are created in a state such that the
- * first call to 'take' the semaphore would pass, whereas binary semaphores
- * created using xSemaphoreCreateBinary() are created in a state such that the
- * the semaphore must first be 'given' before it can be 'taken'.
+ * 旧的 vSemaphoreCreateBinary() 宏现已弃用，建议改用
+ * xSemaphoreCreateBinary() 函数。注意：使用 vSemaphoreCreateBinary() 宏
+ * 创建的二值信号量处于这样一种状态——第一次“获取（take）”该信号量会成功；
+ * 而使用 xSemaphoreCreateBinary() 创建的二值信号量处于另一种状态——
+ * 必须先“释放（give）”该信号量，然后才能“获取（take）”。
  *
- * This type of semaphore can be used for pure synchronisation between tasks or
- * between an interrupt and a task.  The semaphore need not be given back once
- * obtained, so one task/interrupt can continuously 'give' the semaphore while
- * another continuously 'takes' the semaphore.  For this reason this type of
- * semaphore does not use a priority inheritance mechanism.  For an alternative
- * that does use priority inheritance see xSemaphoreCreateMutex().
+ * 这种信号量可用于任务之间或中断与任务之间的纯同步。
+ * 信号量获取后无需归还，因此一个任务或中断可以持续“释放（give）”信号量，
+ * 而另一个任务持续“获取（take）”信号量。正因如此，这种信号量
+ * 不使用优先级继承机制。若需要采用优先级继承的替代方案，
+ * 参见 xSemaphoreCreateMutex()。
  *
- * @return Handle to the created semaphore, or NULL if the memory required to
- * hold the semaphore's data structures could not be allocated.
+ * @return 所创建信号量的句柄；若无法分配保存信号量数据结构所需的内存，则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore = NULL;
  *
  * void vATask( void * pvParameters )
  * {
- *  // Semaphore cannot be used before a call to xSemaphoreCreateBinary().
- *  // This is a macro so pass the variable in directly.
+ *  // 在调用 xSemaphoreCreateBinary() 之前不能使用信号量。
+ *  // 该接口是宏，因此直接传入变量。
  *  xSemaphore = xSemaphoreCreateBinary();
  *
  *  if( xSemaphore != NULL )
  *  {
- *      // The semaphore was created successfully.
- *      // The semaphore can now be used.
+ *      // 信号量创建成功。
+ *      // 现在可以使用该信号量。
  *  }
  * }
  * @endcode
@@ -173,52 +162,44 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateBinaryStatic( StaticSemaphore_t *pxSemaphoreBuffer );
  * @endcode
  *
- * Creates a new binary semaphore instance, and returns a handle by which the
- * new semaphore can be referenced.
+ * 创建一个新的二值信号量实例，并返回可用于引用该新信号量的句柄。
  *
- * NOTE: In many usage scenarios it is faster and more memory efficient to use a
- * direct to task notification in place of a binary semaphore!
+ * 注意：在许多使用场景中，使用直接任务通知代替二值信号量速度更快、内存效率更高！
  * https://www.FreeRTOS.org/RTOS-task-notifications.html
  *
- * Internally, within the FreeRTOS implementation, binary semaphores use a block
- * of memory, in which the semaphore structure is stored.  If a binary semaphore
- * is created using xSemaphoreCreateBinary() then the required memory is
- * automatically dynamically allocated inside the xSemaphoreCreateBinary()
- * function.  (see https://www.FreeRTOS.org/a00111.html).  If a binary semaphore
- * is created using xSemaphoreCreateBinaryStatic() then the application writer
- * must provide the memory.  xSemaphoreCreateBinaryStatic() therefore allows a
- * binary semaphore to be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，二值信号量使用一块内存来存储信号量结构。
+ * 若使用 xSemaphoreCreateBinary() 创建二值信号量，则所需内存会在
+ * xSemaphoreCreateBinary() 函数内部自动动态分配
+ * （参见 https://www.FreeRTOS.org/a00111.html）。若使用
+ * xSemaphoreCreateBinaryStatic() 创建二值信号量，则应用程序编写者
+ * 必须提供内存。因此，xSemaphoreCreateBinaryStatic() 允许在不使用
+ * 任何动态内存分配的情况下创建二值信号量。
  *
- * This type of semaphore can be used for pure synchronisation between tasks or
- * between an interrupt and a task.  The semaphore need not be given back once
- * obtained, so one task/interrupt can continuously 'give' the semaphore while
- * another continuously 'takes' the semaphore.  For this reason this type of
- * semaphore does not use a priority inheritance mechanism.  For an alternative
- * that does use priority inheritance see xSemaphoreCreateMutex().
+ * 这种信号量可用于任务之间或中断与任务之间的纯同步。
+ * 信号量获取后无需归还，因此一个任务或中断可以持续“释放（give）”信号量，
+ * 而另一个任务持续“获取（take）”信号量。正因如此，这种信号量
+ * 不使用优先级继承机制。若需要采用优先级继承的替代方案，
+ * 参见 xSemaphoreCreateMutex()。
  *
- * @param pxSemaphoreBuffer Must point to a variable of type StaticSemaphore_t,
- * which will then be used to hold the semaphore's data structure, removing the
- * need for the memory to be allocated dynamically.
+ * @param pxSemaphoreBuffer 必须指向 StaticSemaphore_t 类型的变量，该变量随后用于
+ * 保存信号量的数据结构，从而无需动态分配内存。
  *
- * @return If the semaphore is created then a handle to the created semaphore is
- * returned.  If pxSemaphoreBuffer is NULL then NULL is returned.
+ * @return 若信号量创建成功，则返回所创建信号量的句柄。若 pxSemaphoreBuffer 为 NULL，则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore = NULL;
  * StaticSemaphore_t xSemaphoreBuffer;
  *
  * void vATask( void * pvParameters )
  * {
- *  // Semaphore cannot be used before a call to xSemaphoreCreateBinary().
- *  // The semaphore's data structures will be placed in the xSemaphoreBuffer
- *  // variable, the address of which is passed into the function.  The
- *  // function's parameter is not NULL, so the function will not attempt any
- *  // dynamic memory allocation, and therefore the function will not return
- *  // return NULL.
+ *  // 在调用 xSemaphoreCreateBinary() 之前不能使用信号量。
+ *  // 信号量的数据结构将存放在 xSemaphoreBuffer 变量中，
+ *  // 该变量的地址会传入函数。函数参数不为 NULL，
+ *  // 因此函数不会尝试任何动态内存分配，也就不会返回 NULL。
  *  xSemaphore = xSemaphoreCreateBinary( &xSemaphoreBuffer );
  *
- *  // Rest of task code goes here.
+ *  // 任务其余代码放在此处。
  * }
  * @endcode
  * \defgroup xSemaphoreCreateBinaryStatic xSemaphoreCreateBinaryStatic
@@ -226,7 +207,7 @@ typedef QueueHandle_t SemaphoreHandle_t;
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     #define xSemaphoreCreateBinaryStatic( pxStaticSemaphore )    xQueueGenericCreateStatic( ( UBaseType_t ) 1, semSEMAPHORE_QUEUE_ITEM_LENGTH, NULL, ( pxStaticSemaphore ), queueQUEUE_TYPE_BINARY_SEMAPHORE )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 条件编译结束 */
 
 /**
  * semphr. h
@@ -237,57 +218,54 @@ typedef QueueHandle_t SemaphoreHandle_t;
  *               );
  * @endcode
  *
- * <i>Macro</i> to obtain a semaphore.  The semaphore must have previously been
- * created with a call to xSemaphoreCreateBinary(), xSemaphoreCreateMutex() or
- * xSemaphoreCreateCounting().
+ * <i>宏</i>，用于获取信号量。该信号量必须已通过调用 xSemaphoreCreateBinary()、
+ * xSemaphoreCreateMutex() 或 xSemaphoreCreateCounting() 创建。
  *
- * @param xSemaphore A handle to the semaphore being taken - obtained when
- * the semaphore was created.
+ * @param xSemaphore 正在获取的信号量句柄——在创建信号量时获得。
  *
- * @param xBlockTime The time in ticks to wait for the semaphore to become
- * available.  The macro portTICK_PERIOD_MS can be used to convert this to a
- * real time.  A block time of zero can be used to poll the semaphore.  A block
- * time of portMAX_DELAY can be used to block indefinitely (provided
- * INCLUDE_vTaskSuspend is set to 1 in FreeRTOSConfig.h).
+ * @param xBlockTime 等待信号量变为可用的时间，单位为时钟节拍（tick）。可使用宏
+ * portTICK_PERIOD_MS 将其转换为实际时间。阻塞时间设为 0 可用于轮询信号量。
+ * 阻塞时间设为 portMAX_DELAY 可用于无限期阻塞（前提是在 FreeRTOSConfig.h 中
+ * 将 INCLUDE_vTaskSuspend 设为 1）。
  *
- * @return pdTRUE if the semaphore was obtained.  pdFALSE
- * if xBlockTime expired without the semaphore becoming available.
+ * @return 若成功获取信号量则返回 pdTRUE。若 xBlockTime 超时后
+ * 信号量仍不可用，则返回 pdFALSE。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore = NULL;
  *
- * // A task that creates a semaphore.
+ * // 创建信号量的任务。
  * void vATask( void * pvParameters )
  * {
- *  // Create the semaphore to guard a shared resource.
+ *  // 创建信号量以保护共享资源。
  *  xSemaphore = xSemaphoreCreateBinary();
  * }
  *
- * // A task that uses the semaphore.
+ * // 使用信号量的任务。
  * void vAnotherTask( void * pvParameters )
  * {
- *  // ... Do other things.
+ *  // ... 执行其他操作。
  *
  *  if( xSemaphore != NULL )
  *  {
- *      // See if we can obtain the semaphore.  If the semaphore is not available
- *      // wait 10 ticks to see if it becomes free.
+ *      // 尝试获取信号量。若信号量不可用，
+ *      // 则等待 10 个时钟节拍，看它是否会变为可用。
  *      if( xSemaphoreTake( xSemaphore, ( TickType_t ) 10 ) == pdTRUE )
  *      {
- *          // We were able to obtain the semaphore and can now access the
- *          // shared resource.
+ *          // 成功获取信号量，现在可以访问
+ *          // 共享资源。
  *
  *          // ...
  *
- *          // We have finished accessing the shared resource.  Release the
- *          // semaphore.
+ *          // 已结束对共享资源的访问。释放
+ *          // 信号量。
  *          xSemaphoreGive( xSemaphore );
  *      }
  *      else
  *      {
- *          // We could not obtain the semaphore and can therefore not access
- *          // the shared resource safely.
+ *          // 未能获取信号量，因此无法安全地
+ *          // 访问共享资源。
  *      }
  *  }
  * }
@@ -306,83 +284,76 @@ typedef QueueHandle_t SemaphoreHandle_t;
  *                        );
  * @endcode
  *
- * <i>Macro</i> to recursively obtain, or 'take', a mutex type semaphore.
- * The mutex must have previously been created using a call to
- * xSemaphoreCreateRecursiveMutex();
+ * <i>宏</i>，用于递归获取（take）互斥量类型的信号量。
+ * 该互斥量必须已通过调用 xSemaphoreCreateRecursiveMutex() 创建。
  *
- * configUSE_RECURSIVE_MUTEXES must be set to 1 in FreeRTOSConfig.h for this
- * macro to be available.
+ * 要使此宏可用，必须在 FreeRTOSConfig.h 中将 configUSE_RECURSIVE_MUTEXES 设为 1。
  *
- * This macro must not be used on mutexes created using xSemaphoreCreateMutex().
+ * 此宏不得用于通过 xSemaphoreCreateMutex() 创建的互斥量。
  *
- * A mutex used recursively can be 'taken' repeatedly by the owner. The mutex
- * doesn't become available again until the owner has called
- * xSemaphoreGiveRecursive() for each successful 'take' request.  For example,
- * if a task successfully 'takes' the same mutex 5 times then the mutex will
- * not be available to any other task until it has also  'given' the mutex back
- * exactly five times.
+ * 递归使用的互斥量可被其所有者重复“获取（take）”。在所有者为每次成功的
+ * “获取”请求调用 xSemaphoreGiveRecursive() 之前，该互斥量不会再次变为可用。
+ * 例如，若某任务成功“获取”同一互斥量 5 次，则该任务也必须恰好
+ * “释放”该互斥量 5 次之后，其他任务才能使用它。
  *
- * @param xMutex A handle to the mutex being obtained.  This is the
- * handle returned by xSemaphoreCreateRecursiveMutex();
+ * @param xMutex 正在获取的互斥量句柄。该句柄由 xSemaphoreCreateRecursiveMutex() 返回。
  *
- * @param xBlockTime The time in ticks to wait for the semaphore to become
- * available.  The macro portTICK_PERIOD_MS can be used to convert this to a
- * real time.  A block time of zero can be used to poll the semaphore.  If
- * the task already owns the semaphore then xSemaphoreTakeRecursive() will
- * return immediately no matter what the value of xBlockTime.
+ * @param xBlockTime 等待信号量变为可用的时间，单位为时钟节拍（tick）。可使用宏
+ * portTICK_PERIOD_MS 将其转换为实际时间。阻塞时间设为 0 可用于轮询信号量。
+ * 若任务已拥有该信号量，则无论 xBlockTime 取值如何，xSemaphoreTakeRecursive()
+ * 都会立即返回。
  *
- * @return pdTRUE if the semaphore was obtained.  pdFALSE if xBlockTime
- * expired without the semaphore becoming available.
+ * @return 若成功获取信号量则返回 pdTRUE。若 xBlockTime 超时后
+ * 信号量仍不可用，则返回 pdFALSE。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xMutex = NULL;
  *
- * // A task that creates a mutex.
+ * // 创建互斥量的任务。
  * void vATask( void * pvParameters )
  * {
- *  // Create the mutex to guard a shared resource.
+ *  // 创建互斥量以保护共享资源。
  *  xMutex = xSemaphoreCreateRecursiveMutex();
  * }
  *
- * // A task that uses the mutex.
+ * // 使用互斥量的任务。
  * void vAnotherTask( void * pvParameters )
  * {
- *  // ... Do other things.
+ *  // ... 执行其他操作。
  *
  *  if( xMutex != NULL )
  *  {
- *      // See if we can obtain the mutex.  If the mutex is not available
- *      // wait 10 ticks to see if it becomes free.
+ *      // 尝试获取互斥量。若互斥量不可用，
+ *      // 则等待 10 个时钟节拍，看它是否会变为可用。
  *      if( xSemaphoreTakeRecursive( xSemaphore, ( TickType_t ) 10 ) == pdTRUE )
  *      {
- *          // We were able to obtain the mutex and can now access the
- *          // shared resource.
+ *          // 成功获取互斥量，现在可以访问
+ *          // 共享资源。
  *
  *          // ...
- *          // For some reason due to the nature of the code further calls to
- *          // xSemaphoreTakeRecursive() are made on the same mutex.  In real
- *          // code these would not be just sequential calls as this would make
- *          // no sense.  Instead the calls are likely to be buried inside
- *          // a more complex call structure.
+ *          // 由于代码逻辑的需要，会对同一互斥量进一步调用
+ *          // xSemaphoreTakeRecursive()。在实际代码中，
+ *          // 这些调用不会只是顺序调用，因为那样毫无意义。
+ *          // 相反，这些调用很可能嵌套在
+ *          // 更复杂的调用结构中。
  *          xSemaphoreTakeRecursive( xMutex, ( TickType_t ) 10 );
  *          xSemaphoreTakeRecursive( xMutex, ( TickType_t ) 10 );
  *
- *          // The mutex has now been 'taken' three times, so will not be
- *          // available to another task until it has also been given back
- *          // three times.  Again it is unlikely that real code would have
- *          // these calls sequentially, but instead buried in a more complex
- *          // call structure.  This is just for illustrative purposes.
+ *          // 该互斥量至此已被“获取”三次，因此在同样被释放三次之前，
+ *          // 其他任务无法使用它。同样，实际代码不太可能
+ *          // 顺序进行这些调用，而是嵌入更复杂的
+ *          // 调用结构中。此处仅作示意。
  *          xSemaphoreGiveRecursive( xMutex );
  *          xSemaphoreGiveRecursive( xMutex );
  *          xSemaphoreGiveRecursive( xMutex );
  *
- *          // Now the mutex can be taken by other tasks.
+ *          // 现在其他任务可以获取该互斥量。
  *      }
  *      else
  *      {
- *          // We could not obtain the mutex and can therefore not access
- *          // the shared resource safely.
+ *          // 未能获取互斥量，因此无法安全地
+ *          // 访问共享资源。
  *      }
  *  }
  * }
@@ -400,55 +371,50 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * xSemaphoreGive( SemaphoreHandle_t xSemaphore );
  * @endcode
  *
- * <i>Macro</i> to release a semaphore.  The semaphore must have previously been
- * created with a call to xSemaphoreCreateBinary(), xSemaphoreCreateMutex() or
- * xSemaphoreCreateCounting(). and obtained using sSemaphoreTake().
+ * <i>宏</i>，用于释放信号量。该信号量必须已通过调用 xSemaphoreCreateBinary()、
+ * xSemaphoreCreateMutex() 或 xSemaphoreCreateCounting() 创建，并使用 sSemaphoreTake() 获取。
  *
- * This macro must not be used from an ISR.  See xSemaphoreGiveFromISR () for
- * an alternative which can be used from an ISR.
+ * 此宏不得在中断服务程序（ISR）中使用。若需在 ISR 中释放信号量，可使用替代接口 xSemaphoreGiveFromISR()。
  *
- * This macro must also not be used on semaphores created using
- * xSemaphoreCreateRecursiveMutex().
+ * 此宏也不得用于通过 xSemaphoreCreateRecursiveMutex() 创建的信号量。
  *
- * @param xSemaphore A handle to the semaphore being released.  This is the
- * handle returned when the semaphore was created.
+ * @param xSemaphore 正在释放的信号量句柄。该句柄在创建信号量时返回。
  *
- * @return pdTRUE if the semaphore was released.  pdFALSE if an error occurred.
- * Semaphores are implemented using queues.  An error can occur if there is
- * no space on the queue to post a message - indicating that the
- * semaphore was not first obtained correctly.
+ * @return 若信号量释放成功则返回 pdTRUE。若发生错误则返回 pdFALSE。
+ * 信号量是使用队列实现的。如果队列中没有空间来投递消息，就会发生错误——
+ * 这表明此前没有正确获取信号量。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore = NULL;
  *
  * void vATask( void * pvParameters )
  * {
- *  // Create the semaphore to guard a shared resource.
+ *  // 创建信号量以保护共享资源。
  *  xSemaphore = vSemaphoreCreateBinary();
  *
  *  if( xSemaphore != NULL )
  *  {
  *      if( xSemaphoreGive( xSemaphore ) != pdTRUE )
  *      {
- *          // We would expect this call to fail because we cannot give
- *          // a semaphore without first "taking" it!
+ *          // 预期此调用会失败，因为不能在未先“获取”信号量的情况下
+ *          // “释放”它！
  *      }
  *
- *      // Obtain the semaphore - don't block if the semaphore is not
- *      // immediately available.
+ *      // 获取信号量——若信号量不能立即变为可用，
+ *      // 则不要阻塞。
  *      if( xSemaphoreTake( xSemaphore, ( TickType_t ) 0 ) )
  *      {
- *          // We now have the semaphore and can access the shared resource.
+ *          // 现在已获得信号量，可以访问共享资源。
  *
  *          // ...
  *
- *          // We have finished accessing the shared resource so can free the
- *          // semaphore.
+ *          // 已结束对共享资源的访问，因此可以释放
+ *          // 信号量。
  *          if( xSemaphoreGive( xSemaphore ) != pdTRUE )
  *          {
- *              // We would not expect this call to fail because we must have
- *              // obtained the semaphore to get here.
+ *              // 预期此调用不会失败，因为能执行到这里就说明
+ *              // 一定已经获取了信号量。
  *          }
  *      }
  *  }
@@ -465,77 +431,71 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * xSemaphoreGiveRecursive( SemaphoreHandle_t xMutex );
  * @endcode
  *
- * <i>Macro</i> to recursively release, or 'give', a mutex type semaphore.
- * The mutex must have previously been created using a call to
- * xSemaphoreCreateRecursiveMutex();
+ * <i>宏</i>，用于递归释放（give）互斥量类型的信号量。
+ * 该互斥量必须已通过调用 xSemaphoreCreateRecursiveMutex() 创建。
  *
- * configUSE_RECURSIVE_MUTEXES must be set to 1 in FreeRTOSConfig.h for this
- * macro to be available.
+ * 要使此宏可用，必须在 FreeRTOSConfig.h 中将 configUSE_RECURSIVE_MUTEXES 设为 1。
  *
- * This macro must not be used on mutexes created using xSemaphoreCreateMutex().
+ * 此宏不得用于通过 xSemaphoreCreateMutex() 创建的互斥量。
  *
- * A mutex used recursively can be 'taken' repeatedly by the owner. The mutex
- * doesn't become available again until the owner has called
- * xSemaphoreGiveRecursive() for each successful 'take' request.  For example,
- * if a task successfully 'takes' the same mutex 5 times then the mutex will
- * not be available to any other task until it has also  'given' the mutex back
- * exactly five times.
+ * 递归使用的互斥量可被其所有者重复“获取（take）”。在所有者为每次成功的
+ * “获取”请求调用 xSemaphoreGiveRecursive() 之前，该互斥量不会再次变为可用。
+ * 例如，若某任务成功“获取”同一互斥量 5 次，则该任务也必须恰好
+ * “释放”该互斥量 5 次之后，其他任务才能使用它。
  *
- * @param xMutex A handle to the mutex being released, or 'given'.  This is the
- * handle returned by xSemaphoreCreateMutex();
+ * @param xMutex 正在释放（give）的互斥量句柄。该句柄由 xSemaphoreCreateMutex() 返回。
  *
- * @return pdTRUE if the semaphore was given.
+ * @return 若信号量已释放，则返回 pdTRUE。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xMutex = NULL;
  *
- * // A task that creates a mutex.
+ * // 创建互斥量的任务。
  * void vATask( void * pvParameters )
  * {
- *  // Create the mutex to guard a shared resource.
+ *  // 创建互斥量以保护共享资源。
  *  xMutex = xSemaphoreCreateRecursiveMutex();
  * }
  *
- * // A task that uses the mutex.
+ * // 使用互斥量的任务。
  * void vAnotherTask( void * pvParameters )
  * {
- *  // ... Do other things.
+ *  // ... 执行其他操作。
  *
  *  if( xMutex != NULL )
  *  {
- *      // See if we can obtain the mutex.  If the mutex is not available
- *      // wait 10 ticks to see if it becomes free.
+ *      // 尝试获取互斥量。若互斥量不可用，
+ *      // 则等待 10 个时钟节拍，看它是否会变为可用。
  *      if( xSemaphoreTakeRecursive( xMutex, ( TickType_t ) 10 ) == pdTRUE )
  *      {
- *          // We were able to obtain the mutex and can now access the
- *          // shared resource.
+ *          // 成功获取互斥量，现在可以访问
+ *          // 共享资源。
  *
  *          // ...
- *          // For some reason due to the nature of the code further calls to
- *          // xSemaphoreTakeRecursive() are made on the same mutex.  In real
- *          // code these would not be just sequential calls as this would make
- *          // no sense.  Instead the calls are likely to be buried inside
- *          // a more complex call structure.
+ *          // 由于代码逻辑的需要，会对同一互斥量进一步调用
+ *          // xSemaphoreTakeRecursive()。在实际代码中，
+ *          // 这些调用不会只是顺序调用，因为那样毫无意义。
+ *          // 相反，这些调用很可能嵌套在
+ *          // 更复杂的调用结构中。
  *          xSemaphoreTakeRecursive( xMutex, ( TickType_t ) 10 );
  *          xSemaphoreTakeRecursive( xMutex, ( TickType_t ) 10 );
  *
- *          // The mutex has now been 'taken' three times, so will not be
- *          // available to another task until it has also been given back
- *          // three times.  Again it is unlikely that real code would have
- *          // these calls sequentially, it would be more likely that the calls
- *          // to xSemaphoreGiveRecursive() would be called as a call stack
- *          // unwound.  This is just for demonstrative purposes.
+ *          // 该互斥量至此已被“获取”三次，因此在同样被释放三次之前，
+ *          // 其他任务无法使用它。同样，实际代码不太可能
+ *          // 顺序进行这些调用，更可能的情况是：这些
+ *          // xSemaphoreGiveRecursive() 调用会随着调用栈
+ *          // 展开而被调用。此处仅作演示。
  *          xSemaphoreGiveRecursive( xMutex );
  *          xSemaphoreGiveRecursive( xMutex );
  *          xSemaphoreGiveRecursive( xMutex );
  *
- *          // Now the mutex can be taken by other tasks.
+ *          // 现在其他任务可以获取该互斥量。
  *      }
  *      else
  *      {
- *          // We could not obtain the mutex and can therefore not access
- *          // the shared resource safely.
+ *          // 未能获取互斥量，因此无法安全地
+ *          // 访问共享资源。
  *      }
  *  }
  * }
@@ -556,81 +516,79 @@ typedef QueueHandle_t SemaphoreHandle_t;
  *                    );
  * @endcode
  *
- * <i>Macro</i> to  release a semaphore.  The semaphore must have previously been
- * created with a call to xSemaphoreCreateBinary() or xSemaphoreCreateCounting().
+ * <i>宏</i>，用于释放信号量。该信号量必须已通过调用 xSemaphoreCreateBinary() 或
+ * xSemaphoreCreateCounting() 创建。
  *
- * Mutex type semaphores (those created using a call to xSemaphoreCreateMutex())
- * must not be used with this macro.
+ * 互斥量类型的信号量（通过调用 xSemaphoreCreateMutex() 创建）
+ * 不得与此宏一起使用。
  *
- * This macro can be used from an ISR.
+ * 此宏可在 ISR 中使用。
  *
- * @param xSemaphore A handle to the semaphore being released.  This is the
- * handle returned when the semaphore was created.
+ * @param xSemaphore 正在释放的信号量句柄。该句柄在创建信号量时返回。
  *
- * @param pxHigherPriorityTaskWoken xSemaphoreGiveFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if giving the semaphore caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xSemaphoreGiveFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若释放信号量导致某个任务解除阻塞，
+ * 且被解除阻塞的任务优先级高于当前正在运行的任务，则 xSemaphoreGiveFromISR()
+ * 会将 *pxHigherPriorityTaskWoken 设为 pdTRUE。若 xSemaphoreGiveFromISR()
+ * 将该值设为 pdTRUE，则应在退出中断前请求一次上下文切换。
  *
- * @return pdTRUE if the semaphore was successfully given, otherwise errQUEUE_FULL.
+ * @return 若信号量释放成功则返回 pdTRUE，否则返回 errQUEUE_FULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- \#define LONG_TIME 0xffff
- \#define TICKS_TO_WAIT 10
+ * \#define LONG_TIME 0xffff
+ * \#define TICKS_TO_WAIT 10
  * SemaphoreHandle_t xSemaphore = NULL;
  *
- * // Repetitive task.
+ * // 重复执行的任务。
  * void vATask( void * pvParameters )
  * {
  *  for( ;; )
  *  {
- *      // We want this task to run every 10 ticks of a timer.  The semaphore
- *      // was created before this task was started.
+ *      // 希望该任务每 10 个时钟节拍运行一次。信号量
+ *      // 已在该任务启动之前创建。
  *
- *      // Block waiting for the semaphore to become available.
+ *      // 阻塞等待信号量变为可用。
  *      if( xSemaphoreTake( xSemaphore, LONG_TIME ) == pdTRUE )
  *      {
- *          // It is time to execute.
+ *          // 到了该执行的时间。
  *
  *          // ...
  *
- *          // We have finished our task.  Return to the top of the loop where
- *          // we will block on the semaphore until it is time to execute
- *          // again.  Note when using the semaphore for synchronisation with an
- *          // ISR in this manner there is no need to 'give' the semaphore back.
+ *          // 已完成任务。返回到循环顶部，
+ *          // 在此阻塞等待信号量，直到再次需要执行。
+ *          // 注意：以这种方式使用信号量与 ISR 同步时，
+ *          // 无需“释放”信号量。
  *      }
  *  }
  * }
  *
- * // Timer ISR
+ * // 定时器 ISR
  * void vTimerISR( void * pvParameters )
  * {
  * static uint8_t ucLocalTickCount = 0;
  * static BaseType_t xHigherPriorityTaskWoken;
  *
- *  // A timer tick has occurred.
+ *  // 发生了定时器时钟节拍。
  *
- *  // ... Do other time functions.
+ *  // ... 执行其他与时间相关的功能。
  *
- *  // Is it time for vATask () to run?
+ *  // 是否到了 vATask() 运行的时间？
  *  xHigherPriorityTaskWoken = pdFALSE;
  *  ucLocalTickCount++;
  *  if( ucLocalTickCount >= TICKS_TO_WAIT )
  *  {
- *      // Unblock the task by releasing the semaphore.
+ *      // 通过释放信号量解除任务的阻塞。
  *      xSemaphoreGiveFromISR( xSemaphore, &xHigherPriorityTaskWoken );
  *
- *      // Reset the count so we release the semaphore again in 10 ticks time.
+ *      // 复位计数，以便在 10 个时钟节拍后再次释放信号量。
  *      ucLocalTickCount = 0;
  *  }
  *
  *  if( xHigherPriorityTaskWoken != pdFALSE )
  *  {
- *      // We can force a context switch here.  Context switching from an
- *      // ISR uses port specific syntax.  Check the demo task for your port
- *      // to find the syntax required.
+ *      // 可在此处强制进行上下文切换。从
+ *      // ISR 进行上下文切换使用移植层特定的语法。请查看所用移植层的
+ *      // 演示任务，以了解所需语法。
  *  }
  * }
  * @endcode
@@ -648,28 +606,24 @@ typedef QueueHandle_t SemaphoreHandle_t;
  *                    );
  * @endcode
  *
- * <i>Macro</i> to  take a semaphore from an ISR.  The semaphore must have
- * previously been created with a call to xSemaphoreCreateBinary() or
- * xSemaphoreCreateCounting().
+ * <i>宏</i>，用于从 ISR 获取信号量。该信号量必须已
+ * 通过调用 xSemaphoreCreateBinary() 或 xSemaphoreCreateCounting() 创建。
  *
- * Mutex type semaphores (those created using a call to xSemaphoreCreateMutex())
- * must not be used with this macro.
+ * 互斥量类型的信号量（通过调用 xSemaphoreCreateMutex() 创建）
+ * 不得与此宏一起使用。
  *
- * This macro can be used from an ISR, however taking a semaphore from an ISR
- * is not a common operation.  It is likely to only be useful when taking a
- * counting semaphore when an interrupt is obtaining an object from a resource
- * pool (when the semaphore count indicates the number of resources available).
+ * 此宏可在 ISR 中使用，不过从 ISR 获取信号量并不常见。
+ * 它可能仅在以下情形有用：当中断从资源池获取对象时获取计数信号量
+ * （此时信号量计数值表示可用资源的数量）。
  *
- * @param xSemaphore A handle to the semaphore being taken.  This is the
- * handle returned when the semaphore was created.
+ * @param xSemaphore 正在获取的信号量句柄。该句柄在创建信号量时返回。
  *
- * @param pxHigherPriorityTaskWoken xSemaphoreTakeFromISR() will set
- * *pxHigherPriorityTaskWoken to pdTRUE if taking the semaphore caused a task
- * to unblock, and the unblocked task has a priority higher than the currently
- * running task.  If xSemaphoreTakeFromISR() sets this value to pdTRUE then
- * a context switch should be requested before the interrupt is exited.
+ * @param pxHigherPriorityTaskWoken 若获取信号量导致某个任务解除阻塞，
+ * 且被解除阻塞的任务优先级高于当前正在运行的任务，则 xSemaphoreTakeFromISR()
+ * 会将 *pxHigherPriorityTaskWoken 设为 pdTRUE。若 xSemaphoreTakeFromISR()
+ * 将该值设为 pdTRUE，则应在退出中断前请求一次上下文切换。
  *
- * @return pdTRUE if the semaphore was successfully taken, otherwise
+ * @return 若信号量获取成功则返回 pdTRUE，否则返回
  * pdFALSE
  */
 #define xSemaphoreTakeFromISR( xSemaphore, pxHigherPriorityTaskWoken )    xQueueReceiveFromISR( ( QueueHandle_t ) ( xSemaphore ), NULL, ( pxHigherPriorityTaskWoken ) )
@@ -680,51 +634,43 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateMutex( void );
  * @endcode
  *
- * Creates a new mutex type semaphore instance, and returns a handle by which
- * the new mutex can be referenced.
+ * 创建一个新的互斥量类型的信号量实例，并返回可用于引用该新互斥量的句柄。
  *
- * Internally, within the FreeRTOS implementation, mutex semaphores use a block
- * of memory, in which the mutex structure is stored.  If a mutex is created
- * using xSemaphoreCreateMutex() then the required memory is automatically
- * dynamically allocated inside the xSemaphoreCreateMutex() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a mutex is created using
- * xSemaphoreCreateMutexStatic() then the application writer must provided the
- * memory.  xSemaphoreCreateMutexStatic() therefore allows a mutex to be created
- * without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，互斥量信号量使用一块内存来存储互斥量结构。
+ * 若使用 xSemaphoreCreateMutex() 创建互斥量，则所需内存会在
+ * xSemaphoreCreateMutex() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xSemaphoreCreateMutexStatic()
+ * 创建互斥量，则应用程序编写者必须提供内存。因此，xSemaphoreCreateMutexStatic()
+ * 允许在不使用任何动态内存分配的情况下创建互斥量。
  *
- * Mutexes created using this function can be accessed using the xSemaphoreTake()
- * and xSemaphoreGive() macros.  The xSemaphoreTakeRecursive() and
- * xSemaphoreGiveRecursive() macros must not be used.
+ * 使用此函数创建的互斥量可通过 xSemaphoreTake() 和 xSemaphoreGive() 宏访问。
+ * 不得使用 xSemaphoreTakeRecursive() 和 xSemaphoreGiveRecursive() 宏。
  *
- * This type of semaphore uses a priority inheritance mechanism so a task
- * 'taking' a semaphore MUST ALWAYS 'give' the semaphore back once the
- * semaphore it is no longer required.
+ * 这种信号量使用优先级继承机制，因此任务“获取（take）”信号量之后，
+ * 一旦不再需要该信号量，就必须始终“释放（give）”它。
  *
- * Mutex type semaphores cannot be used from within interrupt service routines.
+ * 互斥量类型的信号量不能在中断服务程序（ISR）内部使用。
  *
- * See xSemaphoreCreateBinary() for an alternative implementation that can be
- * used for pure synchronisation (where one task or interrupt always 'gives' the
- * semaphore and another always 'takes' the semaphore) and from within interrupt
- * service routines.
+ * 关于可用于纯同步（一个任务或中断始终“释放”信号量，另一个任务始终“获取”
+ * 信号量）且可在中断服务程序内部使用的替代实现，参见 xSemaphoreCreateBinary()。
  *
- * @return If the mutex was successfully created then a handle to the created
- * semaphore is returned.  If there was not enough heap to allocate the mutex
- * data structures then NULL is returned.
+ * @return 若互斥量创建成功，则返回所创建信号量的句柄。若堆内存不足以分配
+ * 互斥量的数据结构，则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore;
  *
  * void vATask( void * pvParameters )
  * {
- *  // Semaphore cannot be used before a call to xSemaphoreCreateMutex().
- *  // This is a macro so pass the variable in directly.
+ *  // 在调用 xSemaphoreCreateMutex() 之前不能使用信号量。
+ *  // 该接口是宏，因此直接传入变量。
  *  xSemaphore = xSemaphoreCreateMutex();
  *
  *  if( xSemaphore != NULL )
  *  {
- *      // The semaphore was created successfully.
- *      // The semaphore can now be used.
+ *      // 信号量创建成功。
+ *      // 现在可以使用该信号量。
  *  }
  * }
  * @endcode
@@ -741,54 +687,44 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateMutexStatic( StaticSemaphore_t *pxMutexBuffer );
  * @endcode
  *
- * Creates a new mutex type semaphore instance, and returns a handle by which
- * the new mutex can be referenced.
+ * 创建一个新的互斥量类型的信号量实例，并返回可用于引用该新互斥量的句柄。
  *
- * Internally, within the FreeRTOS implementation, mutex semaphores use a block
- * of memory, in which the mutex structure is stored.  If a mutex is created
- * using xSemaphoreCreateMutex() then the required memory is automatically
- * dynamically allocated inside the xSemaphoreCreateMutex() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a mutex is created using
- * xSemaphoreCreateMutexStatic() then the application writer must provided the
- * memory.  xSemaphoreCreateMutexStatic() therefore allows a mutex to be created
- * without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，互斥量信号量使用一块内存来存储互斥量结构。
+ * 若使用 xSemaphoreCreateMutex() 创建互斥量，则所需内存会在
+ * xSemaphoreCreateMutex() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xSemaphoreCreateMutexStatic()
+ * 创建互斥量，则应用程序编写者必须提供内存。因此，xSemaphoreCreateMutexStatic()
+ * 允许在不使用任何动态内存分配的情况下创建互斥量。
  *
- * Mutexes created using this function can be accessed using the xSemaphoreTake()
- * and xSemaphoreGive() macros.  The xSemaphoreTakeRecursive() and
- * xSemaphoreGiveRecursive() macros must not be used.
+ * 使用此函数创建的互斥量可通过 xSemaphoreTake() 和 xSemaphoreGive() 宏访问。
+ * 不得使用 xSemaphoreTakeRecursive() 和 xSemaphoreGiveRecursive() 宏。
  *
- * This type of semaphore uses a priority inheritance mechanism so a task
- * 'taking' a semaphore MUST ALWAYS 'give' the semaphore back once the
- * semaphore it is no longer required.
+ * 这种信号量使用优先级继承机制，因此任务“获取（take）”信号量之后，
+ * 一旦不再需要该信号量，就必须始终“释放（give）”它。
  *
- * Mutex type semaphores cannot be used from within interrupt service routines.
+ * 互斥量类型的信号量不能在中断服务程序（ISR）内部使用。
  *
- * See xSemaphoreCreateBinary() for an alternative implementation that can be
- * used for pure synchronisation (where one task or interrupt always 'gives' the
- * semaphore and another always 'takes' the semaphore) and from within interrupt
- * service routines.
+ * 关于可用于纯同步（一个任务或中断始终“释放”信号量，另一个任务始终“获取”
+ * 信号量）且可在中断服务程序内部使用的替代实现，参见 xSemaphoreCreateBinary()。
  *
- * @param pxMutexBuffer Must point to a variable of type StaticSemaphore_t,
- * which will be used to hold the mutex's data structure, removing the need for
- * the memory to be allocated dynamically.
+ * @param pxMutexBuffer 必须指向 StaticSemaphore_t 类型的变量，
+ * 该变量将用于保存互斥量的数据结构，从而无需动态分配内存。
  *
- * @return If the mutex was successfully created then a handle to the created
- * mutex is returned.  If pxMutexBuffer was NULL then NULL is returned.
+ * @return 若互斥量创建成功，则返回所创建互斥量的句柄。若 pxMutexBuffer 为 NULL，则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore;
  * StaticSemaphore_t xMutexBuffer;
  *
  * void vATask( void * pvParameters )
  * {
- *  // A mutex cannot be used before it has been created.  xMutexBuffer is
- *  // into xSemaphoreCreateMutexStatic() so no dynamic memory allocation is
- *  // attempted.
+ *  // 互斥量在创建之后才能使用。xMutexBuffer 会被
+ *  // 传入 xSemaphoreCreateMutexStatic()，因此不会尝试任何动态内存分配。
  *  xSemaphore = xSemaphoreCreateMutexStatic( &xMutexBuffer );
  *
- *  // As no dynamic memory allocation was performed, xSemaphore cannot be NULL,
- *  // so there is no need to check it.
+ *  // 由于未执行动态内存分配，xSemaphore 不可能为 NULL，
+ *  // 因此无需检查。
  * }
  * @endcode
  * \defgroup xSemaphoreCreateMutexStatic xSemaphoreCreateMutexStatic
@@ -805,59 +741,50 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateRecursiveMutex( void );
  * @endcode
  *
- * Creates a new recursive mutex type semaphore instance, and returns a handle
- * by which the new recursive mutex can be referenced.
+ * 创建一个新的递归互斥量类型的信号量实例，并返回可用于引用该新递归互斥量的句柄。
  *
- * Internally, within the FreeRTOS implementation, recursive mutexes use a block
- * of memory, in which the mutex structure is stored.  If a recursive mutex is
- * created using xSemaphoreCreateRecursiveMutex() then the required memory is
- * automatically dynamically allocated inside the
- * xSemaphoreCreateRecursiveMutex() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a recursive mutex is created using
- * xSemaphoreCreateRecursiveMutexStatic() then the application writer must
- * provide the memory that will get used by the mutex.
- * xSemaphoreCreateRecursiveMutexStatic() therefore allows a recursive mutex to
- * be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，递归互斥量使用一块内存来存储互斥量结构。
+ * 若使用 xSemaphoreCreateRecursiveMutex() 创建递归互斥量，则所需内存会在
+ * xSemaphoreCreateRecursiveMutex() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用
+ * xSemaphoreCreateRecursiveMutexStatic() 创建递归互斥量，则应用程序编写者必须
+ * 提供该互斥量将要使用的内存。因此，xSemaphoreCreateRecursiveMutexStatic()
+ * 允许在不使用任何动态内存分配的情况下创建递归互斥量。
  *
- * Mutexes created using this macro can be accessed using the
- * xSemaphoreTakeRecursive() and xSemaphoreGiveRecursive() macros.  The
- * xSemaphoreTake() and xSemaphoreGive() macros must not be used.
+ * 使用此宏创建的互斥量可通过 xSemaphoreTakeRecursive() 和
+ * xSemaphoreGiveRecursive() 宏访问。不得使用 xSemaphoreTake() 和
+ * xSemaphoreGive() 宏。
  *
- * A mutex used recursively can be 'taken' repeatedly by the owner. The mutex
- * doesn't become available again until the owner has called
- * xSemaphoreGiveRecursive() for each successful 'take' request.  For example,
- * if a task successfully 'takes' the same mutex 5 times then the mutex will
- * not be available to any other task until it has also  'given' the mutex back
- * exactly five times.
+ * 递归使用的互斥量可被其所有者重复“获取（take）”。在所有者为每次成功的
+ * “获取”请求调用 xSemaphoreGiveRecursive() 之前，该互斥量不会再次变为可用。
+ * 例如，若某任务成功“获取”同一互斥量 5 次，则该任务也必须恰好
+ * “释放”该互斥量 5 次之后，其他任务才能使用它。
  *
- * This type of semaphore uses a priority inheritance mechanism so a task
- * 'taking' a semaphore MUST ALWAYS 'give' the semaphore back once the
- * semaphore it is no longer required.
+ * 这种信号量使用优先级继承机制，因此任务“获取（take）”信号量之后，
+ * 一旦不再需要该信号量，就必须始终“释放（give）”它。
  *
- * Mutex type semaphores cannot be used from within interrupt service routines.
+ * 互斥量类型的信号量不能在中断服务程序（ISR）内部使用。
  *
- * See xSemaphoreCreateBinary() for an alternative implementation that can be
- * used for pure synchronisation (where one task or interrupt always 'gives' the
- * semaphore and another always 'takes' the semaphore) and from within interrupt
- * service routines.
+ * 关于可用于纯同步（一个任务或中断始终“释放”信号量，另一个任务始终“获取”
+ * 信号量）且可在中断服务程序内部使用的替代实现，参见 xSemaphoreCreateBinary()。
  *
- * @return xSemaphore Handle to the created mutex semaphore.  Should be of type
- * SemaphoreHandle_t.
+ * @return xSemaphore 所创建互斥量信号量的句柄。类型应为
+ * SemaphoreHandle_t。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore;
  *
  * void vATask( void * pvParameters )
  * {
- *  // Semaphore cannot be used before a call to xSemaphoreCreateMutex().
- *  // This is a macro so pass the variable in directly.
+ *  // 在调用 xSemaphoreCreateMutex() 之前不能使用信号量。
+ *  // 该接口是宏，因此直接传入变量。
  *  xSemaphore = xSemaphoreCreateRecursiveMutex();
  *
  *  if( xSemaphore != NULL )
  *  {
- *      // The semaphore was created successfully.
- *      // The semaphore can now be used.
+ *      // 信号量创建成功。
+ *      // 现在可以使用该信号量。
  *  }
  * }
  * @endcode
@@ -874,66 +801,54 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateRecursiveMutexStatic( StaticSemaphore_t *pxMutexBuffer );
  * @endcode
  *
- * Creates a new recursive mutex type semaphore instance, and returns a handle
- * by which the new recursive mutex can be referenced.
+ * 创建一个新的递归互斥量类型的信号量实例，并返回可用于引用该新递归互斥量的句柄。
  *
- * Internally, within the FreeRTOS implementation, recursive mutexes use a block
- * of memory, in which the mutex structure is stored.  If a recursive mutex is
- * created using xSemaphoreCreateRecursiveMutex() then the required memory is
- * automatically dynamically allocated inside the
- * xSemaphoreCreateRecursiveMutex() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a recursive mutex is created using
- * xSemaphoreCreateRecursiveMutexStatic() then the application writer must
- * provide the memory that will get used by the mutex.
- * xSemaphoreCreateRecursiveMutexStatic() therefore allows a recursive mutex to
- * be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，递归互斥量使用一块内存来存储互斥量结构。
+ * 若使用 xSemaphoreCreateRecursiveMutex() 创建递归互斥量，则所需内存会在
+ * xSemaphoreCreateRecursiveMutex() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用
+ * xSemaphoreCreateRecursiveMutexStatic() 创建递归互斥量，则应用程序编写者必须
+ * 提供该互斥量将要使用的内存。因此，xSemaphoreCreateRecursiveMutexStatic()
+ * 允许在不使用任何动态内存分配的情况下创建递归互斥量。
  *
- * Mutexes created using this macro can be accessed using the
- * xSemaphoreTakeRecursive() and xSemaphoreGiveRecursive() macros.  The
- * xSemaphoreTake() and xSemaphoreGive() macros must not be used.
+ * 使用此宏创建的互斥量可通过 xSemaphoreTakeRecursive() 和
+ * xSemaphoreGiveRecursive() 宏访问。不得使用 xSemaphoreTake() 和
+ * xSemaphoreGive() 宏。
  *
- * A mutex used recursively can be 'taken' repeatedly by the owner. The mutex
- * doesn't become available again until the owner has called
- * xSemaphoreGiveRecursive() for each successful 'take' request.  For example,
- * if a task successfully 'takes' the same mutex 5 times then the mutex will
- * not be available to any other task until it has also  'given' the mutex back
- * exactly five times.
+ * 递归使用的互斥量可被其所有者重复“获取（take）”。在所有者为每次成功的
+ * “获取”请求调用 xSemaphoreGiveRecursive() 之前，该互斥量不会再次变为可用。
+ * 例如，若某任务成功“获取”同一互斥量 5 次，则该任务也必须恰好
+ * “释放”该互斥量 5 次之后，其他任务才能使用它。
  *
- * This type of semaphore uses a priority inheritance mechanism so a task
- * 'taking' a semaphore MUST ALWAYS 'give' the semaphore back once the
- * semaphore it is no longer required.
+ * 这种信号量使用优先级继承机制，因此任务“获取（take）”信号量之后，
+ * 一旦不再需要该信号量，就必须始终“释放（give）”它。
  *
- * Mutex type semaphores cannot be used from within interrupt service routines.
+ * 互斥量类型的信号量不能在中断服务程序（ISR）内部使用。
  *
- * See xSemaphoreCreateBinary() for an alternative implementation that can be
- * used for pure synchronisation (where one task or interrupt always 'gives' the
- * semaphore and another always 'takes' the semaphore) and from within interrupt
- * service routines.
+ * 关于可用于纯同步（一个任务或中断始终“释放”信号量，另一个任务始终“获取”
+ * 信号量）且可在中断服务程序内部使用的替代实现，参见 xSemaphoreCreateBinary()。
  *
- * @param pxMutexBuffer Must point to a variable of type StaticSemaphore_t,
- * which will then be used to hold the recursive mutex's data structure,
- * removing the need for the memory to be allocated dynamically.
+ * @param pxMutexBuffer 必须指向 StaticSemaphore_t 类型的变量，
+ * 该变量随后用于保存递归互斥量的数据结构，从而无需动态分配内存。
  *
- * @return If the recursive mutex was successfully created then a handle to the
- * created recursive mutex is returned.  If pxMutexBuffer was NULL then NULL is
- * returned.
+ * @return 若递归互斥量创建成功，则返回所创建递归互斥量的句柄。
+ * 若 pxMutexBuffer 为 NULL，则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore;
  * StaticSemaphore_t xMutexBuffer;
  *
  * void vATask( void * pvParameters )
  * {
- *  // A recursive semaphore cannot be used before it is created.  Here a
- *  // recursive mutex is created using xSemaphoreCreateRecursiveMutexStatic().
- *  // The address of xMutexBuffer is passed into the function, and will hold
- *  // the mutexes data structures - so no dynamic memory allocation will be
- *  // attempted.
+ *  // 递归信号量在创建之后才能使用。此处使用 xSemaphoreCreateRecursiveMutexStatic()
+ *  // 创建递归互斥量。
+ *  // xMutexBuffer 的地址会传入函数，并将保存
+ *  // 互斥量的数据结构——因此不会尝试任何动态内存分配。
  *  xSemaphore = xSemaphoreCreateRecursiveMutexStatic( &xMutexBuffer );
  *
- *  // As no dynamic memory allocation was performed, xSemaphore cannot be NULL,
- *  // so there is no need to check it.
+ *  // 由于未执行动态内存分配，xSemaphore 不可能为 NULL，
+ *  // 因此无需检查。
  * }
  * @endcode
  * \defgroup xSemaphoreCreateRecursiveMutexStatic xSemaphoreCreateRecursiveMutexStatic
@@ -941,7 +856,7 @@ typedef QueueHandle_t SemaphoreHandle_t;
  */
 #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_RECURSIVE_MUTEXES == 1 ) )
     #define xSemaphoreCreateRecursiveMutexStatic( pxStaticSemaphore )    xQueueCreateMutexStatic( queueQUEUE_TYPE_RECURSIVE_MUTEX, ( pxStaticSemaphore ) )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 条件编译结束 */
 
 /**
  * semphr. h
@@ -949,56 +864,44 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateCounting( UBaseType_t uxMaxCount, UBaseType_t uxInitialCount );
  * @endcode
  *
- * Creates a new counting semaphore instance, and returns a handle by which the
- * new counting semaphore can be referenced.
+ * 创建一个新的计数信号量实例，并返回可用于引用该新计数信号量的句柄。
  *
- * In many usage scenarios it is faster and more memory efficient to use a
- * direct to task notification in place of a counting semaphore!
+ * 在许多使用场景中，使用直接任务通知代替计数信号量速度更快、内存效率更高！
  * https://www.FreeRTOS.org/RTOS-task-notifications.html
  *
- * Internally, within the FreeRTOS implementation, counting semaphores use a
- * block of memory, in which the counting semaphore structure is stored.  If a
- * counting semaphore is created using xSemaphoreCreateCounting() then the
- * required memory is automatically dynamically allocated inside the
- * xSemaphoreCreateCounting() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a counting semaphore is created
- * using xSemaphoreCreateCountingStatic() then the application writer can
- * instead optionally provide the memory that will get used by the counting
- * semaphore.  xSemaphoreCreateCountingStatic() therefore allows a counting
- * semaphore to be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，计数信号量使用一块内存来存储计数信号量结构。
+ * 若使用 xSemaphoreCreateCounting() 创建计数信号量，则所需内存会在
+ * xSemaphoreCreateCounting() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xSemaphoreCreateCountingStatic()
+ * 创建计数信号量，则应用程序编写者可以选择提供该计数信号量将要使用的内存。
+ * 因此，xSemaphoreCreateCountingStatic() 允许在不使用任何动态内存分配的情况下
+ * 创建计数信号量。
  *
- * Counting semaphores are typically used for two things:
+ * 计数信号量通常用于以下两种用途：
  *
- * 1) Counting events.
+ * 1) 计数事件。
  *
- *    In this usage scenario an event handler will 'give' a semaphore each time
- *    an event occurs (incrementing the semaphore count value), and a handler
- *    task will 'take' a semaphore each time it processes an event
- *    (decrementing the semaphore count value).  The count value is therefore
- *    the difference between the number of events that have occurred and the
- *    number that have been processed.  In this case it is desirable for the
- *    initial count value to be zero.
+ *    在这种使用场景中，每当事件发生时，事件处理程序会“释放（give）”一次信号量
+ *    （递增信号量计数值）；处理任务每处理一个事件就“获取（take）”一次信号量
+ *    （递减信号量计数值）。因此，计数值等于已发生事件数与已处理事件数之差。
+ *    在这种情况下，初始计数值宜设为 0。
  *
- * 2) Resource management.
+ * 2) 资源管理。
  *
- *    In this usage scenario the count value indicates the number of resources
- *    available.  To obtain control of a resource a task must first obtain a
- *    semaphore - decrementing the semaphore count value.  When the count value
- *    reaches zero there are no free resources.  When a task finishes with the
- *    resource it 'gives' the semaphore back - incrementing the semaphore count
- *    value.  In this case it is desirable for the initial count value to be
- *    equal to the maximum count value, indicating that all resources are free.
+ *    在这种使用场景中，计数值表示可用资源的数量。任务若要获得对某个资源的控制权，
+ *    必须先获取信号量——递减信号量计数值。当计数值降到 0 时，表示没有空闲资源。
+ *    任务用完资源后“释放”信号量——递增信号量计数值。在这种情况下，
+ *    初始计数值宜等于最大计数值，表示所有资源均空闲。
  *
- * @param uxMaxCount The maximum count value that can be reached.  When the
- *        semaphore reaches this value it can no longer be 'given'.
+ * @param uxMaxCount 可达到的最大计数值。当信号量达到该值时，
+ *        就不能再被“释放（give）”。
  *
- * @param uxInitialCount The count value assigned to the semaphore when it is
- *        created.
+ * @param uxInitialCount 创建信号量时赋予它的计数值。
  *
- * @return Handle to the created semaphore.  Null if the semaphore could not be
- *         created.
+ * @return 所创建信号量的句柄。若无法创建信号量，
+ *         则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore;
  *
@@ -1006,15 +909,15 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * {
  * SemaphoreHandle_t xSemaphore = NULL;
  *
- *  // Semaphore cannot be used before a call to xSemaphoreCreateCounting().
- *  // The max value to which the semaphore can count should be 10, and the
- *  // initial value assigned to the count should be 0.
+ *  // 在调用 xSemaphoreCreateCounting() 之前不能使用信号量。
+ *  // 信号量可计数的最大值应为 10，
+ *  // 赋予计数值的初始值应为 0。
  *  xSemaphore = xSemaphoreCreateCounting( 10, 0 );
  *
  *  if( xSemaphore != NULL )
  *  {
- *      // The semaphore was created successfully.
- *      // The semaphore can now be used.
+ *      // 信号量创建成功。
+ *      // 现在可以使用该信号量。
  *  }
  * }
  * @endcode
@@ -1031,60 +934,47 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * SemaphoreHandle_t xSemaphoreCreateCountingStatic( UBaseType_t uxMaxCount, UBaseType_t uxInitialCount, StaticSemaphore_t *pxSemaphoreBuffer );
  * @endcode
  *
- * Creates a new counting semaphore instance, and returns a handle by which the
- * new counting semaphore can be referenced.
+ * 创建一个新的计数信号量实例，并返回可用于引用该新计数信号量的句柄。
  *
- * In many usage scenarios it is faster and more memory efficient to use a
- * direct to task notification in place of a counting semaphore!
+ * 在许多使用场景中，使用直接任务通知代替计数信号量速度更快、内存效率更高！
  * https://www.FreeRTOS.org/RTOS-task-notifications.html
  *
- * Internally, within the FreeRTOS implementation, counting semaphores use a
- * block of memory, in which the counting semaphore structure is stored.  If a
- * counting semaphore is created using xSemaphoreCreateCounting() then the
- * required memory is automatically dynamically allocated inside the
- * xSemaphoreCreateCounting() function.  (see
- * https://www.FreeRTOS.org/a00111.html).  If a counting semaphore is created
- * using xSemaphoreCreateCountingStatic() then the application writer must
- * provide the memory.  xSemaphoreCreateCountingStatic() therefore allows a
- * counting semaphore to be created without using any dynamic memory allocation.
+ * 在 FreeRTOS 内部实现中，计数信号量使用一块内存来存储计数信号量结构。
+ * 若使用 xSemaphoreCreateCounting() 创建计数信号量，则所需内存会在
+ * xSemaphoreCreateCounting() 函数内部自动动态分配（参见
+ * https://www.FreeRTOS.org/a00111.html）。若使用 xSemaphoreCreateCountingStatic()
+ * 创建计数信号量，则应用程序编写者必须提供内存。
+ * 因此，xSemaphoreCreateCountingStatic() 允许在不使用任何动态内存分配的情况下
+ * 创建计数信号量。
  *
- * Counting semaphores are typically used for two things:
+ * 计数信号量通常用于以下两种用途：
  *
- * 1) Counting events.
+ * 1) 计数事件。
  *
- *    In this usage scenario an event handler will 'give' a semaphore each time
- *    an event occurs (incrementing the semaphore count value), and a handler
- *    task will 'take' a semaphore each time it processes an event
- *    (decrementing the semaphore count value).  The count value is therefore
- *    the difference between the number of events that have occurred and the
- *    number that have been processed.  In this case it is desirable for the
- *    initial count value to be zero.
+ *    在这种使用场景中，每当事件发生时，事件处理程序会“释放（give）”一次信号量
+ *    （递增信号量计数值）；处理任务每处理一个事件就“获取（take）”一次信号量
+ *    （递减信号量计数值）。因此，计数值等于已发生事件数与已处理事件数之差。
+ *    在这种情况下，初始计数值宜设为 0。
  *
- * 2) Resource management.
+ * 2) 资源管理。
  *
- *    In this usage scenario the count value indicates the number of resources
- *    available.  To obtain control of a resource a task must first obtain a
- *    semaphore - decrementing the semaphore count value.  When the count value
- *    reaches zero there are no free resources.  When a task finishes with the
- *    resource it 'gives' the semaphore back - incrementing the semaphore count
- *    value.  In this case it is desirable for the initial count value to be
- *    equal to the maximum count value, indicating that all resources are free.
+ *    在这种使用场景中，计数值表示可用资源的数量。任务若要获得对某个资源的控制权，
+ *    必须先获取信号量——递减信号量计数值。当计数值降到 0 时，表示没有空闲资源。
+ *    任务用完资源后“释放”信号量——递增信号量计数值。在这种情况下，
+ *    初始计数值宜等于最大计数值，表示所有资源均空闲。
  *
- * @param uxMaxCount The maximum count value that can be reached.  When the
- *        semaphore reaches this value it can no longer be 'given'.
+ * @param uxMaxCount 可达到的最大计数值。当信号量达到该值时，
+ *        就不能再被“释放（give）”。
  *
- * @param uxInitialCount The count value assigned to the semaphore when it is
- *        created.
+ * @param uxInitialCount 创建信号量时赋予它的计数值。
  *
- * @param pxSemaphoreBuffer Must point to a variable of type StaticSemaphore_t,
- * which will then be used to hold the semaphore's data structure, removing the
- * need for the memory to be allocated dynamically.
+ * @param pxSemaphoreBuffer 必须指向 StaticSemaphore_t 类型的变量，
+ * 该变量随后用于保存信号量的数据结构，从而无需动态分配内存。
  *
- * @return If the counting semaphore was successfully created then a handle to
- * the created counting semaphore is returned.  If pxSemaphoreBuffer was NULL
- * then NULL is returned.
+ * @return 若计数信号量创建成功，则返回所创建计数信号量的句柄。
+ * 若 pxSemaphoreBuffer 为 NULL，则返回 NULL。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
  * SemaphoreHandle_t xSemaphore;
  * StaticSemaphore_t xSemaphoreBuffer;
@@ -1093,16 +983,14 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * {
  * SemaphoreHandle_t xSemaphore = NULL;
  *
- *  // Counting semaphore cannot be used before they have been created.  Create
- *  // a counting semaphore using xSemaphoreCreateCountingStatic().  The max
- *  // value to which the semaphore can count is 10, and the initial value
- *  // assigned to the count will be 0.  The address of xSemaphoreBuffer is
- *  // passed in and will be used to hold the semaphore structure, so no dynamic
- *  // memory allocation will be used.
+ *  // 计数信号量在创建之后才能使用。使用
+ *  // xSemaphoreCreateCountingStatic() 创建计数信号量。信号量可计数的最大
+ *  // 值为 10，赋予计数值的初始值将为 0。xSemaphoreBuffer 的地址
+ *  // 会传入，并将用于保存信号量结构，因此不会使用动态内存分配。
  *  xSemaphore = xSemaphoreCreateCounting( 10, 0, &xSemaphoreBuffer );
  *
- *  // No memory allocation was attempted so xSemaphore cannot be NULL, so there
- *  // is no need to check its value.
+ *  // 未尝试内存分配，因此 xSemaphore 不可能为 NULL，
+ *  // 无需检查其值。
  * }
  * @endcode
  * \defgroup xSemaphoreCreateCountingStatic xSemaphoreCreateCountingStatic
@@ -1110,7 +998,7 @@ typedef QueueHandle_t SemaphoreHandle_t;
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     #define xSemaphoreCreateCountingStatic( uxMaxCount, uxInitialCount, pxSemaphoreBuffer )    xQueueCreateCountingSemaphoreStatic( ( uxMaxCount ), ( uxInitialCount ), ( pxSemaphoreBuffer ) )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 条件编译结束 */
 
 /**
  * semphr. h
@@ -1118,10 +1006,10 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * void vSemaphoreDelete( SemaphoreHandle_t xSemaphore );
  * @endcode
  *
- * Delete a semaphore.  This function must be used with care.  For example,
- * do not delete a mutex type semaphore if the mutex is held by a task.
+ * 删除信号量。使用此函数必须格外小心。例如，
+ * 若互斥量类型的信号量正被某个任务持有，则不要删除它。
  *
- * @param xSemaphore A handle to the semaphore to be deleted.
+ * @param xSemaphore 要删除的信号量的句柄。
  *
  * \defgroup vSemaphoreDelete vSemaphoreDelete
  * \ingroup Semaphores
@@ -1134,14 +1022,13 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * TaskHandle_t xSemaphoreGetMutexHolder( SemaphoreHandle_t xMutex );
  * @endcode
  *
- * If xMutex is indeed a mutex type semaphore, return the current mutex holder.
- * If xMutex is not a mutex type semaphore, or the mutex is available (not held
- * by a task), return NULL.
+ * 如果 xMutex 确实是互斥量类型的信号量，则返回当前持有该互斥量的任务。
+ * 如果 xMutex 不是互斥量类型的信号量，或者该互斥量可用（未被任何任务持有），
+ * 则返回 NULL。
  *
- * Note: This is a good way of determining if the calling task is the mutex
- * holder, but not a good way of determining the identity of the mutex holder as
- * the holder may change between the function exiting and the returned value
- * being tested.
+ * 注意：这是判断调用任务是否为互斥量持有者的好方法，但不适合用于
+ * 确定互斥量持有者的身份，因为在函数返回到测试返回值之间，
+ * 持有者可能已经改变。
  */
 #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
     #define xSemaphoreGetMutexHolder( xSemaphore )    xQueueGetMutexHolder( ( xSemaphore ) )
@@ -1153,10 +1040,9 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * TaskHandle_t xSemaphoreGetMutexHolderFromISR( SemaphoreHandle_t xMutex );
  * @endcode
  *
- * If xMutex is indeed a mutex type semaphore, return the current mutex holder.
- * If xMutex is not a mutex type semaphore, or the mutex is available (not held
- * by a task), return NULL.
- *
+ * 如果 xMutex 确实是互斥量类型的信号量，则返回当前持有该互斥量的任务。
+ * 如果 xMutex 不是互斥量类型的信号量，或者该互斥量可用（未被任何任务持有），
+ * 则返回 NULL。
  */
 #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
     #define xSemaphoreGetMutexHolderFromISR( xSemaphore )    xQueueGetMutexHolderFromISR( ( xSemaphore ) )
@@ -1168,11 +1054,9 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * UBaseType_t uxSemaphoreGetCount( SemaphoreHandle_t xSemaphore );
  * @endcode
  *
- * If the semaphore is a counting semaphore then uxSemaphoreGetCount() returns
- * its current count value.  If the semaphore is a binary semaphore then
- * uxSemaphoreGetCount() returns 1 if the semaphore is available, and 0 if the
- * semaphore is not available.
- *
+ * 若信号量是计数信号量，则 uxSemaphoreGetCount() 返回其当前计数值。
+ * 若信号量是二值信号量，则 uxSemaphoreGetCount() 在信号量可用时返回 1，
+ * 在信号量不可用时返回 0。
  */
 #define uxSemaphoreGetCount( xSemaphore )           uxQueueMessagesWaiting( ( QueueHandle_t ) ( xSemaphore ) )
 
@@ -1182,11 +1066,9 @@ typedef QueueHandle_t SemaphoreHandle_t;
  * UBaseType_t uxSemaphoreGetCountFromISR( SemaphoreHandle_t xSemaphore );
  * @endcode
  *
- * If the semaphore is a counting semaphore then uxSemaphoreGetCountFromISR() returns
- * its current count value.  If the semaphore is a binary semaphore then
- * uxSemaphoreGetCountFromISR() returns 1 if the semaphore is available, and 0 if the
- * semaphore is not available.
- *
+ * 若信号量是计数信号量，则 uxSemaphoreGetCountFromISR() 返回其当前计数值。
+ * 若信号量是二值信号量，则 uxSemaphoreGetCountFromISR() 在信号量可用时返回 1，
+ * 在信号量不可用时返回 0。
  */
 #define uxSemaphoreGetCountFromISR( xSemaphore )    uxQueueMessagesWaitingFromISR( ( QueueHandle_t ) ( xSemaphore ) )
 
@@ -1197,19 +1079,17 @@ typedef QueueHandle_t SemaphoreHandle_t;
  *                                       StaticSemaphore_t ** ppxSemaphoreBuffer );
  * @endcode
  *
- * Retrieve pointer to a statically created binary semaphore, counting semaphore,
- * or mutex semaphore's data structure buffer. This is the same buffer that is
- * supplied at the time of creation.
+ * 获取指向静态创建的二值信号量、计数信号量或互斥量信号量的数据结构缓冲区的指针。
+ * 该缓冲区与创建时提供的缓冲区相同。
  *
- * @param xSemaphore The semaphore for which to retrieve the buffer.
+ * @param xSemaphore 要获取其缓冲区的信号量。
  *
- * @param ppxSemaphoreBuffer Used to return a pointer to the semaphore's
- * data structure buffer.
+ * @param ppxSemaphoreBuffer 用于返回指向信号量数据结构缓冲区的指针。
  *
- * @return pdTRUE if buffer was retrieved, pdFALSE otherwise.
+ * @return 若成功获取缓冲区则返回 pdTRUE，否则返回 pdFALSE。
  */
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     #define xSemaphoreGetStaticBuffer( xSemaphore, ppxSemaphoreBuffer )    xQueueGenericGetStaticBuffers( ( QueueHandle_t ) ( xSemaphore ), NULL, ( ppxSemaphoreBuffer ) )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 条件编译结束 */
 
-#endif /* SEMAPHORE_H */
+#endif /* SEMAPHORE_H 头文件包含保护 */

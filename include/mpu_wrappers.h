@@ -29,24 +29,26 @@
 #ifndef MPU_WRAPPERS_H
 #define MPU_WRAPPERS_H
 
-/* This file redefines API functions to be called through a wrapper macro, but
- * only for ports that are using the MPU. */
+/*
+ * 此文件将 API 函数重定义为通过包装宏调用，但仅适用于
+ * 使用 MPU 的移植层。
+ */
 #if ( portUSING_MPU_WRAPPERS == 1 )
 
-/* MPU_WRAPPERS_INCLUDED_FROM_API_FILE will be defined when this file is
- * included from queue.c or task.c to prevent it from having an effect within
- * those files. */
+/*
+ * 当此文件从 queue.c 或 task.c 包含时，将定义
+ * MPU_WRAPPERS_INCLUDED_FROM_API_FILE，以防止其在这些文件内生效。
+ */
     #ifndef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 /*
- * Map standard (non MPU) API functions to equivalents that start
- * "MPU_".  This will cause the application code to call the MPU_
- * version, which wraps the non-MPU version with privilege promoting
- * then demoting code, so the kernel code always runs will full
- * privileges.
+ * 将标准（非 MPU）API 函数映射到以 "MPU_" 开头的等效函数。
+ * 这将使应用程序代码调用 MPU_ 版本，该版本在非 MPU 版本
+ * 外面包装了提升权限再降低权限的代码，因此内核代码始终以
+ * 完整权限运行。
  */
 
-/* Map standard task.h API functions to the MPU equivalents. */
+/* 将标准 task.h API 函数映射到对应的 MPU 等效函数。 */
         #define vTaskDelay                            MPU_vTaskDelay
         #define xTaskDelayUntil                       MPU_xTaskDelayUntil
         #define xTaskAbortDelay                       MPU_xTaskAbortDelay
@@ -80,22 +82,24 @@
         #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
             #define ulTaskGetRunTimeCounter           MPU_ulTaskGetRunTimeCounter
             #define ulTaskGetRunTimePercent           MPU_ulTaskGetRunTimePercent
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* Privileged only wrappers for Task APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 任务 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
         #if ( configUSE_MPU_WRAPPERS_V1 == 1 )
 
-/* These are not needed in v2 because they do not take a task
- * handle and therefore, no lookup is needed. Needed in v1 because
- * these are available as system calls in v1. */
+/*
+ * v2 中不需要这些包装器，因为它们不接收任务句柄，因而无需查找。
+ * v1 中需要它们，因为在 v1 中这些函数以系统调用形式提供。
+ */
             #define vTaskGetRunTimeStatistics            MPU_vTaskGetRunTimeStatistics
             #define vTaskListTasks                       MPU_vTaskListTasks
             #define vTaskSuspendAll                      MPU_vTaskSuspendAll
             #define xTaskCatchUpTicks                    MPU_xTaskCatchUpTicks
             #define xTaskResumeAll                       MPU_xTaskResumeAll
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
         #define xTaskCreate                              MPU_xTaskCreate
         #define xTaskCreateStatic                        MPU_xTaskCreateStatic
@@ -117,9 +121,9 @@
             #define xTaskGetApplicationTaskTagFromISR    MPU_xTaskGetApplicationTaskTagFromISR
             #define xTaskGenericNotifyFromISR            MPU_xTaskGenericNotifyFromISR
             #define vTaskGenericNotifyGiveFromISR        MPU_vTaskGenericNotifyGiveFromISR
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* Map standard queue.h API functions to the MPU equivalents. */
+/* 将标准 queue.h API 函数映射到对应的 MPU 等效函数。 */
         #define xQueueGenericSend            MPU_xQueueGenericSend
         #define xQueueReceive                MPU_xQueueReceive
         #define xQueuePeek                   MPU_xQueuePeek
@@ -136,11 +140,12 @@
             #define vQueueAddToRegistry      MPU_vQueueAddToRegistry
             #define vQueueUnregisterQueue    MPU_vQueueUnregisterQueue
             #define pcQueueGetName           MPU_pcQueueGetName
-        #endif /* #if ( configQUEUE_REGISTRY_SIZE > 0 ) */
+        #endif /* 条件编译结束：if ( configQUEUE_REGISTRY_SIZE > 0 ) */
 
-/* Privileged only wrappers for Queue APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 队列 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
         #define vQueueDelete                           MPU_vQueueDelete
         #define xQueueCreateMutex                      MPU_xQueueCreateMutex
         #define xQueueCreateMutexStatic                MPU_xQueueCreateMutexStatic
@@ -164,9 +169,9 @@
             #define uxQueueMessagesWaitingFromISR      MPU_uxQueueMessagesWaitingFromISR
             #define xQueueGetMutexHolderFromISR        MPU_xQueueGetMutexHolderFromISR
             #define xQueueSelectFromSetFromISR         MPU_xQueueSelectFromSetFromISR
-        #endif /* if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* Map standard timer.h API functions to the MPU equivalents. */
+/* 将标准 timer.h API 函数映射到对应的 MPU 等效函数。 */
         #define pvTimerGetTimerID                 MPU_pvTimerGetTimerID
         #define vTimerSetTimerID                  MPU_vTimerSetTimerID
         #define xTimerIsTimerActive               MPU_xTimerIsTimerActive
@@ -180,20 +185,21 @@
 
         #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
             #define xTimerGetReloadMode           MPU_xTimerGetReloadMode
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* Privileged only wrappers for Timer APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 定时器 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
         #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
             #define xTimerCreate                   MPU_xTimerCreate
             #define xTimerCreateStatic             MPU_xTimerCreateStatic
             #define xTimerGetStaticBuffer          MPU_xTimerGetStaticBuffer
             #define xTimerGenericCommandFromISR    MPU_xTimerGenericCommandFromISR
             #define xTimerDelete                   MPU_xTimerDelete
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* Map standard event_group.h API functions to the MPU equivalents. */
+/* 将标准 event_group.h API 函数映射到对应的 MPU 等效函数。 */
         #define xEventGroupWaitBits          MPU_xEventGroupWaitBits
         #define xEventGroupClearBits         MPU_xEventGroupClearBits
         #define xEventGroupSetBits           MPU_xEventGroupSetBits
@@ -202,11 +208,12 @@
         #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) )
             #define uxEventGroupGetNumber    MPU_uxEventGroupGetNumber
             #define vEventGroupSetNumber     MPU_vEventGroupSetNumber
-        #endif /* #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) ) */
+        #endif /* 条件编译结束：#if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) ) */
 
-/* Privileged only wrappers for Event Group APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 事件组 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
         #define xEventGroupCreate                  MPU_xEventGroupCreate
         #define xEventGroupCreateStatic            MPU_xEventGroupCreateStatic
         #define vEventGroupDelete                  MPU_vEventGroupDelete
@@ -216,10 +223,12 @@
             #define xEventGroupClearBitsFromISR    MPU_xEventGroupClearBitsFromISR
             #define xEventGroupSetBitsFromISR      MPU_xEventGroupSetBitsFromISR
             #define xEventGroupGetBitsFromISR      MPU_xEventGroupGetBitsFromISR
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* Map standard message/stream_buffer.h API functions to the MPU
- * equivalents. */
+/*
+ * 将标准 message/stream_buffer.h API 函数映射到对应的 MPU
+ * 等效函数。
+ */
         #define xStreamBufferSend                      MPU_xStreamBufferSend
         #define xStreamBufferReceive                   MPU_xStreamBufferReceive
         #define xStreamBufferIsFull                    MPU_xStreamBufferIsFull
@@ -229,9 +238,10 @@
         #define xStreamBufferSetTriggerLevel           MPU_xStreamBufferSetTriggerLevel
         #define xStreamBufferNextMessageLengthBytes    MPU_xStreamBufferNextMessageLengthBytes
 
-/* Privileged only wrappers for Stream Buffer APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 流缓冲 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
 
         #define xStreamBufferGenericCreate                  MPU_xStreamBufferGenericCreate
         #define xStreamBufferGenericCreateStatic            MPU_xStreamBufferGenericCreateStatic
@@ -245,14 +255,16 @@
             #define xStreamBufferSendCompletedFromISR       MPU_xStreamBufferSendCompletedFromISR
             #define xStreamBufferReceiveCompletedFromISR    MPU_xStreamBufferReceiveCompletedFromISR
             #define xStreamBufferResetFromISR               MPU_xStreamBufferResetFromISR
-        #endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+        #endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
         #if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) )
 
             #define vGrantAccessToTask( xTask, xTaskToGrantAccess )                        vGrantAccessToKernelObject( ( xTask ), ( int32_t ) ( xTaskToGrantAccess ) )
 
-/* A privileged task must revoke access to the object before deletion,
- * otherwise index reuse may result in accidental permissions. */
+/*
+ * 特权任务必须在删除对象之前撤销对该对象的访问权限，
+ * 否则索引复用可能导致意外的权限。
+ */
             #define vRevokeAccessToTask( xTask, xTaskToRevokeAccess )                      vRevokeAccessToKernelObject( ( xTask ), ( int32_t ) ( xTaskToRevokeAccess ) )
 
             #define vGrantAccessToSemaphore( xTask, xSemaphoreToGrantAccess )              vGrantAccessToKernelObject( ( xTask ), ( int32_t ) ( xSemaphoreToGrantAccess ) )
@@ -276,15 +288,15 @@
             #define vGrantAccessToTimer( xTask, xTimerToGrantAccess )                      vGrantAccessToKernelObject( ( xTask ), ( int32_t ) ( xTimerToGrantAccess ) )
             #define vRevokeAccessToTimer( xTask, xTimerToRevokeAccess )                    vRevokeAccessToKernelObject( ( xTask ), ( int32_t ) ( xTimerToRevokeAccess ) )
 
-        #endif /* #if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) ) */
+        #endif /* 条件编译结束：#if ( ( configUSE_MPU_WRAPPERS_V1 == 0 ) && ( configENABLE_ACCESS_CONTROL_LIST == 1 ) ) */
 
-    #endif /* MPU_WRAPPERS_INCLUDED_FROM_API_FILE */
+    #endif /* 配置项 MPU_WRAPPERS_INCLUDED_FROM_API_FILE */
 
     #define PRIVILEGED_FUNCTION     __attribute__( ( section( "privileged_functions" ) ) )
     #define PRIVILEGED_DATA         __attribute__( ( section( "privileged_data" ) ) )
     #define FREERTOS_SYSTEM_CALL    __attribute__( ( section( "freertos_system_calls" ) ) )
 
-#else /* portUSING_MPU_WRAPPERS */
+#else /* 条件不成立：portUSING_MPU_WRAPPERS */
 
     #ifndef PRIVILEGED_FUNCTION
         #define PRIVILEGED_FUNCTION
@@ -298,7 +310,7 @@
         #define FREERTOS_SYSTEM_CALL
     #endif
 
-#endif /* portUSING_MPU_WRAPPERS */
+#endif /* 条件编译结束：portUSING_MPU_WRAPPERS */
 
 
-#endif /* MPU_WRAPPERS_H */
+#endif /* 头文件保护：MPU_WRAPPERS_H */

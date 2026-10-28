@@ -30,43 +30,38 @@
 #define STACK_MACROS_H
 
 /*
- * Call the stack overflow hook function if the stack of the task being swapped
- * out is currently overflowed, or looks like it might have overflowed in the
- * past.
+ * 如果被换出任务的栈当前已溢出，或看起来过去可能曾溢出，
+ * 则调用栈溢出钩子函数。
  *
- * Setting configCHECK_FOR_STACK_OVERFLOW to 1 will cause the macro to check
- * the current stack state only - comparing the current top of stack value to
- * the stack limit.  Setting configCHECK_FOR_STACK_OVERFLOW to greater than 1
- * will also cause the last few stack bytes to be checked to ensure the value
- * to which the bytes were set when the task was created have not been
- * overwritten.  Note this second test does not guarantee that an overflowed
- * stack will always be recognised.
+ * 将 configCHECK_FOR_STACK_OVERFLOW 设为 1 会使该宏仅检查
+ * 当前栈状态——将当前栈顶值与栈界限进行比较。将
+ * configCHECK_FOR_STACK_OVERFLOW 设为大于 1 还会检查最后几个
+ * 栈字节，以确保创建任务时写入这些字节的值未被覆写。
+ * 注意，第二种检查并不保证总能识别出已溢出的栈。
  */
 
 /*-----------------------------------------------------------*/
 
 /*
- * portSTACK_LIMIT_PADDING is a number of extra words to consider to be in
- * use on the stack.
+ * portSTACK_LIMIT_PADDING 是视为已占用栈空间的额外字数。
  */
 #ifndef portSTACK_LIMIT_PADDING
     #define portSTACK_LIMIT_PADDING    0
 #endif
 
-/* Stack overflow check is not straight forward to implement for MPU ports
- * because of the following reasons:
- * 1. The context is stored in TCB and as a result, pxTopOfStack member points
- *    to the context location in TCB.
- * 2. System calls are executed on a separate privileged only stack.
+/*
+ * 由于以下原因，MPU 移植层的栈溢出检查实现并不直接：
+ * 1. 上下文保存在 TCB 中，因此 pxTopOfStack 成员指向 TCB 中的
+ *    上下文位置。
+ * 2. 系统调用在单独的特权栈上执行。
  *
- * It is still okay because an MPU region is used to protect task stack which
- * means task stack overflow will trigger an MPU fault for unprivileged tasks.
- * Additionally, architectures with hardware stack overflow checking support
- * (such as Armv8-M) will trigger a fault when a task's stack overflows.
+ * 这仍然没有问题，因为使用 MPU 区域保护任务栈，这意味着
+ * 非特权任务发生任务栈溢出会触发 MPU 故障。此外，具有硬件
+ * 栈溢出检查支持的架构（例如 Armv8-M）会在任务栈溢出时触发故障。
  */
 #if ( ( configCHECK_FOR_STACK_OVERFLOW == 1 ) && ( portSTACK_GROWTH < 0 ) && ( portUSING_MPU_WRAPPERS != 1 ) )
 
-/* Only the current stack state is to be checked. */
+/* 仅检查当前栈状态。 */
     #define taskCHECK_FOR_STACK_OVERFLOW()                                                      \
     do                                                                                          \
     {                                                                                           \
@@ -78,12 +73,12 @@
         }                                                                                       \
     } while( 0 )
 
-#endif /* configCHECK_FOR_STACK_OVERFLOW == 1 */
+#endif /* 配置项 configCHECK_FOR_STACK_OVERFLOW == 1 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configCHECK_FOR_STACK_OVERFLOW == 1 ) && ( portSTACK_GROWTH > 0 ) && ( portUSING_MPU_WRAPPERS != 1 ) )
 
-/* Only the current stack state is to be checked. */
+/* 仅检查当前栈状态。 */
     #define taskCHECK_FOR_STACK_OVERFLOW()                                                       \
     do                                                                                           \
     {                                                                                            \
@@ -95,7 +90,7 @@
         }                                                                                        \
     } while( 0 )
 
-#endif /* configCHECK_FOR_STACK_OVERFLOW == 1 */
+#endif /* 配置项 configCHECK_FOR_STACK_OVERFLOW == 1 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configCHECK_FOR_STACK_OVERFLOW > 1 ) && ( portSTACK_GROWTH < 0 ) && ( portUSING_MPU_WRAPPERS != 1 ) )
@@ -117,7 +112,7 @@
         }                                                                                        \
     } while( 0 )
 
-#endif /* #if( configCHECK_FOR_STACK_OVERFLOW > 1 ) */
+#endif /* 条件编译结束：#if( configCHECK_FOR_STACK_OVERFLOW > 1 ) */
 /*-----------------------------------------------------------*/
 
 #if ( ( configCHECK_FOR_STACK_OVERFLOW > 1 ) && ( portSTACK_GROWTH > 0 ) && ( portUSING_MPU_WRAPPERS != 1 ) )
@@ -142,14 +137,14 @@
         }                                                                                                                                 \
     } while( 0 )
 
-#endif /* #if( configCHECK_FOR_STACK_OVERFLOW > 1 ) */
+#endif /* 条件编译结束：#if( configCHECK_FOR_STACK_OVERFLOW > 1 ) */
 /*-----------------------------------------------------------*/
 
-/* Remove stack overflow macro if not being used. */
+/* 如果未使用栈溢出检查宏，则移除该宏。 */
 #ifndef taskCHECK_FOR_STACK_OVERFLOW
     #define taskCHECK_FOR_STACK_OVERFLOW()
 #endif
 
 
 
-#endif /* STACK_MACROS_H */
+#endif /* 头文件保护：STACK_MACROS_H */

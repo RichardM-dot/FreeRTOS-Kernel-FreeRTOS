@@ -28,36 +28,11 @@
 
 
 /*
- * Message buffers build functionality on top of FreeRTOS stream buffers.
- * Whereas stream buffers are used to send a continuous stream of data from one
- * task or interrupt to another, message buffers are used to send variable
- * length discrete messages from one task or interrupt to another.  Their
- * implementation is light weight, making them particularly suited for interrupt
- * to task and core to core communication scenarios.
+ * 消息缓冲的功能构建在 FreeRTOS 流缓冲之上。流缓冲用于在一个任务或中断与另一个任务或中断之间发送连续的数据流，而消息缓冲则用于在一个任务或中断与另一个任务或中断之间发送变长的离散消息。其实现轻量，因此特别适合中断到任务以及核间通信等场景。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Message buffers hold variable length messages.  To enable that, when a
- * message is written to the message buffer an additional sizeof( size_t ) bytes
- * are also written to store the message's length (that happens internally, with
- * the API function).  sizeof( size_t ) is typically 4 bytes on a 32-bit
- * architecture, so writing a 10 byte message to a message buffer on a 32-bit
- * architecture will actually reduce the available space in the message buffer
- * by 14 bytes (10 byte are used by the message, and 4 bytes to hold the length
- * of the message).
+ * 消息缓冲用于保存变长消息。为实现这一点，当消息写入消息缓冲时，还会额外写入 sizeof( size_t ) 个字节以保存消息长度（该过程由 API 函数在内部完成）。在 32 位架构上，sizeof( size_t ) 通常为 4 字节，因此在 32 位架构上向消息缓冲写入一条 10 字节的消息，实际会使消息缓冲的可用空间减少 14 字节（10 字节用于消息本身，4 字节用于保存消息长度）。
  */
 
 #ifndef FREERTOS_MESSAGE_BUFFER_H
@@ -67,21 +42,17 @@
     #error "include FreeRTOS.h must appear in source files before include message_buffer.h"
 #endif
 
-/* Message buffers are built onto of stream buffers. */
+/* 消息缓冲构建在流缓冲之上。 */
 #include "stream_buffer.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #if defined( __cplusplus )
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
 /**
- * Type by which message buffers are referenced.  For example, a call to
- * xMessageBufferCreate() returns an MessageBufferHandle_t variable that can
- * then be used as a parameter to xMessageBufferSend(), xMessageBufferReceive(),
- * etc. Message buffer is essentially built as a stream buffer hence its handle
- * is also set to same type as a stream buffer handle.
+ * 用于引用消息缓冲的类型。例如，调用 xMessageBufferCreate() 会返回一个 MessageBufferHandle_t 变量，该变量随后可作为参数传给 xMessageBufferSend()、xMessageBufferReceive() 等函数。消息缓冲本质上构建为流缓冲，因此其句柄也被设置为与流缓冲句柄相同的类型。
  */
 typedef StreamBufferHandle_t MessageBufferHandle_t;
 
@@ -94,42 +65,19 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * MessageBufferHandle_t xMessageBufferCreate( size_t xBufferSizeBytes );
  * @endcode
  *
- * Creates a new message buffer using dynamically allocated memory.  See
- * xMessageBufferCreateStatic() for a version that uses statically allocated
- * memory (memory that is allocated at compile time).
+ * 使用动态分配的内存创建新的消息缓冲。若需使用静态分配内存（在编译时分配的内存）的版本，请参见 xMessageBufferCreateStatic()。
  *
- * configSUPPORT_DYNAMIC_ALLOCATION must be set to 1 or left undefined in
- * FreeRTOSConfig.h for xMessageBufferCreate() to be available.
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferCreate() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferCreate()，必须将 configSUPPORT_DYNAMIC_ALLOCATION 设置为 1，或将其保留为未定义状态。要在 FreeRTOSConfig.h 中使用 xMessageBufferCreate()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xBufferSizeBytes The total number of bytes (not messages) the message
- * buffer will be able to hold at any one time.  When a message is written to
- * the message buffer an additional sizeof( size_t ) bytes are also written to
- * store the message's length.  sizeof( size_t ) is typically 4 bytes on a
- * 32-bit architecture, so on most 32-bit architectures a 10 byte message will
- * take up 14 bytes of message buffer space.
+ * @param xBufferSizeBytes 消息缓冲在任意时刻能够容纳的总字节数（不是消息条数）。当消息写入消息缓冲时，还会额外写入 sizeof( size_t ) 个字节以保存消息长度。在 32 位架构上 sizeof( size_t ) 通常为 4 字节，因此在大多数 32 位架构上，一条 10 字节的消息将占用 14 字节的消息缓冲空间。
  *
- * @param pxSendCompletedCallback Callback invoked when a send operation to the
- * message buffer is complete. If the parameter is NULL or xMessageBufferCreate()
- * is called without the parameter, then it will use the default implementation
- * provided by sbSEND_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxSendCompletedCallback 当对消息缓冲的发送操作完成时调用的回调。如果该参数为 NULL，或调用 xMessageBufferCreate() 时未提供该参数，则使用 sbSEND_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @param pxReceiveCompletedCallback Callback invoked when a receive operation from
- * the message buffer is complete. If the parameter is NULL or xMessageBufferCreate()
- * is called without the parameter, it will use the default implementation provided
- * by sbRECEIVE_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxReceiveCompletedCallback 当从消息缓冲的接收操作完成时调用的回调。如果该参数为 NULL，或调用 xMessageBufferCreate() 时未提供该参数，则使用 sbRECEIVE_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @return If NULL is returned, then the message buffer cannot be created
- * because there is insufficient heap memory available for FreeRTOS to allocate
- * the message buffer data structures and storage area.  A non-NULL value being
- * returned indicates that the message buffer has been created successfully -
- * the returned value should be stored as the handle to the created message
- * buffer.
+ * @return 如果返回 NULL，则表示无法创建消息缓冲，原因是 FreeRTOS 没有足够的堆内存来分配消息缓冲的数据结构和存储区域。返回非 NULL 值表示消息缓冲已成功创建——返回的值应保存为所创建消息缓冲的句柄。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  *
  * void vAFunction( void )
@@ -137,20 +85,18 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * MessageBufferHandle_t xMessageBuffer;
  * const size_t xMessageBufferSizeBytes = 100;
  *
- *  // Create a message buffer that can hold 100 bytes.  The memory used to hold
- *  // both the message buffer structure and the messages themselves is allocated
- *  // dynamically.  Each message added to the buffer consumes an additional 4
- *  // bytes which are used to hold the length of the message.
+ *  // 创建一个可容纳 100 字节的消息缓冲。用于保存消息缓冲结构体及消息本身的内存
+ *  // 均通过动态方式分配。每条添加到缓冲区的消息还会额外占用 4 个字节，
+ *  // 用于保存消息长度。
  *  xMessageBuffer = xMessageBufferCreate( xMessageBufferSizeBytes );
  *
  *  if( xMessageBuffer == NULL )
  *  {
- *      // There was not enough heap memory space available to create the
- *      // message buffer.
+ *      // 没有足够的堆内存空间来创建消息缓冲。
  *  }
  *  else
  *  {
- *      // The message buffer was created successfully and can now be used.
+ *      // 消息缓冲创建成功，现在可以使用。
  *  }
  *
  * @endcode
@@ -173,54 +119,32 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                                                   uint8_t *pucMessageBufferStorageArea,
  *                                                   StaticMessageBuffer_t *pxStaticMessageBuffer );
  * @endcode
- * Creates a new message buffer using statically allocated memory.  See
- * xMessageBufferCreate() for a version that uses dynamically allocated memory.
+ * 使用静态分配的内存创建新的消息缓冲。若需使用动态分配内存的版本，请参见 xMessageBufferCreate()。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferCreateStatic() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferCreateStatic()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xBufferSizeBytes The size, in bytes, of the buffer pointed to by the
- * pucMessageBufferStorageArea parameter.  When a message is written to the
- * message buffer an additional sizeof( size_t ) bytes are also written to store
- * the message's length.  sizeof( size_t ) is typically 4 bytes on a 32-bit
- * architecture, so on most 32-bit architecture a 10 byte message will take up
- * 14 bytes of message buffer space.  The maximum number of bytes that can be
- * stored in the message buffer is actually (xBufferSizeBytes - 1).
+ * @param xBufferSizeBytes 由 pucMessageBufferStorageArea 参数所指向缓冲区的大小（字节数）。当消息写入消息缓冲时，还会额外写入 sizeof( size_t ) 个字节以保存消息长度。在 32 位架构上 sizeof( size_t ) 通常为 4 字节，因此在大多数 32 位架构上，一条 10 字节的消息将占用 14 字节的消息缓冲空间。消息缓冲实际可存储的最大字节数为 (xBufferSizeBytes - 1)。
  *
- * @param pucMessageBufferStorageArea Must point to a uint8_t array that is at
- * least xBufferSizeBytes big.  This is the array to which messages are
- * copied when they are written to the message buffer.
+ * @param pucMessageBufferStorageArea 必须指向一个大小至少为 xBufferSizeBytes 的 uint8_t 数组。当消息写入消息缓冲时，消息将复制到该数组。
  *
- * @param pxStaticMessageBuffer Must point to a variable of type
- * StaticMessageBuffer_t, which will be used to hold the message buffer's data
- * structure.
+ * @param pxStaticMessageBuffer 必须指向一个 StaticMessageBuffer_t 类型的变量，用于保存消息缓冲的数据结构。
  *
- * @param pxSendCompletedCallback Callback invoked when a new message is sent to the message buffer.
- * If the parameter is NULL or xMessageBufferCreate() is called without the parameter, then it will use the default
- * implementation provided by sbSEND_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxSendCompletedCallback 当新消息发送到消息缓冲时调用的回调。如果该参数为 NULL，或调用 xMessageBufferCreate() 时未提供该参数，则使用 sbSEND_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @param pxReceiveCompletedCallback Callback invoked when a message is read from a
- * message buffer. If the parameter is NULL or xMessageBufferCreate() is called without the parameter, it will
- * use the default implementation provided by sbRECEIVE_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxReceiveCompletedCallback 当从消息缓冲读取消息时调用的回调。如果该参数为 NULL，或调用 xMessageBufferCreate() 时未提供该参数，则使用 sbRECEIVE_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @return If the message buffer is created successfully then a handle to the
- * created message buffer is returned. If either pucMessageBufferStorageArea or
- * pxStaticmessageBuffer are NULL then NULL is returned.
+ * @return 如果消息缓冲创建成功，则返回所创建消息缓冲的句柄。如果 pucMessageBufferStorageArea 或 pxStaticMessageBuffer 为 NULL，则返回 NULL。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  *
- * // Used to dimension the array used to hold the messages.  The available space
- * // will actually be one less than this, so 999.
- #define STORAGE_SIZE_BYTES 1000
+ * // 用于指定保存消息的数组大小。实际可用空间将比该值少 1，因此为 999。
+ * #define STORAGE_SIZE_BYTES 1000
  *
- * // Defines the memory that will actually hold the messages within the message
- * // buffer.
+ * // 定义实际用于保存消息缓冲中消息的内存。
  * static uint8_t ucStorageBuffer[ STORAGE_SIZE_BYTES ];
  *
- * // The variable used to hold the message buffer structure.
+ * // 用于保存消息缓冲结构体的变量。
  * StaticMessageBuffer_t xMessageBufferStruct;
  *
  * void MyFunction( void )
@@ -231,11 +155,11 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                                               ucStorageBuffer,
  *                                               &xMessageBufferStruct );
  *
- *  // As neither the pucMessageBufferStorageArea or pxStaticMessageBuffer
- *  // parameters were NULL, xMessageBuffer will not be NULL, and can be used to
- *  // reference the created message buffer in other message buffer API calls.
+ *  // 由于 pucMessageBufferStorageArea 和 pxStaticMessageBuffer 参数均不为 NULL，
+ *  // xMessageBuffer 不会为 NULL，可用于在其他消息缓冲 API 调用中引用
+ *  // 已创建的消息缓冲。
  *
- *  // Other code that uses the message buffer can go here.
+ *  // 使用该消息缓冲的其他代码可放在此处。
  * }
  *
  * @endcode
@@ -259,22 +183,17 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                                            StaticMessageBuffer_t ** ppxStaticMessageBuffer );
  * @endcode
  *
- * Retrieve pointers to a statically created message buffer's data structure
- * buffer and storage area buffer. These are the same buffers that are supplied
- * at the time of creation.
+ * 检索静态创建的消息缓冲的数据结构缓冲区和存储区缓冲区的指针。这些缓冲区与创建时提供的缓冲区相同。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferGetStaticBuffers() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferGetStaticBuffers()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The message buffer for which to retrieve the buffers.
+ * @param xMessageBuffer 要检索其缓冲区的消息缓冲。
  *
- * @param ppucMessageBufferStorageArea Used to return a pointer to the
- * message buffer's storage area buffer.
+ * @param ppucMessageBufferStorageArea 用于返回指向消息缓冲存储区缓冲区的指针。
  *
- * @param ppxStaticMessageBuffer Used to return a pointer to the message
- * buffer's data structure buffer.
+ * @param ppxStaticMessageBuffer 用于返回指向消息缓冲数据结构缓冲区的指针。
  *
- * @return pdTRUE if buffers were retrieved, pdFALSE otherwise..
+ * @return 如果成功检索到缓冲区则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xMessageBufferGetStaticBuffers xMessageBufferGetStaticBuffers
  * \ingroup MessageBufferManagement
@@ -282,7 +201,7 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     #define xMessageBufferGetStaticBuffers( xMessageBuffer, ppucMessageBufferStorageArea, ppxStaticMessageBuffer ) \
     xStreamBufferGetStaticBuffers( ( xMessageBuffer ), ( ppucMessageBufferStorageArea ), ( ppxStaticMessageBuffer ) )
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 配置项 */
 
 /**
  * message_buffer.h
@@ -294,64 +213,25 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                            TickType_t xTicksToWait );
  * @endcode
  *
- * Sends a discrete message to the message buffer.  The message can be any
- * length that fits within the buffer's free space, and is copied into the
- * buffer.
+ * 向消息缓冲发送一条离散消息。消息可以是能够放入缓冲区空闲空间的任意长度，并将被复制到缓冲区中。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xMessageBufferSend() to write to a message buffer from a task.  Use
- * xMessageBufferSendFromISR() to write to a message buffer from an interrupt
- * service routine (ISR).
+ * 使用 xMessageBufferSend() 从任务向消息缓冲写入。使用 xMessageBufferSendFromISR() 从中断服务程序（ISR）向消息缓冲写入。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferSend() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferSend()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer to which a message is
- * being sent.
+ * @param xMessageBuffer 要将消息发送到的消息缓冲的句柄。
  *
- * @param pvTxData A pointer to the message that is to be copied into the
- * message buffer.
+ * @param pvTxData 指向要复制到消息缓冲中的消息的指针。
  *
- * @param xDataLengthBytes The length of the message.  That is, the number of
- * bytes to copy from pvTxData into the message buffer.  When a message is
- * written to the message buffer an additional sizeof( size_t ) bytes are also
- * written to store the message's length.  sizeof( size_t ) is typically 4 bytes
- * on a 32-bit architecture, so on most 32-bit architecture setting
- * xDataLengthBytes to 20 will reduce the free space in the message buffer by 24
- * bytes (20 bytes of message data and 4 bytes to hold the message length).
+ * @param xDataLengthBytes 消息的长度，即从 pvTxData 复制到消息缓冲中的字节数。当消息写入消息缓冲时，还会额外写入 sizeof( size_t ) 个字节以保存消息长度。在 32 位架构上 sizeof( size_t ) 通常为 4 字节，因此在大多数 32 位架构上，将 xDataLengthBytes 设置为 20 会使消息缓冲中的空闲空间减少 24 字节（20 字节消息数据加上 4 字节消息长度）。
  *
- * @param xTicksToWait The maximum amount of time the calling task should remain
- * in the Blocked state to wait for enough space to become available in the
- * message buffer, should the message buffer have insufficient space when
- * xMessageBufferSend() is called.  The calling task will never block if
- * xTicksToWait is zero.  The block time is specified in tick periods, so the
- * absolute time it represents is dependent on the tick frequency.  The macro
- * pdMS_TO_TICKS() can be used to convert a time specified in milliseconds into
- * a time specified in ticks.  Setting xTicksToWait to portMAX_DELAY will cause
- * the task to wait indefinitely (without timing out), provided
- * INCLUDE_vTaskSuspend is set to 1 in FreeRTOSConfig.h.  Tasks do not use any
- * CPU time when they are in the Blocked state.
+ * @param xTicksToWait 如果调用 xMessageBufferSend() 时消息缓冲空间不足，调用任务应保持在阻塞状态以等待消息缓冲中出现足够空间的最长时间。如果 xTicksToWait 为零，调用任务将永远不会阻塞。阻塞时间以时钟节拍周期为单位指定，因此其代表的绝对时间取决于时钟节拍频率。可使用 pdMS_TO_TICKS() 宏将按毫秒指定的时间转换为按时钟节拍指定的时间。将 xTicksToWait 设置为 portMAX_DELAY 将使任务无限期等待（不超时），前提是 FreeRTOSConfig.h 中将 INCLUDE_vTaskSuspend 设置为 1。任务处于阻塞状态时不占用任何 CPU 时间。
  *
- * @return The number of bytes written to the message buffer.  If the call to
- * xMessageBufferSend() times out before there was enough space to write the
- * message into the message buffer then zero is returned.  If the call did not
- * time out then xDataLengthBytes is returned.
+ * @return 写入消息缓冲的字节数。如果对 xMessageBufferSend() 的调用在消息缓冲中有足够空间写入消息之前超时，则返回 0。如果调用未超时，则返回 xDataLengthBytes。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  * void vAFunction( MessageBufferHandle_t xMessageBuffer )
  * {
@@ -360,24 +240,20 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * char *pcStringToSend = "String to send";
  * const TickType_t x100ms = pdMS_TO_TICKS( 100 );
  *
- *  // Send an array to the message buffer, blocking for a maximum of 100ms to
- *  // wait for enough space to be available in the message buffer.
+ *  // 向消息缓冲发送一个数组，最多阻塞 100ms 以等待消息缓冲中出现足够空间。
  *  xBytesSent = xMessageBufferSend( xMessageBuffer, ( void * ) ucArrayToSend, sizeof( ucArrayToSend ), x100ms );
  *
  *  if( xBytesSent != sizeof( ucArrayToSend ) )
  *  {
- *      // The call to xMessageBufferSend() times out before there was enough
- *      // space in the buffer for the data to be written.
+ *      // 对 xMessageBufferSend() 的调用在缓冲区中有足够空间写入数据之前超时。
  *  }
  *
- *  // Send the string to the message buffer.  Return immediately if there is
- *  // not enough space in the buffer.
+ *  // 将字符串发送到消息缓冲。如果缓冲区中没有足够空间则立即返回。
  *  xBytesSent = xMessageBufferSend( xMessageBuffer, ( void * ) pcStringToSend, strlen( pcStringToSend ), 0 );
  *
  *  if( xBytesSent != strlen( pcStringToSend ) )
  *  {
- *      // The string could not be added to the message buffer because there was
- *      // not enough free space in the buffer.
+ *      // 由于缓冲区中没有足够的空闲空间，字符串无法添加到消息缓冲。
  *  }
  * }
  * @endcode
@@ -397,76 +273,36 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                                   BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * Interrupt safe version of the API function that sends a discrete message to
- * the message buffer.  The message can be any length that fits within the
- * buffer's free space, and is copied into the buffer.
+ * 向消息缓冲发送一条离散消息的 API 函数的中断安全版本。消息可以是能够放入缓冲区空闲空间的任意长度，并将被复制到缓冲区中。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xMessageBufferSend() to write to a message buffer from a task.  Use
- * xMessageBufferSendFromISR() to write to a message buffer from an interrupt
- * service routine (ISR).
+ * 使用 xMessageBufferSend() 从任务向消息缓冲写入。使用 xMessageBufferSendFromISR() 从中断服务程序（ISR）向消息缓冲写入。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferSendFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferSendFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer to which a message is
- * being sent.
+ * @param xMessageBuffer 要将消息发送到的消息缓冲的句柄。
  *
- * @param pvTxData A pointer to the message that is to be copied into the
- * message buffer.
+ * @param pvTxData 指向要复制到消息缓冲中的消息的指针。
  *
- * @param xDataLengthBytes The length of the message.  That is, the number of
- * bytes to copy from pvTxData into the message buffer.  When a message is
- * written to the message buffer an additional sizeof( size_t ) bytes are also
- * written to store the message's length.  sizeof( size_t ) is typically 4 bytes
- * on a 32-bit architecture, so on most 32-bit architecture setting
- * xDataLengthBytes to 20 will reduce the free space in the message buffer by 24
- * bytes (20 bytes of message data and 4 bytes to hold the message length).
+ * @param xDataLengthBytes 消息的长度，即从 pvTxData 复制到消息缓冲中的字节数。当消息写入消息缓冲时，还会额外写入 sizeof( size_t ) 个字节以保存消息长度。在 32 位架构上 sizeof( size_t ) 通常为 4 字节，因此在大多数 32 位架构上，将 xDataLengthBytes 设置为 20 会使消息缓冲中的空闲空间减少 24 字节（20 字节消息数据加上 4 字节消息长度）。
  *
- * @param pxHigherPriorityTaskWoken  It is possible that a message buffer will
- * have a task blocked on it waiting for data.  Calling
- * xMessageBufferSendFromISR() can make data available, and so cause a task that
- * was waiting for data to leave the Blocked state.  If calling
- * xMessageBufferSendFromISR() causes a task to leave the Blocked state, and the
- * unblocked task has a priority higher than the currently executing task (the
- * task that was interrupted), then, internally, xMessageBufferSendFromISR()
- * will set *pxHigherPriorityTaskWoken to pdTRUE.  If
- * xMessageBufferSendFromISR() sets this value to pdTRUE, then normally a
- * context switch should be performed before the interrupt is exited.  This will
- * ensure that the interrupt returns directly to the highest priority Ready
- * state task.  *pxHigherPriorityTaskWoken should be set to pdFALSE before it
- * is passed into the function.  See the code example below for an example.
+ * @param pxHigherPriorityTaskWoken 消息缓冲上可能有任务阻塞等待数据。调用 xMessageBufferSendFromISR() 可使数据变为可用，从而使等待数据的任务离开阻塞状态。如果调用 xMessageBufferSendFromISR() 导致某任务离开阻塞状态，且被解除阻塞的任务优先级高于当前正在执行的任务（被中断的任务），则 xMessageBufferSendFromISR() 会在内部将 *pxHigherPriorityTaskWoken 设置为 pdTRUE。如果 xMessageBufferSendFromISR() 将该值设置为 pdTRUE，通常应在退出中断之前执行一次上下文切换。这将确保中断直接返回到优先级最高的就绪态任务。在传入函数之前，应将 *pxHigherPriorityTaskWoken 设置为 pdFALSE。示例参见下面的代码示例。
  *
- * @return The number of bytes actually written to the message buffer.  If the
- * message buffer didn't have enough free space for the message to be stored
- * then 0 is returned, otherwise xDataLengthBytes is returned.
+ * @return 实际写入消息缓冲的字节数。如果消息缓冲没有足够的空闲空间存储该消息，则返回 0，否则返回 xDataLengthBytes。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
- * // A message buffer that has already been created.
+ * // 一个已经创建好的消息缓冲。
  * MessageBufferHandle_t xMessageBuffer;
  *
  * void vAnInterruptServiceRoutine( void )
  * {
  * size_t xBytesSent;
  * char *pcStringToSend = "String to send";
- * BaseType_t xHigherPriorityTaskWoken = pdFALSE; // Initialised to pdFALSE.
+ * BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 初始化为 pdFALSE。
  *
- *  // Attempt to send the string to the message buffer.
+ *  // 尝试将字符串发送到消息缓冲。
  *  xBytesSent = xMessageBufferSendFromISR( xMessageBuffer,
  *                                          ( void * ) pcStringToSend,
  *                                          strlen( pcStringToSend ),
@@ -474,18 +310,15 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *
  *  if( xBytesSent != strlen( pcStringToSend ) )
  *  {
- *      // The string could not be added to the message buffer because there was
- *      // not enough free space in the buffer.
+ *      // 由于缓冲区中没有足够的空闲空间，字符串无法添加到消息缓冲。
  *  }
  *
- *  // If xHigherPriorityTaskWoken was set to pdTRUE inside
- *  // xMessageBufferSendFromISR() then a task that has a priority above the
- *  // priority of the currently executing task was unblocked and a context
- *  // switch should be performed to ensure the ISR returns to the unblocked
- *  // task.  In most FreeRTOS ports this is done by simply passing
- *  // xHigherPriorityTaskWoken into portYIELD_FROM_ISR(), which will test the
- *  // variables value, and perform the context switch if necessary.  Check the
- *  // documentation for the port in use for port specific instructions.
+ *  // 如果在 xMessageBufferSendFromISR() 内部将 xHigherPriorityTaskWoken 设置为 pdTRUE，
+ *  // 则说明有优先级高于当前正在执行任务的任务被解除阻塞，应执行上下文切换，
+ *  // 以确保 ISR 返回到被解除阻塞的任务。在大多数 FreeRTOS 移植层中，
+ *  // 只需将 xHigherPriorityTaskWoken 传给 portYIELD_FROM_ISR()，该宏会检查
+ *  // 该变量的值，并在需要时执行上下文切换。具体移植层相关说明请查阅
+ *  // 所用移植层的文档。
  *  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  * }
  * @endcode
@@ -505,60 +338,25 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                               TickType_t xTicksToWait );
  * @endcode
  *
- * Receives a discrete message from a message buffer.  Messages can be of
- * variable length and are copied out of the buffer.
+ * 从消息缓冲接收一条离散消息。消息可以是变长的，并将从缓冲区复制出来。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xMessageBufferReceive() to read from a message buffer from a task.  Use
- * xMessageBufferReceiveFromISR() to read from a message buffer from an
- * interrupt service routine (ISR).
+ * 使用 xMessageBufferReceive() 从任务读取消息缓冲。使用 xMessageBufferReceiveFromISR() 从中断服务程序（ISR）读取消息缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferReceive() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferReceive()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer from which a message
- * is being received.
+ * @param xMessageBuffer 要接收其消息的消息缓冲的句柄。
  *
- * @param pvRxData A pointer to the buffer into which the received message is
- * to be copied.
+ * @param pvRxData 指向将复制所接收消息的缓冲区的指针。
  *
- * @param xBufferLengthBytes The length of the buffer pointed to by the pvRxData
- * parameter.  This sets the maximum length of the message that can be received.
- * If xBufferLengthBytes is too small to hold the next message then the message
- * will be left in the message buffer and 0 will be returned.
+ * @param xBufferLengthBytes pvRxData 参数所指向缓冲区的长度。这设置了可接收消息的最大长度。如果 xBufferLengthBytes 太小，不足以容纳下一条消息，则该消息将保留在消息缓冲中，并返回 0。
  *
- * @param xTicksToWait The maximum amount of time the task should remain in the
- * Blocked state to wait for a message, should the message buffer be empty.
- * xMessageBufferReceive() will return immediately if xTicksToWait is zero and
- * the message buffer is empty.  The block time is specified in tick periods, so
- * the absolute time it represents is dependent on the tick frequency.  The
- * macro pdMS_TO_TICKS() can be used to convert a time specified in milliseconds
- * into a time specified in ticks.  Setting xTicksToWait to portMAX_DELAY will
- * cause the task to wait indefinitely (without timing out), provided
- * INCLUDE_vTaskSuspend is set to 1 in FreeRTOSConfig.h.  Tasks do not use any
- * CPU time when they are in the Blocked state.
+ * @param xTicksToWait 如果消息缓冲为空，任务应保持在阻塞状态以等待消息的最长时间。如果 xTicksToWait 为零且消息缓冲为空，xMessageBufferReceive() 将立即返回。阻塞时间以时钟节拍周期为单位指定，因此其代表的绝对时间取决于时钟节拍频率。可使用 pdMS_TO_TICKS() 宏将按毫秒指定的时间转换为按时钟节拍指定的时间。将 xTicksToWait 设置为 portMAX_DELAY 将使任务无限期等待（不超时），前提是 FreeRTOSConfig.h 中将 INCLUDE_vTaskSuspend 设置为 1。任务处于阻塞状态时不占用任何 CPU 时间。
  *
- * @return The length, in bytes, of the message read from the message buffer, if
- * any.  If xMessageBufferReceive() times out before a message became available
- * then zero is returned.  If the length of the message is greater than
- * xBufferLengthBytes then the message will be left in the message buffer and
- * zero is returned.
+ * @return 从消息缓冲读取的消息长度（字节数）（如果有）。如果 xMessageBufferReceive() 在消息变为可用之前超时，则返回 0。如果消息长度大于 xBufferLengthBytes，则该消息将保留在消息缓冲中，并返回 0。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  * void vAFunction( MessageBufferHandle_t xMessageBuffer )
  * {
@@ -566,9 +364,8 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * size_t xReceivedBytes;
  * const TickType_t xBlockTime = pdMS_TO_TICKS( 20 );
  *
- *  // Receive the next message from the message buffer.  Wait in the Blocked
- *  // state (so not using any CPU processing time) for a maximum of 20ms for
- *  // a message to become available.
+ *  // 从消息缓冲接收下一条消息。在阻塞状态（不占用任何 CPU 处理时间）
+ *  // 最多等待 20ms，以等待消息变为可用。
  *  xReceivedBytes = xMessageBufferReceive( xMessageBuffer,
  *                                          ( void * ) ucRxData,
  *                                          sizeof( ucRxData ),
@@ -576,8 +373,8 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *
  *  if( xReceivedBytes > 0 )
  *  {
- *      // A ucRxData contains a message that is xReceivedBytes long.  Process
- *      // the message here....
+ *      // ucRxData 中包含一条长度为 xReceivedBytes 的消息。
+ *      // 在此处处理该消息...
  *  }
  * }
  * @endcode
@@ -598,72 +395,36 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *                                      BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * An interrupt safe version of the API function that receives a discrete
- * message from a message buffer.  Messages can be of variable length and are
- * copied out of the buffer.
+ * 从消息缓冲接收一条离散消息的 API 函数的中断安全版本。消息可以是变长的，并将从缓冲区复制出来。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xMessageBufferReceive() to read from a message buffer from a task.  Use
- * xMessageBufferReceiveFromISR() to read from a message buffer from an
- * interrupt service routine (ISR).
+ * 使用 xMessageBufferReceive() 从任务读取消息缓冲。使用 xMessageBufferReceiveFromISR() 从中断服务程序（ISR）读取消息缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferReceiveFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferReceiveFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer from which a message
- * is being received.
+ * @param xMessageBuffer 要接收其消息的消息缓冲的句柄。
  *
- * @param pvRxData A pointer to the buffer into which the received message is
- * to be copied.
+ * @param pvRxData 指向将复制所接收消息的缓冲区的指针。
  *
- * @param xBufferLengthBytes The length of the buffer pointed to by the pvRxData
- * parameter.  This sets the maximum length of the message that can be received.
- * If xBufferLengthBytes is too small to hold the next message then the message
- * will be left in the message buffer and 0 will be returned.
+ * @param xBufferLengthBytes pvRxData 参数所指向缓冲区的长度。这设置了可接收消息的最大长度。如果 xBufferLengthBytes 太小，不足以容纳下一条消息，则该消息将保留在消息缓冲中，并返回 0。
  *
- * @param pxHigherPriorityTaskWoken  It is possible that a message buffer will
- * have a task blocked on it waiting for space to become available.  Calling
- * xMessageBufferReceiveFromISR() can make space available, and so cause a task
- * that is waiting for space to leave the Blocked state.  If calling
- * xMessageBufferReceiveFromISR() causes a task to leave the Blocked state, and
- * the unblocked task has a priority higher than the currently executing task
- * (the task that was interrupted), then, internally,
- * xMessageBufferReceiveFromISR() will set *pxHigherPriorityTaskWoken to pdTRUE.
- * If xMessageBufferReceiveFromISR() sets this value to pdTRUE, then normally a
- * context switch should be performed before the interrupt is exited.  That will
- * ensure the interrupt returns directly to the highest priority Ready state
- * task.  *pxHigherPriorityTaskWoken should be set to pdFALSE before it is
- * passed into the function.  See the code example below for an example.
+ * @param pxHigherPriorityTaskWoken 消息缓冲上可能有任务阻塞等待空间变为可用。调用 xMessageBufferReceiveFromISR() 可使空间变为可用，从而使等待空间的任务离开阻塞状态。如果调用 xMessageBufferReceiveFromISR() 导致某任务离开阻塞状态，且被解除阻塞的任务优先级高于当前正在执行的任务（被中断的任务），则 xMessageBufferReceiveFromISR() 会在内部将 *pxHigherPriorityTaskWoken 设置为 pdTRUE。如果 xMessageBufferReceiveFromISR() 将该值设置为 pdTRUE，通常应在退出中断之前执行一次上下文切换。这将确保中断直接返回到优先级最高的就绪态任务。在传入函数之前，应将 *pxHigherPriorityTaskWoken 设置为 pdFALSE。示例参见下面的代码示例。
  *
- * @return The length, in bytes, of the message read from the message buffer, if
- * any.
+ * @return 从消息缓冲读取的消息长度（字节数）（如果有）。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
- * // A message buffer that has already been created.
+ * // 一个已经创建好的消息缓冲。
  * MessageBufferHandle_t xMessageBuffer;
  *
  * void vAnInterruptServiceRoutine( void )
  * {
  * uint8_t ucRxData[ 20 ];
  * size_t xReceivedBytes;
- * BaseType_t xHigherPriorityTaskWoken = pdFALSE;  // Initialised to pdFALSE.
+ * BaseType_t xHigherPriorityTaskWoken = pdFALSE;  // 初始化为 pdFALSE。
  *
- *  // Receive the next message from the message buffer.
+ *  // 从消息缓冲接收下一条消息。
  *  xReceivedBytes = xMessageBufferReceiveFromISR( xMessageBuffer,
  *                                                ( void * ) ucRxData,
  *                                                sizeof( ucRxData ),
@@ -671,18 +432,16 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  *
  *  if( xReceivedBytes > 0 )
  *  {
- *      // A ucRxData contains a message that is xReceivedBytes long.  Process
- *      // the message here....
+ *      // ucRxData 中包含一条长度为 xReceivedBytes 的消息。
+ *      // 在此处处理该消息...
  *  }
  *
- *  // If xHigherPriorityTaskWoken was set to pdTRUE inside
- *  // xMessageBufferReceiveFromISR() then a task that has a priority above the
- *  // priority of the currently executing task was unblocked and a context
- *  // switch should be performed to ensure the ISR returns to the unblocked
- *  // task.  In most FreeRTOS ports this is done by simply passing
- *  // xHigherPriorityTaskWoken into portYIELD_FROM_ISR(), which will test the
- *  // variables value, and perform the context switch if necessary.  Check the
- *  // documentation for the port in use for port specific instructions.
+ *  // 如果在 xMessageBufferReceiveFromISR() 内部将 xHigherPriorityTaskWoken 设置为 pdTRUE，
+ *  // 则说明有优先级高于当前正在执行任务的任务被解除阻塞，应执行上下文切换，
+ *  // 以确保 ISR 返回到被解除阻塞的任务。在大多数 FreeRTOS 移植层中，
+ *  // 只需将 xHigherPriorityTaskWoken 传给 portYIELD_FROM_ISR()，该宏会检查
+ *  // 该变量的值，并在需要时执行上下文切换。具体移植层相关说明请查阅
+ *  // 所用移植层的文档。
  *  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  * }
  * @endcode
@@ -699,19 +458,13 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * void vMessageBufferDelete( MessageBufferHandle_t xMessageBuffer );
  * @endcode
  *
- * Deletes a message buffer that was previously created using a call to
- * xMessageBufferCreate() or xMessageBufferCreateStatic().  If the message
- * buffer was created using dynamic memory (that is, by xMessageBufferCreate()),
- * then the allocated memory is freed.
+ * 删除先前通过调用 xMessageBufferCreate() 或 xMessageBufferCreateStatic() 创建的消息缓冲。如果消息缓冲是使用动态内存创建的（即通过 xMessageBufferCreate() 创建），则释放已分配的内存。
  *
- * A message buffer handle must not be used after the message buffer has been
- * deleted.
+ * 消息缓冲被删除后，不得再使用其句柄。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * vMessageBufferDelete() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 vMessageBufferDelete()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer to be deleted.
- *
+ * @param xMessageBuffer 要删除的消息缓冲的句柄。
  */
 #define vMessageBufferDelete( xMessageBuffer ) \
     vStreamBufferDelete( xMessageBuffer )
@@ -722,17 +475,13 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * BaseType_t xMessageBufferIsFull( MessageBufferHandle_t xMessageBuffer );
  * @endcode
  *
- * Tests to see if a message buffer is full.  A message buffer is full if it
- * cannot accept any more messages, of any size, until space is made available
- * by a message being removed from the message buffer.
+ * 测试消息缓冲是否已满。如果消息缓冲无法再接收任何大小的消息，直到有消息从消息缓冲中移除、腾出空间为止，则消息缓冲为满。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferIsFull() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferIsFull()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer being queried.
+ * @param xMessageBuffer 要查询的消息缓冲的句柄。
  *
- * @return If the message buffer referenced by xMessageBuffer is full then
- * pdTRUE is returned.  Otherwise pdFALSE is returned.
+ * @return 如果 xMessageBuffer 引用的消息缓冲已满则返回 pdTRUE，否则返回 pdFALSE。
  */
 #define xMessageBufferIsFull( xMessageBuffer ) \
     xStreamBufferIsFull( xMessageBuffer )
@@ -743,16 +492,13 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * BaseType_t xMessageBufferIsEmpty( MessageBufferHandle_t xMessageBuffer );
  * @endcode
  *
- * Tests to see if a message buffer is empty (does not contain any messages).
+ * 测试消息缓冲是否为空（不包含任何消息）。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferIsEmpty() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferIsEmpty()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer being queried.
+ * @param xMessageBuffer 要查询的消息缓冲的句柄。
  *
- * @return If the message buffer referenced by xMessageBuffer is empty then
- * pdTRUE is returned.  Otherwise pdFALSE is returned.
- *
+ * @return 如果 xMessageBuffer 引用的消息缓冲为空则返回 pdTRUE，否则返回 pdFALSE。
  */
 #define xMessageBufferIsEmpty( xMessageBuffer ) \
     xStreamBufferIsEmpty( xMessageBuffer )
@@ -763,24 +509,17 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * BaseType_t xMessageBufferReset( MessageBufferHandle_t xMessageBuffer );
  * @endcode
  *
- * Resets a message buffer to its initial empty state, discarding any message it
- * contained.
+ * 将消息缓冲重置为初始的空状态，并丢弃其中包含的任何消息。
  *
- * A message buffer can only be reset if there are no tasks blocked on it.
+ * 只有在消息缓冲上没有任务阻塞时，才能重置消息缓冲。
  *
- * Use xMessageBufferReset() to reset a message buffer from a task.
- * Use xMessageBufferResetFromISR() to reset a message buffer from an
- * interrupt service routine (ISR).
+ * 使用 xMessageBufferReset() 从任务重置消息缓冲。使用 xMessageBufferResetFromISR() 从中断服务程序（ISR）重置消息缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferReset() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferReset()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer being reset.
+ * @param xMessageBuffer 要重置的消息缓冲的句柄。
  *
- * @return If the message buffer was reset then pdPASS is returned.  If the
- * message buffer could not be reset because either there was a task blocked on
- * the message queue to wait for space to become available, or to wait for a
- * a message to be available, then pdFAIL is returned.
+ * @return 如果消息缓冲已重置则返回 pdPASS。如果无法重置消息缓冲，原因是有任务阻塞在消息队列上等待空间变为可用，或等待消息变为可用，则返回 pdFAIL。
  *
  * \defgroup xMessageBufferReset xMessageBufferReset
  * \ingroup MessageBufferManagement
@@ -795,25 +534,17 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * BaseType_t xMessageBufferResetFromISR( MessageBufferHandle_t xMessageBuffer );
  * @endcode
  *
- * An interrupt safe version of the API function that resets the message buffer.
- * Resets a message buffer to its initial empty state, discarding any message it
- * contained.
+ * 重置消息缓冲的 API 函数的中断安全版本。将消息缓冲重置为初始的空状态，并丢弃其中包含的任何消息。
  *
- * A message buffer can only be reset if there are no tasks blocked on it.
+ * 只有在消息缓冲上没有任务阻塞时，才能重置消息缓冲。
  *
- * Use xMessageBufferReset() to reset a message buffer from a task.
- * Use xMessageBufferResetFromISR() to reset a message buffer from an
- * interrupt service routine (ISR).
+ * 使用 xMessageBufferReset() 从任务重置消息缓冲。使用 xMessageBufferResetFromISR() 从中断服务程序（ISR）重置消息缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferResetFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferResetFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer being reset.
+ * @param xMessageBuffer 要重置的消息缓冲的句柄。
  *
- * @return If the message buffer was reset then pdPASS is returned.  If the
- * message buffer could not be reset because either there was a task blocked on
- * the message queue to wait for space to become available, or to wait for a
- * a message to be available, then pdFAIL is returned.
+ * @return 如果消息缓冲已重置则返回 pdPASS。如果无法重置消息缓冲，原因是有任务阻塞在消息队列上等待空间变为可用，或等待消息变为可用，则返回 pdFAIL。
  *
  * \defgroup xMessageBufferResetFromISR xMessageBufferResetFromISR
  * \ingroup MessageBufferManagement
@@ -826,19 +557,13 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * @code{c}
  * size_t xMessageBufferSpaceAvailable( MessageBufferHandle_t xMessageBuffer );
  * @endcode
- * Returns the number of bytes of free space in the message buffer.
+ * 返回消息缓冲中空闲空间的字节数。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferSpaceAvailable() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferSpaceAvailable()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer being queried.
+ * @param xMessageBuffer 要查询的消息缓冲的句柄。
  *
- * @return The number of bytes that can be written to the message buffer before
- * the message buffer would be full.  When a message is written to the message
- * buffer an additional sizeof( size_t ) bytes are also written to store the
- * message's length.  sizeof( size_t ) is typically 4 bytes on a 32-bit
- * architecture, so if xMessageBufferSpacesAvailable() returns 10, then the size
- * of the largest message that can be written to the message buffer is 6 bytes.
+ * @return 在消息缓冲变满之前可写入消息缓冲的字节数。当消息写入消息缓冲时，还会额外写入 sizeof( size_t ) 个字节以保存消息长度。在 32 位架构上 sizeof( size_t ) 通常为 4 字节，因此如果 xMessageBufferSpacesAvailable() 返回 10，则可写入消息缓冲的最大消息大小为 6 字节。
  *
  * \defgroup xMessageBufferSpaceAvailable xMessageBufferSpaceAvailable
  * \ingroup MessageBufferManagement
@@ -846,24 +571,20 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
 #define xMessageBufferSpaceAvailable( xMessageBuffer ) \
     xStreamBufferSpacesAvailable( xMessageBuffer )
 #define xMessageBufferSpacesAvailable( xMessageBuffer ) \
-    xStreamBufferSpacesAvailable( xMessageBuffer ) /* Corrects typo in original macro name. */
+    xStreamBufferSpacesAvailable( xMessageBuffer ) /* 修正原始宏名称中的拼写错误。 */
 
 /**
  * message_buffer.h
  * @code{c}
  * size_t xMessageBufferNextLengthBytes( MessageBufferHandle_t xMessageBuffer );
  * @endcode
- * Returns the length (in bytes) of the next message in a message buffer.
- * Useful if xMessageBufferReceive() returned 0 because the size of the buffer
- * passed into xMessageBufferReceive() was too small to hold the next message.
+ * 返回消息缓冲中下一条消息的长度（字节数）。如果 xMessageBufferReceive() 因传入的缓冲区太小而无法容纳下一条消息并返回 0，则该函数很有用。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferNextLengthBytes() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferNextLengthBytes()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the message buffer being queried.
+ * @param xMessageBuffer 要查询的消息缓冲的句柄。
  *
- * @return The length (in bytes) of the next message in the message buffer, or 0
- * if the message buffer is empty.
+ * @return 消息缓冲中下一条消息的长度（字节数）；如果消息缓冲为空则返回 0。
  *
  * \defgroup xMessageBufferNextLengthBytes xMessageBufferNextLengthBytes
  * \ingroup MessageBufferManagement
@@ -878,35 +599,19 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * BaseType_t xMessageBufferSendCompletedFromISR( MessageBufferHandle_t xMessageBuffer, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * For advanced users only.
+ * 仅供高级用户使用。
  *
- * The sbSEND_COMPLETED() macro is called from within the FreeRTOS APIs when
- * data is sent to a message buffer or stream buffer.  If there was a task that
- * was blocked on the message or stream buffer waiting for data to arrive then
- * the sbSEND_COMPLETED() macro sends a notification to the task to remove it
- * from the Blocked state.  xMessageBufferSendCompletedFromISR() does the same
- * thing.  It is provided to enable application writers to implement their own
- * version of sbSEND_COMPLETED(), and MUST NOT BE USED AT ANY OTHER TIME.
+ * 当数据被发送到消息缓冲或流缓冲时，FreeRTOS API 内部会调用 sbSEND_COMPLETED() 宏。如果有任务阻塞在消息缓冲或流缓冲上等待数据到达，则 sbSEND_COMPLETED() 宏会向该任务发送通知，使其离开阻塞状态。xMessageBufferSendCompletedFromISR() 完成相同的工作。提供该函数是为了让应用编写者实现自己的 sbSEND_COMPLETED() 版本，且不得在任何其他时间使用。
  *
- * See the example implemented in FreeRTOS/Demo/Minimal/MessageBufferAMP.c for
- * additional information.
+ * 有关更多信息，请参见 FreeRTOS/Demo/Minimal/MessageBufferAMP.c 中实现的示例。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferSendCompletedFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferSendCompletedFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the stream buffer to which data was
- * written.
+ * @param xMessageBuffer 已向其中写入数据的流缓冲的句柄。
  *
- * @param pxHigherPriorityTaskWoken *pxHigherPriorityTaskWoken should be
- * initialised to pdFALSE before it is passed into
- * xMessageBufferSendCompletedFromISR().  If calling
- * xMessageBufferSendCompletedFromISR() removes a task from the Blocked state,
- * and the task has a priority above the priority of the currently running task,
- * then *pxHigherPriorityTaskWoken will get set to pdTRUE indicating that a
- * context switch should be performed before exiting the ISR.
+ * @param pxHigherPriorityTaskWoken 在将 *pxHigherPriorityTaskWoken 传入 xMessageBufferSendCompletedFromISR() 之前，应将其初始化为 pdFALSE。如果调用 xMessageBufferSendCompletedFromISR() 使某任务离开阻塞状态，且该任务优先级高于当前正在运行的任务，则 *pxHigherPriorityTaskWoken 将被设置为 pdTRUE，表示应在退出 ISR 之前执行上下文切换。
  *
- * @return If a task was removed from the Blocked state then pdTRUE is returned.
- * Otherwise pdFALSE is returned.
+ * @return 如果有任务被移出阻塞状态则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xMessageBufferSendCompletedFromISR xMessageBufferSendCompletedFromISR
  * \ingroup StreamBufferManagement
@@ -921,36 +626,19 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
  * BaseType_t xMessageBufferReceiveCompletedFromISR( MessageBufferHandle_t xMessageBuffer, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * For advanced users only.
+ * 仅供高级用户使用。
  *
- * The sbRECEIVE_COMPLETED() macro is called from within the FreeRTOS APIs when
- * data is read out of a message buffer or stream buffer.  If there was a task
- * that was blocked on the message or stream buffer waiting for data to arrive
- * then the sbRECEIVE_COMPLETED() macro sends a notification to the task to
- * remove it from the Blocked state.  xMessageBufferReceiveCompletedFromISR()
- * does the same thing.  It is provided to enable application writers to
- * implement their own version of sbRECEIVE_COMPLETED(), and MUST NOT BE USED AT
- * ANY OTHER TIME.
+ * 当从消息缓冲或流缓冲读取数据时，FreeRTOS API 内部会调用 sbRECEIVE_COMPLETED() 宏。如果有任务阻塞在消息缓冲或流缓冲上等待数据到达，则 sbRECEIVE_COMPLETED() 宏会向该任务发送通知，使其离开阻塞状态。xMessageBufferReceiveCompletedFromISR() 完成相同的工作。提供该函数是为了让应用编写者实现自己的 sbRECEIVE_COMPLETED() 版本，且不得在任何其他时间使用。
  *
- * See the example implemented in FreeRTOS/Demo/Minimal/MessageBufferAMP.c for
- * additional information.
+ * 有关更多信息，请参见 FreeRTOS/Demo/Minimal/MessageBufferAMP.c 中实现的示例。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xMessageBufferReceiveCompletedFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xMessageBufferReceiveCompletedFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xMessageBuffer The handle of the stream buffer from which data was
- * read.
+ * @param xMessageBuffer 已从其中读取数据的流缓冲的句柄。
  *
- * @param pxHigherPriorityTaskWoken *pxHigherPriorityTaskWoken should be
- * initialised to pdFALSE before it is passed into
- * xMessageBufferReceiveCompletedFromISR().  If calling
- * xMessageBufferReceiveCompletedFromISR() removes a task from the Blocked state,
- * and the task has a priority above the priority of the currently running task,
- * then *pxHigherPriorityTaskWoken will get set to pdTRUE indicating that a
- * context switch should be performed before exiting the ISR.
+ * @param pxHigherPriorityTaskWoken 在将 *pxHigherPriorityTaskWoken 传入 xMessageBufferReceiveCompletedFromISR() 之前，应将其初始化为 pdFALSE。如果调用 xMessageBufferReceiveCompletedFromISR() 使某任务离开阻塞状态，且该任务优先级高于当前正在运行的任务，则 *pxHigherPriorityTaskWoken 将被设置为 pdTRUE，表示应在退出 ISR 之前执行上下文切换。
  *
- * @return If a task was removed from the Blocked state then pdTRUE is returned.
- * Otherwise pdFALSE is returned.
+ * @return 如果有任务被移出阻塞状态则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xMessageBufferReceiveCompletedFromISR xMessageBufferReceiveCompletedFromISR
  * \ingroup StreamBufferManagement
@@ -958,10 +646,10 @@ typedef StreamBufferHandle_t MessageBufferHandle_t;
 #define xMessageBufferReceiveCompletedFromISR( xMessageBuffer, pxHigherPriorityTaskWoken ) \
     xStreamBufferReceiveCompletedFromISR( ( xMessageBuffer ), ( pxHigherPriorityTaskWoken ) )
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #if defined( __cplusplus )
-    } /* extern "C" */
+    } /* extern "C"（C++ 链接声明结束） */
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* !defined( FREERTOS_MESSAGE_BUFFER_H ) */
+#endif /* !defined( FREERTOS_MESSAGE_BUFFER_H )（头文件包含保护） */

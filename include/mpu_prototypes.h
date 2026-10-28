@@ -27,11 +27,10 @@
  */
 
 /*
- * When the MPU is used the standard (non MPU) API functions are mapped to
- * equivalents that start "MPU_", the prototypes for which are defined in this
- * header files.  This will cause the application code to call the MPU_ version
- * which wraps the non-MPU version with privilege promoting then demoting code,
- * so the kernel code always runs will full privileges.
+ * 使用 MPU 时，标准（非 MPU）API 函数被映射到以 "MPU_" 开头的
+ * 等效函数，其原型在此头文件中定义。这将使应用程序代码调用
+ * MPU_ 版本，该版本在非 MPU 版本外面包装了提升权限再降低权限的
+ * 代码，因此内核代码始终以完整权限运行。
  */
 
 
@@ -74,7 +73,7 @@ typedef struct xEventGroupWaitBitsParams
     TickType_t xTicksToWait;
 } xEventGroupWaitBitsParams_t;
 
-/* MPU versions of task.h API functions. */
+/* MPU 版本的 task.h API 函数。 */
 void MPU_vTaskDelay( const TickType_t xTicksToDelay ) FREERTOS_SYSTEM_CALL;
 BaseType_t MPU_xTaskDelayUntil( TickType_t * const pxPreviousWakeTime,
                                 const TickType_t xTimeIncrement ) FREERTOS_SYSTEM_CALL;
@@ -133,9 +132,10 @@ BaseType_t MPU_xTaskCheckForTimeOut( TimeOut_t * const pxTimeOut,
 TaskHandle_t MPU_xTaskGetCurrentTaskHandle( void ) FREERTOS_SYSTEM_CALL;
 BaseType_t MPU_xTaskGetSchedulerState( void ) FREERTOS_SYSTEM_CALL;
 
-/* Privileged only wrappers for Task APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 任务 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
 #if ( configUSE_MPU_WRAPPERS_V1 == 1 )
 
     BaseType_t MPU_xTaskCreate( TaskFunction_t pxTaskCode,
@@ -165,7 +165,7 @@ BaseType_t MPU_xTaskGetSchedulerState( void ) FREERTOS_SYSTEM_CALL;
     BaseType_t MPU_xTaskCatchUpTicks( TickType_t xTicksToCatchUp ) FREERTOS_SYSTEM_CALL;
     BaseType_t MPU_xTaskResumeAll( void ) FREERTOS_SYSTEM_CALL;
 
-#else /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#else /* 条件不成立：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
     BaseType_t MPU_xTaskCreate( TaskFunction_t pxTaskCode,
                                 const char * const pcName,
@@ -187,7 +187,7 @@ BaseType_t MPU_xTaskGetSchedulerState( void ) FREERTOS_SYSTEM_CALL;
     BaseType_t MPU_xTaskCallApplicationTaskHook( TaskHandle_t xTask,
                                                  void * pvParameter ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
 char * MPU_pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
 BaseType_t MPU_xTaskCreateRestricted( const TaskParameters_t * const pxTaskDefinition,
@@ -214,7 +214,7 @@ void MPU_vTaskGenericNotifyGiveFromISR( TaskHandle_t xTaskToNotify,
                                         UBaseType_t uxIndexToNotify,
                                         BaseType_t * pxHigherPriorityTaskWoken ) PRIVILEGED_FUNCTION;
 
-/* MPU versions of queue.h API functions. */
+/* MPU 版本的 queue.h API 函数。 */
 BaseType_t MPU_xQueueGenericSend( QueueHandle_t xQueue,
                                   const void * const pvItemToQueue,
                                   TickType_t xTicksToWait,
@@ -246,9 +246,10 @@ void MPU_vQueueSetQueueNumber( QueueHandle_t xQueue,
 UBaseType_t MPU_uxQueueGetQueueNumber( QueueHandle_t xQueue ) FREERTOS_SYSTEM_CALL;
 uint8_t MPU_ucQueueGetQueueType( QueueHandle_t xQueue ) FREERTOS_SYSTEM_CALL;
 
-/* Privileged only wrappers for Queue APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 队列 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
 #if ( configUSE_MPU_WRAPPERS_V1 == 1 )
 
     void MPU_vQueueDelete( QueueHandle_t xQueue ) FREERTOS_SYSTEM_CALL;
@@ -277,7 +278,7 @@ uint8_t MPU_ucQueueGetQueueType( QueueHandle_t xQueue ) FREERTOS_SYSTEM_CALL;
     BaseType_t MPU_xQueueGenericReset( QueueHandle_t xQueue,
                                        BaseType_t xNewQueue ) FREERTOS_SYSTEM_CALL;
 
-#else /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#else /* 条件不成立：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
     void MPU_vQueueDelete( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
     QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType ) PRIVILEGED_FUNCTION;
@@ -305,7 +306,7 @@ uint8_t MPU_ucQueueGetQueueType( QueueHandle_t xQueue ) FREERTOS_SYSTEM_CALL;
     BaseType_t MPU_xQueueGenericReset( QueueHandle_t xQueue,
                                        BaseType_t xNewQueue ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
 BaseType_t MPU_xQueueGenericGetStaticBuffers( QueueHandle_t xQueue,
                                               uint8_t ** ppucQueueStorage,
@@ -327,7 +328,7 @@ UBaseType_t MPU_uxQueueMessagesWaitingFromISR( const QueueHandle_t xQueue ) PRIV
 TaskHandle_t MPU_xQueueGetMutexHolderFromISR( QueueHandle_t xSemaphore ) PRIVILEGED_FUNCTION;
 QueueSetMemberHandle_t MPU_xQueueSelectFromSetFromISR( QueueSetHandle_t xQueueSet ) PRIVILEGED_FUNCTION;
 
-/* MPU versions of timers.h API functions. */
+/* MPU 版本的 timers.h API 函数。 */
 void * MPU_pvTimerGetTimerID( const TimerHandle_t xTimer ) FREERTOS_SYSTEM_CALL;
 void MPU_vTimerSetTimerID( TimerHandle_t xTimer,
                            void * pvNewID ) FREERTOS_SYSTEM_CALL;
@@ -347,9 +348,10 @@ UBaseType_t MPU_uxTimerGetReloadMode( TimerHandle_t xTimer ) FREERTOS_SYSTEM_CAL
 TickType_t MPU_xTimerGetPeriod( TimerHandle_t xTimer ) FREERTOS_SYSTEM_CALL;
 TickType_t MPU_xTimerGetExpiryTime( TimerHandle_t xTimer ) FREERTOS_SYSTEM_CALL;
 
-/* Privileged only wrappers for Timer APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 定时器 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
 TimerHandle_t MPU_xTimerCreate( const char * const pcTimerName,
                                 const TickType_t xTimerPeriodInTicks,
                                 const BaseType_t xAutoReload,
@@ -372,7 +374,7 @@ BaseType_t MPU_xTimerGenericCommandFromISR( TimerHandle_t xTimer,
 BaseType_t MPU_xTimerDelete( TimerHandle_t xTimer,
                              TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
 
-/* MPU versions of event_group.h API functions. */
+/* MPU 版本的 event_group.h API 函数。 */
 EventBits_t MPU_xEventGroupWaitBits( EventGroupHandle_t xEventGroup,
                                      const EventBits_t uxBitsToWaitFor,
                                      const BaseType_t xClearOnExit,
@@ -391,24 +393,25 @@ EventBits_t MPU_xEventGroupSync( EventGroupHandle_t xEventGroup,
     UBaseType_t MPU_uxEventGroupGetNumber( void * xEventGroup ) FREERTOS_SYSTEM_CALL;
     void MPU_vEventGroupSetNumber( void * xEventGroup,
                                    UBaseType_t uxEventGroupNumber ) FREERTOS_SYSTEM_CALL;
-#endif /* #if ( configUSE_TRACE_FACILITY == 1 ) */
+#endif /* 条件编译结束：#if ( configUSE_TRACE_FACILITY == 1 ) */
 
-/* Privileged only wrappers for Event Group APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 事件组 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
 #if ( configUSE_MPU_WRAPPERS_V1 == 1 )
 
     EventGroupHandle_t MPU_xEventGroupCreate( void ) FREERTOS_SYSTEM_CALL;
     EventGroupHandle_t MPU_xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer ) FREERTOS_SYSTEM_CALL;
     void MPU_vEventGroupDelete( EventGroupHandle_t xEventGroup ) FREERTOS_SYSTEM_CALL;
 
-#else /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#else /* 条件不成立：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
     EventGroupHandle_t MPU_xEventGroupCreate( void ) PRIVILEGED_FUNCTION;
     EventGroupHandle_t MPU_xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer ) PRIVILEGED_FUNCTION;
     void MPU_vEventGroupDelete( EventGroupHandle_t xEventGroup ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
 BaseType_t MPU_xEventGroupGetStaticBuffer( EventGroupHandle_t xEventGroup,
                                            StaticEventGroup_t ** ppxEventGroupBuffer ) PRIVILEGED_FUNCTION;
@@ -420,9 +423,9 @@ EventBits_t MPU_xEventGroupGetBitsFromISR( EventGroupHandle_t xEventGroup ) PRIV
     BaseType_t MPU_xEventGroupSetBitsFromISR( EventGroupHandle_t xEventGroup,
                                               const EventBits_t uxBitsToSet,
                                               BaseType_t * pxHigherPriorityTaskWoken ) FREERTOS_SYSTEM_CALL;
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
+#endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 0 ) */
 
-/* MPU versions of message/stream_buffer.h API functions. */
+/* MPU 版本的 message/stream_buffer.h API 函数。 */
 size_t MPU_xStreamBufferSend( StreamBufferHandle_t xStreamBuffer,
                               const void * pvTxData,
                               size_t xDataLengthBytes,
@@ -439,9 +442,10 @@ BaseType_t MPU_xStreamBufferSetTriggerLevel( StreamBufferHandle_t xStreamBuffer,
                                              size_t xTriggerLevel ) FREERTOS_SYSTEM_CALL;
 size_t MPU_xStreamBufferNextMessageLengthBytes( StreamBufferHandle_t xStreamBuffer ) FREERTOS_SYSTEM_CALL;
 
-/* Privileged only wrappers for Stream Buffer APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 流缓冲 API 的仅特权包装器。这些包装器是必需的，以便应用程序
+ * 可在所有 API 中使用由 mpu_wrappers.c 维护的不透明句柄。
+ */
 #if ( configUSE_MPU_WRAPPERS_V1 == 1 )
 
     StreamBufferHandle_t MPU_xStreamBufferGenericCreate( size_t xBufferSizeBytes,
@@ -459,7 +463,7 @@ size_t MPU_xStreamBufferNextMessageLengthBytes( StreamBufferHandle_t xStreamBuff
     void MPU_vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) FREERTOS_SYSTEM_CALL;
     BaseType_t MPU_xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) FREERTOS_SYSTEM_CALL;
 
-#else /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#else /* 条件不成立：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
     StreamBufferHandle_t MPU_xStreamBufferGenericCreate( size_t xBufferSizeBytes,
                                                          size_t xTriggerLevelBytes,
@@ -476,7 +480,7 @@ size_t MPU_xStreamBufferNextMessageLengthBytes( StreamBufferHandle_t xStreamBuff
     void MPU_vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
     BaseType_t MPU_xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-#endif /* #if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
+#endif /* 条件编译结束：#if ( configUSE_MPU_WRAPPERS_V1 == 1 ) */
 
 BaseType_t MPU_xStreamBufferGetStaticBuffers( StreamBufferHandle_t xStreamBuffers,
                                               uint8_t * ppucStreamBufferStorageArea,
@@ -495,4 +499,4 @@ BaseType_t MPU_xStreamBufferReceiveCompletedFromISR( StreamBufferHandle_t xStrea
                                                      BaseType_t * pxHigherPriorityTaskWoken ) PRIVILEGED_FUNCTION;
 BaseType_t MPU_xStreamBufferResetFromISR( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-#endif /* MPU_PROTOTYPES_H */
+#endif /* 头文件保护：MPU_PROTOTYPES_H */

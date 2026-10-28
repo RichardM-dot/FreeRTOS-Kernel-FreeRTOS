@@ -29,7 +29,7 @@
 #ifndef MPU_SYSCALL_NUMBERS_H
 #define MPU_SYSCALL_NUMBERS_H
 
-/* Numbers assigned to various system calls. */
+/* 分配给各系统调用的编号。 */
 #define SYSTEM_CALL_xTaskGenericNotify                     0
 #define SYSTEM_CALL_xTaskGenericNotifyWait                 1
 #define SYSTEM_CALL_xTimerGenericCommandFromTask           2
@@ -100,6 +100,6 @@
 #define SYSTEM_CALL_xStreamBufferBytesAvailable            67
 #define SYSTEM_CALL_xStreamBufferSetTriggerLevel           68
 #define SYSTEM_CALL_xStreamBufferNextMessageLengthBytes    69
-#define NUM_SYSTEM_CALLS                                   70  /* Total number of system calls. */
+#define NUM_SYSTEM_CALLS                                   70  /* 系统调用总数。 */
 
-#endif /* MPU_SYSCALL_NUMBERS_H */
+#endif /* 头文件保护：MPU_SYSCALL_NUMBERS_H */

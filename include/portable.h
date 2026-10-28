@@ -26,29 +26,31 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Portable layer API.  Each function must be defined for each port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * 移植层 API。每个函数都必须针对每个移植层分别定义。
+ * ----------------------------------------------------------
+ */
 
 #ifndef PORTABLE_H
 #define PORTABLE_H
 
-/* Each FreeRTOS port has a unique portmacro.h header file.  Originally a
- * pre-processor definition was used to ensure the pre-processor found the correct
- * portmacro.h file for the port being used.  That scheme was deprecated in favour
- * of setting the compiler's include path such that it found the correct
- * portmacro.h file - removing the need for the constant and allowing the
- * portmacro.h file to be located anywhere in relation to the port being used.
- * Purely for reasons of backward compatibility the old method is still valid, but
- * to make it clear that new projects should not use it, support for the port
- * specific constants has been moved into the deprecated_definitions.h header
- * file. */
+/*
+ * 每个 FreeRTOS 移植层都有唯一的 portmacro.h 头文件。最初使用
+ * 预处理器定义来确保预处理器找到所用移植层对应的正确 portmacro.h
+ * 文件。该方案已被弃用，改为设置编译器的包含路径，使其找到正确的
+ * portmacro.h 文件——这样就不再需要该常量，并允许 portmacro.h 文件
+ * 位于与所用移植层相关的任意位置。纯粹出于向后兼容的考虑，旧方法
+ * 仍然有效，但为明确新项目不应使用旧方法，对移植层特定常量的支持
+ * 已移至 deprecated_definitions.h 头文件。
+ */
 #include "deprecated_definitions.h"
 
-/* If portENTER_CRITICAL is not defined then including deprecated_definitions.h
- * did not result in a portmacro.h header file being included - and it should be
- * included here.  In this case the path to the correct portmacro.h header file
- * must be set in the compiler's include path. */
+/*
+ * 如果未定义 portENTER_CRITICAL，则包含 deprecated_definitions.h
+ * 不会引入 portmacro.h 头文件——此时应在此处包含。在这种情况下，
+ * 必须在编译器的包含路径中设置正确 portmacro.h 头文件的路径。
+ */
 #ifndef portENTER_CRITICAL
     #include "portmacro.h"
 #endif
@@ -65,9 +67,9 @@
     #define portBYTE_ALIGNMENT_MASK    ( 0x0001 )
 #elif portBYTE_ALIGNMENT == 1
     #define portBYTE_ALIGNMENT_MASK    ( 0x0000 )
-#else /* if portBYTE_ALIGNMENT == 32 */
+#else /* 条件不成立：if portBYTE_ALIGNMENT == 32 */
     #error "Invalid portBYTE_ALIGNMENT definition"
-#endif /* if portBYTE_ALIGNMENT == 32 */
+#endif /* 条件编译结束：if portBYTE_ALIGNMENT == 32 */
 
 #ifndef portUSING_MPU_WRAPPERS
     #define portUSING_MPU_WRAPPERS    0
@@ -98,23 +100,21 @@
 #endif
 
 #ifndef configSTACK_ALLOCATION_FROM_SEPARATE_HEAP
-    /* Defaults to 0 for backward compatibility. */
+    /* 为向后兼容，默认为 0。 */
     #define configSTACK_ALLOCATION_FROM_SEPARATE_HEAP    0
 #endif
 
 #include "mpu_wrappers.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
 /*
- * Setup the stack of a new task so it is ready to be placed under the
- * scheduler control.  The registers have to be placed on the stack in
- * the order that the port expects to find them.
- *
+ * 设置新任务的栈，使其准备好接受调度器控制。寄存器必须按照
+ * 移植层期望的顺序压入栈中。
  */
 #if ( portUSING_MPU_WRAPPERS == 1 )
     #if ( portHAS_STACK_OVERFLOW_CHECKING == 1 )
@@ -130,8 +130,8 @@
                                              void * pvParameters,
                                              BaseType_t xRunPrivileged,
                                              xMPU_SETTINGS * xMPUSettings ) PRIVILEGED_FUNCTION;
-    #endif /* if ( portHAS_STACK_OVERFLOW_CHECKING == 1 ) */
-#else /* if ( portUSING_MPU_WRAPPERS == 1 ) */
+    #endif /* 条件编译结束：if ( portHAS_STACK_OVERFLOW_CHECKING == 1 ) */
+#else /* 条件不成立：if ( portUSING_MPU_WRAPPERS == 1 ) */
     #if ( portHAS_STACK_OVERFLOW_CHECKING == 1 )
         StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                              StackType_t * pxEndOfStack,
@@ -142,49 +142,48 @@
                                              TaskFunction_t pxCode,
                                              void * pvParameters ) PRIVILEGED_FUNCTION;
     #endif
-#endif /* if ( portUSING_MPU_WRAPPERS == 1 ) */
+#endif /* 条件编译结束：if ( portUSING_MPU_WRAPPERS == 1 ) */
 
-/* Used by heap_5.c to define the start address and size of each memory region
- * that together comprise the total FreeRTOS heap space. */
+/*
+ * 由 heap_5.c 使用，用于定义共同构成 FreeRTOS 总堆空间的
+ * 各个内存区域的起始地址和大小。
+ */
 typedef struct HeapRegion
 {
     uint8_t * pucStartAddress;
     size_t xSizeInBytes;
 } HeapRegion_t;
 
-/* Used to pass information about the heap out of vPortGetHeapStats(). */
+/* 用于从 vPortGetHeapStats() 传出堆的相关信息。 */
 typedef struct xHeapStats
 {
-    size_t xAvailableHeapSpaceInBytes;      /* The total heap size currently available - this is the sum of all the free blocks, not the largest block that can be allocated. */
-    size_t xSizeOfLargestFreeBlockInBytes;  /* The maximum size, in bytes, of all the free blocks within the heap at the time vPortGetHeapStats() is called. */
-    size_t xSizeOfSmallestFreeBlockInBytes; /* The minimum size, in bytes, of all the free blocks within the heap at the time vPortGetHeapStats() is called. */
-    size_t xNumberOfFreeBlocks;             /* The number of free memory blocks within the heap at the time vPortGetHeapStats() is called. */
-    size_t xMinimumEverFreeBytesRemaining;  /* The minimum amount of total free memory (sum of all free blocks) there has been in the heap since the system booted. */
-    size_t xNumberOfSuccessfulAllocations;  /* The number of calls to pvPortMalloc() that have returned a valid memory block. */
-    size_t xNumberOfSuccessfulFrees;        /* The number of calls to vPortFree() that has successfully freed a block of memory. */
+    size_t xAvailableHeapSpaceInBytes;      /* 当前可用的堆总大小——这是所有空闲块之和，而不是可分配的最大块。 */
+    size_t xSizeOfLargestFreeBlockInBytes;  /* 调用 vPortGetHeapStats() 时，堆内所有空闲块的最大大小（字节）。 */
+    size_t xSizeOfSmallestFreeBlockInBytes; /* 调用 vPortGetHeapStats() 时，堆内所有空闲块的最小大小（字节）。 */
+    size_t xNumberOfFreeBlocks;             /* 调用 vPortGetHeapStats() 时，堆内空闲内存块的数量。 */
+    size_t xMinimumEverFreeBytesRemaining;  /* 自系统启动以来，堆内曾出现的最小空闲内存总量（所有空闲块之和）。 */
+    size_t xNumberOfSuccessfulAllocations;  /* pvPortMalloc() 返回有效内存块的调用次数。 */
+    size_t xNumberOfSuccessfulFrees;        /* vPortFree() 成功释放内存块的调用次数。 */
 } HeapStats_t;
 
 /*
- * Used to define multiple heap regions for use by heap_5.c.  This function
- * must be called before any calls to pvPortMalloc() - not creating a task,
- * queue, semaphore, mutex, software timer, event group, etc. will result in
- * pvPortMalloc being called.
+ * 用于为 heap_5.c 定义多个堆区域。此函数必须在任何
+ * pvPortMalloc() 调用之前调用——创建任务、队列、信号量、互斥量、
+ * 软件定时器、事件组等都会导致调用 pvPortMalloc。
  *
- * pxHeapRegions passes in an array of HeapRegion_t structures - each of which
- * defines a region of memory that can be used as the heap.  The array is
- * terminated by a HeapRegions_t structure that has a size of 0.  The region
- * with the lowest start address must appear first in the array.
+ * pxHeapRegions 传入一个 HeapRegion_t 结构体数组，其中每个结构体
+ * 定义一个可用作堆的内存区域。该数组以一个大小为 0 的
+ * HeapRegions_t 结构体结束。起始地址最低的区域必须位于数组首位。
  */
 void vPortDefineHeapRegions( const HeapRegion_t * const pxHeapRegions ) PRIVILEGED_FUNCTION;
 
 /*
- * Returns a HeapStats_t structure filled with information about the current
- * heap state.
+ * 返回一个填充了当前堆状态信息的 HeapStats_t 结构体。
  */
 void vPortGetHeapStats( HeapStats_t * pxHeapStats );
 
 /*
- * Map to the memory management routines required for the port.
+ * 映射到移植层所需的内存管理例程。
  */
 void * pvPortMalloc( size_t xWantedSize ) PRIVILEGED_FUNCTION;
 void * pvPortCalloc( size_t xNum,
@@ -204,8 +203,8 @@ void xPortResetHeapMinimumEverFreeHeapSize( void ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * This function resets the internal state of the heap module. It must be called
- * by the application before restarting the scheduler.
+ * 此函数重置堆模块的内部状态。应用程序必须在重新启动调度器
+ * 之前调用它。
  */
 void vPortHeapResetState( void ) PRIVILEGED_FUNCTION;
 
@@ -217,30 +216,27 @@ void vPortHeapResetState( void ) PRIVILEGED_FUNCTION;
  * void vApplicationMallocFailedHook( void )
  * @endcode
  *
- * This hook function is called when allocation failed.
+ * 此钩子函数在内存分配失败时被调用。
  */
     void vApplicationMallocFailedHook( void );
 #endif
 
 /*
- * Setup the hardware ready for the scheduler to take control.  This generally
- * sets up a tick interrupt and sets timers for the correct tick frequency.
+ * 为调度器接管控制做好硬件准备。这通常会设置时钟节拍中断，
+ * 并按正确的节拍频率配置定时器。
  */
 BaseType_t xPortStartScheduler( void ) PRIVILEGED_FUNCTION;
 
 /*
- * Undo any hardware/ISR setup that was performed by xPortStartScheduler() so
- * the hardware is left in its original condition after the scheduler stops
- * executing.
+ * 撤销 xPortStartScheduler() 所做的任何硬件/ISR 设置，使调度器
+ * 停止运行后硬件恢复到原始状态。
  */
 void vPortEndScheduler( void ) PRIVILEGED_FUNCTION;
 
 /*
- * The structures and methods of manipulating the MPU are contained within the
- * port layer.
+ * MPU 的结构和操作方法都包含在移植层内。
  *
- * Fills the xMPUSettings structure with the memory region information
- * contained in xRegions.
+ * 用 xRegions 中的内存区域信息填充 xMPUSettings 结构体。
  */
 #if ( portUSING_MPU_WRAPPERS == 1 )
     struct xMEMORY_REGION;
@@ -251,14 +247,14 @@ void vPortEndScheduler( void ) PRIVILEGED_FUNCTION;
 #endif
 
 /**
- * @brief Checks if the calling task is authorized to access the given buffer.
+ * @brief 检查调用任务是否有权访问给定缓冲区。
  *
- * @param pvBuffer The buffer which the calling task wants to access.
- * @param ulBufferLength The length of the pvBuffer.
- * @param ulAccessRequested The permissions that the calling task wants.
+ * @param pvBuffer 调用任务想要访问的缓冲区。
+ * @param ulBufferLength pvBuffer 的长度。
+ * @param ulAccessRequested 调用任务请求的权限。
  *
- * @return pdTRUE if the calling task is authorized to access the buffer,
- *         pdFALSE otherwise.
+ * @return 如果调用任务有权访问该缓冲区则返回 pdTRUE，
+ *         否则返回 pdFALSE。
  */
 #if ( portUSING_MPU_WRAPPERS == 1 )
     BaseType_t xPortIsAuthorizedToAccessBuffer( const void * pvBuffer,
@@ -267,13 +263,12 @@ void vPortEndScheduler( void ) PRIVILEGED_FUNCTION;
 #endif
 
 /**
- * @brief Checks if the calling task is authorized to access the given kernel object.
+ * @brief 检查调用任务是否有权访问给定的内核对象。
  *
- * @param lInternalIndexOfKernelObject The index of the kernel object in the kernel
- *                                     object handle pool.
+ * @param lInternalIndexOfKernelObject 内核对象句柄池中该内核对象的索引。
  *
- * @return pdTRUE if the calling task is authorized to access the kernel object,
- *         pdFALSE otherwise.
+ * @return 如果调用任务有权访问该内核对象则返回 pdTRUE，
+ *         否则返回 pdFALSE。
  */
 #if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) )
 
@@ -281,10 +276,10 @@ void vPortEndScheduler( void ) PRIVILEGED_FUNCTION;
 
 #endif
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTABLE_H */
+#endif /* 头文件保护：PORTABLE_H */

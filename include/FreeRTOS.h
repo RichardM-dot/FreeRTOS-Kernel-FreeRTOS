@@ -36,31 +36,25 @@
 #define INC_FREERTOS_H
 
 /*
- * Include the generic headers required for the FreeRTOS port being used.
+ * 包含当前所用 FreeRTOS 移植层所需的通用头文件。
  */
 #include <stddef.h>
 
 /*
- * If stdint.h cannot be located then:
- *   + If using GCC ensure the -nostdint options is *not* being used.
- *   + Ensure the project's include path includes the directory in which your
- *     compiler stores stdint.h.
- *   + Set any compiler options necessary for it to support C99, as technically
- *     stdint.h is only mandatory with C99 (FreeRTOS does not require C99 in any
- *     other way).
- *   + The FreeRTOS download includes a simple stdint.h definition that can be
- *     used in cases where none is provided by the compiler.  The files only
- *     contains the typedefs required to build FreeRTOS.  Read the instructions
- *     in FreeRTOS/source/stdint.readme for more information.
+ * 如果无法找到 stdint.h，则：
+ *   + 使用 GCC 时，确保*未*使用 -nostdint 选项。
+ *   + 确保工程的包含路径中包含编译器存放 stdint.h 的目录。
+ *   + 设置必要的编译器选项以支持 C99，因为严格来说 stdint.h 只在 C99 中才是必需的（FreeRTOS 在其他方面并不要求 C99）。
+ *   + FreeRTOS 下载包附带一个简化的 stdint.h 定义，可在编译器未提供该文件时使用。该文件只包含构建 FreeRTOS 所需的 typedef。更多信息请阅读 FreeRTOS/source/stdint.readme 中的说明。
  */
-#include <stdint.h> /* READ COMMENT ABOVE. */
+#include <stdint.h> /* 请阅读上方的注释。 */
 
-/* Acceptable values for configTICK_TYPE_WIDTH_IN_BITS. */
+/* configTICK_TYPE_WIDTH_IN_BITS 的可接受取值。 */
 #define TICK_TYPE_WIDTH_16_BITS    0
 #define TICK_TYPE_WIDTH_32_BITS    1
 #define TICK_TYPE_WIDTH_64_BITS    2
 
-/* Application specific configuration options. */
+/* 应用特定的配置选项。 */
 #include "FreeRTOSConfig.h"
 
 #if !defined( configUSE_16_BIT_TICKS ) && !defined( configTICK_TYPE_WIDTH_IN_BITS )
@@ -71,8 +65,9 @@
     #error Only one of configUSE_16_BIT_TICKS and configTICK_TYPE_WIDTH_IN_BITS must be defined in FreeRTOSConfig.h.  See the Configuration section of the FreeRTOS API documentation for details.
 #endif
 
-/* Define configTICK_TYPE_WIDTH_IN_BITS according to the
- * value of configUSE_16_BIT_TICKS for backward compatibility. */
+/*
+ * 根据 configUSE_16_BIT_TICKS 的取值定义 configTICK_TYPE_WIDTH_IN_BITS，以保持向后兼容性。
+ */
 #ifndef configTICK_TYPE_WIDTH_IN_BITS
     #if ( configUSE_16_BIT_TICKS == 1 )
         #define configTICK_TYPE_WIDTH_IN_BITS    TICK_TYPE_WIDTH_16_BITS
@@ -81,17 +76,17 @@
     #endif
 #endif
 
-/* Set configUSE_MPU_WRAPPERS_V1 to 1 to use MPU wrappers v1. */
+/* 将 configUSE_MPU_WRAPPERS_V1 设置为 1，以使用 MPU 封装层 v1。 */
 #ifndef configUSE_MPU_WRAPPERS_V1
     #define configUSE_MPU_WRAPPERS_V1    0
 #endif
 
-/* Set configENABLE_ACCESS_CONTROL_LIST to 1 to enable access control list support. */
+/* 将 configENABLE_ACCESS_CONTROL_LIST 设置为 1，以启用访问控制列表支持。 */
 #ifndef configENABLE_ACCESS_CONTROL_LIST
     #define configENABLE_ACCESS_CONTROL_LIST    0
 #endif
 
-/* Set default value of configNUMBER_OF_CORES to 1 to use single core FreeRTOS. */
+/* 将 configNUMBER_OF_CORES 的默认值设为 1，以使用单核 FreeRTOS。 */
 #ifndef configNUMBER_OF_CORES
     #define configNUMBER_OF_CORES    1
 #endif
@@ -107,8 +102,9 @@
     #define configASSERT_DEFINED    1
 #endif
 
-/* Set configENABLE_PAC and/or configENABLE_BTI to 1 to enable PAC and/or BTI
- * support and 0 to disable them. These are currently used in ARMv8.1-M ports. */
+/*
+ * 将 configENABLE_PAC 和/或 configENABLE_BTI 设置为 1，以启用 PAC 和/或 BTI 支持；设置为 0 则禁用。这些配置目前用于 ARMv8.1-M 移植层。
+ */
 #ifndef configENABLE_PAC
     #define configENABLE_PAC    0
 #endif
@@ -117,25 +113,25 @@
     #define configENABLE_BTI    0
 #endif
 
-/* Basic FreeRTOS definitions. */
+/* FreeRTOS 基本定义。 */
 #include "projdefs.h"
 
-/* Definitions specific to the port being used. */
+/* 所用移植层特有的定义。 */
 #include "portable.h"
 
-/* Must be defaulted before configUSE_NEWLIB_REENTRANT is used below. */
+/* 必须在下方使用 configUSE_NEWLIB_REENTRANT 之前为其提供默认值。 */
 #ifndef configUSE_NEWLIB_REENTRANT
     #define configUSE_NEWLIB_REENTRANT    0
 #endif
 
-/* Required if struct _reent is used. */
+/* 使用 struct _reent 时必须包含。 */
 #if ( configUSE_NEWLIB_REENTRANT == 1 )
 
     #include "newlib-freertos.h"
 
-#endif /* if ( configUSE_NEWLIB_REENTRANT == 1 ) */
+#endif /* 结束：if ( configUSE_NEWLIB_REENTRANT == 1 ) */
 
-/* Must be defaulted before configUSE_PICOLIBC_TLS is used below. */
+/* 必须在下方使用 configUSE_PICOLIBC_TLS 之前为其提供默认值。 */
 #ifndef configUSE_PICOLIBC_TLS
     #define configUSE_PICOLIBC_TLS    0
 #endif
@@ -144,13 +140,13 @@
 
     #include "picolibc-freertos.h"
 
-#endif /* if ( configUSE_PICOLIBC_TLS == 1 ) */
+#endif /* 结束：if ( configUSE_PICOLIBC_TLS == 1 ) */
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON* 恢复自动缩进 */
 
 #ifndef configUSE_C_RUNTIME_TLS_SUPPORT
     #define configUSE_C_RUNTIME_TLS_SUPPORT    0
@@ -173,12 +169,11 @@
     #ifndef configDEINIT_TLS_BLOCK
         #error Missing definition:  configDEINIT_TLS_BLOCK must be defined in FreeRTOSConfig.h when configUSE_C_RUNTIME_TLS_SUPPORT is set to 1.
     #endif
-#endif /* if ( configUSE_C_RUNTIME_TLS_SUPPORT == 1 ) */
+#endif /* 结束：if ( configUSE_C_RUNTIME_TLS_SUPPORT == 1 ) */
 
 /*
- * Check all the required application specific macros have been defined.
- * These macros are application specific and (as downloaded) are defined
- * within FreeRTOSConfig.h.
+ * 检查所有必需的应用特定宏是否均已定义。
+ * 这些宏与应用相关，在下载的代码中定义于 FreeRTOSConfig.h 内。
  */
 
 #ifndef configMINIMAL_STACK_SIZE
@@ -240,9 +235,9 @@
 #ifdef INCLUDE_xTaskDelayUntil
     #ifdef INCLUDE_vTaskDelayUntil
 
-/* INCLUDE_vTaskDelayUntil was replaced by INCLUDE_xTaskDelayUntil.  Backward
- * compatibility is maintained if only one or the other is defined, but
- * there is a conflict if both are defined. */
+/*
+ * INCLUDE_vTaskDelayUntil 已被 INCLUDE_xTaskDelayUntil 取代。若仅定义其中一个，则可保持向后兼容；若两者同时定义，则会产生冲突。
+ */
         #error INCLUDE_vTaskDelayUntil and INCLUDE_xTaskDelayUntil are both defined.  INCLUDE_vTaskDelayUntil is no longer required and should be removed
     #endif
 #endif
@@ -250,10 +245,10 @@
 #ifndef INCLUDE_xTaskDelayUntil
     #ifdef INCLUDE_vTaskDelayUntil
 
-/* If INCLUDE_vTaskDelayUntil is set but INCLUDE_xTaskDelayUntil is not then
- * the project's FreeRTOSConfig.h probably pre-dates the introduction of
- * xTaskDelayUntil and setting INCLUDE_xTaskDelayUntil to whatever
- * INCLUDE_vTaskDelayUntil is set to will ensure backward compatibility.
+/*
+ * 如果设置了 INCLUDE_vTaskDelayUntil 但未设置 INCLUDE_xTaskDelayUntil，
+ * 说明工程的 FreeRTOSConfig.h 很可能早于 xTaskDelayUntil 的引入；
+ * 此时将 INCLUDE_xTaskDelayUntil 设置为与 INCLUDE_vTaskDelayUntil 相同的值即可确保向后兼容。
  */
         #define INCLUDE_xTaskDelayUntil    INCLUDE_vTaskDelayUntil
     #endif
@@ -391,11 +386,12 @@
     #error configMAX_TASK_NAME_LEN must be set to a minimum of 1 in FreeRTOSConfig.h
 #endif
 
-/* configPRECONDITION should be defined as configASSERT.
- * The CBMC proofs need a way to track assumptions and assertions.
- * A configPRECONDITION statement should express an implicit invariant or
- * assumption made.  A configASSERT statement should express an invariant that must
- * hold explicit before calling the code. */
+/*
+ * configPRECONDITION 应定义为 configASSERT。
+ * CBMC 证明需要一种跟踪假设与断言的方法。
+ * configPRECONDITION 语句应表达隐含的不变量或所作假设。
+ * configASSERT 语句应表达在调用代码之前必须显式成立的不变量。
+ */
 #ifndef configPRECONDITION
     #define configPRECONDITION( X )    configASSERT( X )
     #define configPRECONDITION_DEFINED    0
@@ -407,8 +403,10 @@
     #define configCHECK_HANDLER_INSTALLATION    1
 #else
 
-/* The application has explicitly defined configCHECK_HANDLER_INSTALLATION
- * to 1. The checks requires configASSERT() to be defined. */
+/*
+ * 应用已显式将 configCHECK_HANDLER_INSTALLATION 定义为 1。
+ * 该检查要求定义 configASSERT()。
+ */
     #if ( ( configCHECK_HANDLER_INSTALLATION == 1 ) && ( configASSERT_DEFINED == 0 ) )
         #error You must define configASSERT() when configCHECK_HANDLER_INSTALLATION is 1.
     #endif
@@ -432,9 +430,9 @@
         #define portGET_CORE_ID()    0
     #else
         #error configNUMBER_OF_CORES is set to more than 1 then portGET_CORE_ID must also be defined.
-    #endif /* configNUMBER_OF_CORES */
+    #endif /* configNUMBER_OF_CORES 结束 */
 
-#endif /* portGET_CORE_ID */
+#endif /* portGET_CORE_ID 结束 */
 
 #ifndef portYIELD_CORE
 
@@ -442,9 +440,9 @@
         #define portYIELD_CORE( x )    portYIELD()
     #else
         #error configNUMBER_OF_CORES is set to more than 1 then portYIELD_CORE must also be defined.
-    #endif /* configNUMBER_OF_CORES */
+    #endif /* configNUMBER_OF_CORES 结束 */
 
-#endif /* portYIELD_CORE */
+#endif /* portYIELD_CORE 结束 */
 
 #ifndef portSET_INTERRUPT_MASK
 
@@ -452,7 +450,7 @@
         #error portSET_INTERRUPT_MASK is required in SMP
     #endif
 
-#endif /* portSET_INTERRUPT_MASK */
+#endif /* portSET_INTERRUPT_MASK 结束 */
 
 #ifndef portCLEAR_INTERRUPT_MASK
 
@@ -460,7 +458,7 @@
         #error portCLEAR_INTERRUPT_MASK is required in SMP
     #endif
 
-#endif /* portCLEAR_INTERRUPT_MASK */
+#endif /* portCLEAR_INTERRUPT_MASK 结束 */
 
 #ifndef portRELEASE_TASK_LOCK
 
@@ -470,7 +468,7 @@
         #error portRELEASE_TASK_LOCK is required in SMP
     #endif
 
-#endif /* portRELEASE_TASK_LOCK */
+#endif /* portRELEASE_TASK_LOCK 结束 */
 
 #ifndef portGET_TASK_LOCK
 
@@ -480,7 +478,7 @@
         #error portGET_TASK_LOCK is required in SMP
     #endif
 
-#endif /* portGET_TASK_LOCK */
+#endif /* portGET_TASK_LOCK 结束 */
 
 #ifndef portRELEASE_ISR_LOCK
 
@@ -490,7 +488,7 @@
         #error portRELEASE_ISR_LOCK is required in SMP
     #endif
 
-#endif /* portRELEASE_ISR_LOCK */
+#endif /* portRELEASE_ISR_LOCK 结束 */
 
 #ifndef portGET_ISR_LOCK
 
@@ -500,7 +498,7 @@
         #error portGET_ISR_LOCK is required in SMP
     #endif
 
-#endif /* portGET_ISR_LOCK */
+#endif /* portGET_ISR_LOCK 结束 */
 
 #ifndef portENTER_CRITICAL_FROM_ISR
 
@@ -520,7 +518,7 @@
 
 #ifndef configUSE_CORE_AFFINITY
     #define configUSE_CORE_AFFINITY    0
-#endif /* configUSE_CORE_AFFINITY */
+#endif /* configUSE_CORE_AFFINITY 结束 */
 
 #if ( ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) )
     #ifndef configTASK_DEFAULT_CORE_AFFINITY
@@ -530,28 +528,28 @@
 
 #ifndef configUSE_PASSIVE_IDLE_HOOK
     #define configUSE_PASSIVE_IDLE_HOOK    0
-#endif /* configUSE_PASSIVE_IDLE_HOOK */
+#endif /* configUSE_PASSIVE_IDLE_HOOK 结束 */
 
-/* The timers module relies on xTaskGetSchedulerState(). */
+/* 定时器模块依赖 xTaskGetSchedulerState()。 */
 #if configUSE_TIMERS == 1
 
     #ifndef configTIMER_TASK_PRIORITY
         #error If configUSE_TIMERS is set to 1 then configTIMER_TASK_PRIORITY must also be defined.
-    #endif /* configTIMER_TASK_PRIORITY */
+    #endif /* configTIMER_TASK_PRIORITY 结束 */
 
     #ifndef configTIMER_QUEUE_LENGTH
         #error If configUSE_TIMERS is set to 1 then configTIMER_QUEUE_LENGTH must also be defined.
-    #endif /* configTIMER_QUEUE_LENGTH */
+    #endif /* configTIMER_QUEUE_LENGTH 结束 */
 
     #ifndef configTIMER_TASK_STACK_DEPTH
         #error If configUSE_TIMERS is set to 1 then configTIMER_TASK_STACK_DEPTH must also be defined.
-    #endif /* configTIMER_TASK_STACK_DEPTH */
+    #endif /* configTIMER_TASK_STACK_DEPTH 结束 */
 
     #ifndef portTIMER_CALLBACK_ATTRIBUTE
         #define portTIMER_CALLBACK_ATTRIBUTE
-    #endif /* portTIMER_CALLBACK_ATTRIBUTE */
+    #endif /* portTIMER_CALLBACK_ATTRIBUTE 结束 */
 
-#endif /* configUSE_TIMERS */
+#endif /* configUSE_TIMERS 结束 */
 
 #ifndef portHAS_NESTED_INTERRUPTS
     #if defined( portSET_INTERRUPT_MASK_FROM_ISR ) && defined( portCLEAR_INTERRUPT_MASK_FROM_ISR )
@@ -619,102 +617,112 @@
     #define portPOINTER_SIZE_TYPE    uint32_t
 #endif
 
-/* Remove any unused trace macros. */
+/* 删除所有未使用的跟踪（trace）宏。 */
 #ifndef traceSTART
 
-/* Used to perform any necessary initialisation - for example, open a file
- * into which trace is to be written. */
+/*
+ * 用于执行必要的初始化——例如打开一个用于写入跟踪信息的文件。
+ */
     #define traceSTART()
 #endif
 
 #ifndef traceEND
 
-/* Use to close a trace, for example close a file into which trace has been
- * written. */
+/*
+ * 用于关闭跟踪，例如关闭已写入跟踪信息的文件。
+ */
     #define traceEND()
 #endif
 
 #ifndef traceTASK_SWITCHED_IN
 
-/* Called after a task has been selected to run.  pxCurrentTCB holds a pointer
- * to the task control block of the selected task. */
+/*
+ * 在选定要运行的任务之后调用。pxCurrentTCB 指向所选任务的任务控制块（TCB）。
+ */
     #define traceTASK_SWITCHED_IN()
 #endif
 
 #ifndef traceSTARTING_SCHEDULER
 
-/* Called after all idle tasks and timer task (if enabled) have been created
- * successfully, just before the scheduler is started. */
+/*
+ * 在所有空闲任务和定时器任务（若已启用）成功创建之后、调度器启动之前调用。
+ */
     #define traceSTARTING_SCHEDULER( xIdleTaskHandles )
 #endif
 
 #ifndef traceINCREASE_TICK_COUNT
 
-/* Called before stepping the tick count after waking from tickless idle
- * sleep. */
+/*
+ * 从无节拍空闲睡眠唤醒后、递增时钟节拍计数之前调用。
+ */
     #define traceINCREASE_TICK_COUNT( x )
 #endif
 
 #ifndef traceLOW_POWER_IDLE_BEGIN
-    /* Called immediately before entering tickless idle. */
+    /* 进入无节拍空闲之前立即调用。 */
     #define traceLOW_POWER_IDLE_BEGIN()
 #endif
 
 #ifndef traceLOW_POWER_IDLE_END
-    /* Called when returning to the Idle task after a tickless idle. */
+    /* 无节拍空闲结束后返回空闲任务时调用。 */
     #define traceLOW_POWER_IDLE_END()
 #endif
 
 #ifndef traceTASK_SWITCHED_OUT
 
-/* Called before a task has been selected to run.  pxCurrentTCB holds a pointer
- * to the task control block of the task being switched out. */
+/*
+ * 在选定要运行的任务之前调用。pxCurrentTCB 指向被切换出去的任务的任务控制块（TCB）。
+ */
     #define traceTASK_SWITCHED_OUT()
 #endif
 
 #ifndef traceTASK_PRIORITY_INHERIT
 
-/* Called when a task attempts to take a mutex that is already held by a
- * lower priority task.  pxTCBOfMutexHolder is a pointer to the TCB of the task
- * that holds the mutex.  uxInheritedPriority is the priority the mutex holder
- * will inherit (the priority of the task that is attempting to obtain the
- * muted. */
+/*
+ * 当任务试图获取一个已被较低优先级任务持有的互斥量时调用。
+ * pxTCBOfMutexHolder 指向持有该互斥量的任务的控制块（TCB）。
+ * uxInheritedPriority 是互斥量持有者将继承的优先级（即试图获取该互斥量的任务的优先级）。
+ */
     #define traceTASK_PRIORITY_INHERIT( pxTCBOfMutexHolder, uxInheritedPriority )
 #endif
 
 #ifndef traceTASK_PRIORITY_DISINHERIT
 
-/* Called when a task releases a mutex, the holding of which had resulted in
- * the task inheriting the priority of a higher priority task.
- * pxTCBOfMutexHolder is a pointer to the TCB of the task that is releasing the
- * mutex.  uxOriginalPriority is the task's configured (base) priority. */
+/*
+ * 当任务释放某个互斥量时调用；该互斥量的持有曾使此任务继承更高优先级任务的优先级。
+ * pxTCBOfMutexHolder 指向正在释放该互斥量的任务的控制块（TCB）。
+ * uxOriginalPriority 是该任务配置的（基准）优先级。
+ */
     #define traceTASK_PRIORITY_DISINHERIT( pxTCBOfMutexHolder, uxOriginalPriority )
 #endif
 
 #ifndef traceBLOCKING_ON_QUEUE_RECEIVE
 
-/* Task is about to block because it cannot read from a
- * queue/mutex/semaphore.  pxQueue is a pointer to the queue/mutex/semaphore
- * upon which the read was attempted.  pxCurrentTCB points to the TCB of the
- * task that attempted the read. */
+/*
+ * 任务因无法从队列/互斥量/信号量读取而即将阻塞。
+ * pxQueue 指向尝试读取的队列/互斥量/信号量。
+ * pxCurrentTCB 指向尝试读取的任务的控制块（TCB）。
+ */
     #define traceBLOCKING_ON_QUEUE_RECEIVE( pxQueue )
 #endif
 
 #ifndef traceBLOCKING_ON_QUEUE_PEEK
 
-/* Task is about to block because it cannot read from a
- * queue/mutex/semaphore.  pxQueue is a pointer to the queue/mutex/semaphore
- * upon which the read was attempted.  pxCurrentTCB points to the TCB of the
- * task that attempted the read. */
+/*
+ * 任务因无法从队列/互斥量/信号量读取而即将阻塞。
+ * pxQueue 指向尝试读取的队列/互斥量/信号量。
+ * pxCurrentTCB 指向尝试读取的任务的控制块（TCB）。
+ */
     #define traceBLOCKING_ON_QUEUE_PEEK( pxQueue )
 #endif
 
 #ifndef traceBLOCKING_ON_QUEUE_SEND
 
-/* Task is about to block because it cannot write to a
- * queue/mutex/semaphore.  pxQueue is a pointer to the queue/mutex/semaphore
- * upon which the write was attempted.  pxCurrentTCB points to the TCB of the
- * task that attempted the write. */
+/*
+ * 任务因无法向队列/互斥量/信号量写入而即将阻塞。
+ * pxQueue 指向尝试写入的队列/互斥量/信号量。
+ * pxCurrentTCB 指向尝试写入的任务的控制块（TCB）。
+ */
     #define traceBLOCKING_ON_QUEUE_SEND( pxQueue )
 #endif
 
@@ -730,7 +738,7 @@
     #define configINCLUDE_FREERTOS_TASK_C_ADDITIONS_H    0
 #endif
 
-/* The following event macros are embedded in the kernel API calls. */
+/* 以下事件宏嵌入在内核 API 调用中。 */
 
 #ifndef traceMOVED_TASK_TO_READY_STATE
     #define traceMOVED_TASK_TO_READY_STATE( pxTCB )
@@ -2708,15 +2716,15 @@
 
     #ifndef portCONFIGURE_TIMER_FOR_RUN_TIME_STATS
         #error If configGENERATE_RUN_TIME_STATS is defined then portCONFIGURE_TIMER_FOR_RUN_TIME_STATS must also be defined.  portCONFIGURE_TIMER_FOR_RUN_TIME_STATS should call a port layer function to setup a peripheral timer/counter that can then be used as the run time counter time base.
-    #endif /* portCONFIGURE_TIMER_FOR_RUN_TIME_STATS */
+    #endif /* portCONFIGURE_TIMER_FOR_RUN_TIME_STATS 结束 */
 
     #ifndef portGET_RUN_TIME_COUNTER_VALUE
         #ifndef portALT_GET_RUN_TIME_COUNTER_VALUE
             #error If configGENERATE_RUN_TIME_STATS is defined then either portGET_RUN_TIME_COUNTER_VALUE or portALT_GET_RUN_TIME_COUNTER_VALUE must also be defined.  See the examples provided and the FreeRTOS web site for more information.
-        #endif /* portALT_GET_RUN_TIME_COUNTER_VALUE */
-    #endif /* portGET_RUN_TIME_COUNTER_VALUE */
+        #endif /* portALT_GET_RUN_TIME_COUNTER_VALUE 结束 */
+    #endif /* portGET_RUN_TIME_COUNTER_VALUE 结束 */
 
-#endif /* configGENERATE_RUN_TIME_STATS */
+#endif /* configGENERATE_RUN_TIME_STATS 结束 */
 
 #ifndef portCONFIGURE_TIMER_FOR_RUN_TIME_STATS
     #define portCONFIGURE_TIMER_FOR_RUN_TIME_STATS()
@@ -2836,7 +2844,7 @@
 
 #ifndef configUSE_SB_COMPLETED_CALLBACK
 
-/* By default per-instance callbacks are not enabled for stream buffer or message buffer. */
+/* 默认情况下，流缓冲和消息缓冲不启用按实例（per-instance）回调。 */
     #define configUSE_SB_COMPLETED_CALLBACK    0
 #endif
 
@@ -2845,7 +2853,7 @@
 #endif
 
 #ifndef configSUPPORT_STATIC_ALLOCATION
-    /* Defaults to 0 for backward compatibility. */
+    /* 为保持向后兼容，默认值为 0。 */
     #define configSUPPORT_STATIC_ALLOCATION    0
 #endif
 
@@ -2854,7 +2862,7 @@
 #endif
 
 #ifndef configSUPPORT_DYNAMIC_ALLOCATION
-    /* Defaults to 1 for backward compatibility. */
+    /* 为保持向后兼容，默认值为 1。 */
     #define configSUPPORT_DYNAMIC_ALLOCATION    1
 #endif
 
@@ -2874,28 +2882,30 @@
 
 #ifndef configSTACK_DEPTH_TYPE
 
-/* Defaults to StackType_t for backward compatibility, but can be overridden
- * in FreeRTOSConfig.h if StackType_t is too restrictive. */
+/*
+ * 为保持向后兼容，默认为 StackType_t；若 StackType_t 限制过严，可在 FreeRTOSConfig.h 中覆盖。
+ */
     #define configSTACK_DEPTH_TYPE    StackType_t
 #endif
 
 #ifndef configRUN_TIME_COUNTER_TYPE
 
-/* Defaults to uint32_t for backward compatibility, but can be overridden in
- * FreeRTOSConfig.h if uint32_t is too restrictive. */
+/*
+ * 为保持向后兼容，默认为 uint32_t；若 uint32_t 限制过严，可在 FreeRTOSConfig.h 中覆盖。
+ */
 
     #define configRUN_TIME_COUNTER_TYPE    uint32_t
 #endif
 
 #ifndef configMESSAGE_BUFFER_LENGTH_TYPE
 
-/* Defaults to size_t for backward compatibility, but can be overridden
- * in FreeRTOSConfig.h if lengths will always be less than the number of bytes
- * in a size_t. */
+/*
+ * 为保持向后兼容，默认为 size_t；若长度始终小于 size_t 的字节数，可在 FreeRTOSConfig.h 中覆盖。
+ */
     #define configMESSAGE_BUFFER_LENGTH_TYPE    size_t
 #endif
 
-/* Sanity check the configuration. */
+/* 对配置进行合理性检查。 */
 #if ( ( configSUPPORT_STATIC_ALLOCATION == 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 0 ) )
     #error configSUPPORT_STATIC_ALLOCATION and configSUPPORT_DYNAMIC_ALLOCATION cannot both be 0, but can both be 1.
 #endif
@@ -2930,55 +2940,61 @@
 
 #if ( portTICK_TYPE_IS_ATOMIC == 0 )
 
-/* Either variables of tick type cannot be read atomically, or
- * portTICK_TYPE_IS_ATOMIC was not set - map the critical sections used when
- * the tick count is returned to the standard critical section macros. */
+/*
+ * 时钟节拍类型的变量无法原子读取，或未设置 portTICK_TYPE_IS_ATOMIC ——
+ * 此时将读取节拍计数时使用的临界区映射为标准临界区宏。
+ */
     #define portTICK_TYPE_ENTER_CRITICAL()                      portENTER_CRITICAL()
     #define portTICK_TYPE_EXIT_CRITICAL()                       portEXIT_CRITICAL()
     #define portTICK_TYPE_SET_INTERRUPT_MASK_FROM_ISR()         portSET_INTERRUPT_MASK_FROM_ISR()
     #define portTICK_TYPE_CLEAR_INTERRUPT_MASK_FROM_ISR( x )    portCLEAR_INTERRUPT_MASK_FROM_ISR( ( x ) )
 #else
 
-/* The tick type can be read atomically, so critical sections used when the
- * tick count is returned can be defined away. */
+/*
+ * 时钟节拍类型可原子读取，因此读取节拍计数时使用的临界区可定义为空。
+ */
     #define portTICK_TYPE_ENTER_CRITICAL()
     #define portTICK_TYPE_EXIT_CRITICAL()
     #define portTICK_TYPE_SET_INTERRUPT_MASK_FROM_ISR()         0
     #define portTICK_TYPE_CLEAR_INTERRUPT_MASK_FROM_ISR( x )    ( void ) ( x )
-#endif /* if ( portTICK_TYPE_IS_ATOMIC == 0 ) */
+#endif /* 结束：if ( portTICK_TYPE_IS_ATOMIC == 0 ) */
 
-/* Definitions to allow backward compatibility with FreeRTOS versions prior to
- * V8 if desired. */
+/*
+ * 用于在需要时提供与 V8 之前 FreeRTOS 版本的向后兼容性定义。
+ */
 #ifndef configENABLE_BACKWARD_COMPATIBILITY
     #define configENABLE_BACKWARD_COMPATIBILITY    1
 #endif
 
 #ifndef configPRINTF
 
-/* configPRINTF() was not defined, so define it away to nothing.  To use
- * configPRINTF() then define it as follows (where MyPrintFunction() is
- * provided by the application writer):
+/*
+ * 未定义 configPRINTF()，因此将其定义为空。若要使用
+ * configPRINTF()，请按如下方式定义（其中 MyPrintFunction() 由应用编写者提供）：
  *
  * void MyPrintFunction(const char *pcFormat, ... );
- #define configPRINTF( X )   MyPrintFunction X
+ * #define configPRINTF( X )   MyPrintFunction X
  *
- * Then call like a standard printf() function, but placing brackets around
- * all parameters so they are passed as a single parameter.  For example:
- * configPRINTF( ("Value = %d", MyVariable) ); */
+ * 然后像标准 printf() 函数一样调用，但需用括号将所有参数括起来，
+ * 使其作为单个参数传递。例如：
+ * configPRINTF( ("Value = %d", MyVariable) );
+ */
     #define configPRINTF( X )
 #endif
 
 #ifndef configMAX
 
-/* The application writer has not provided their own MAX macro, so define
- * the following generic implementation. */
+/*
+ * 应用编写者未提供自定义的 MAX 宏，因此定义以下通用实现。
+ */
     #define configMAX( a, b )    ( ( ( a ) > ( b ) ) ? ( a ) : ( b ) )
 #endif
 
 #ifndef configMIN
 
-/* The application writer has not provided their own MIN macro, so define
- * the following generic implementation. */
+/*
+ * 应用编写者未提供自定义的 MIN 宏，因此定义以下通用实现。
+ */
     #define configMIN( a, b )    ( ( ( a ) < ( b ) ) ? ( a ) : ( b ) )
 #endif
 
@@ -3004,56 +3020,63 @@
     #define vTaskGetTaskInfo              vTaskGetInfo
     #define xTaskGetIdleRunTimeCounter    ulTaskGetIdleRunTimeCounter
 
-/* Backward compatibility within the scheduler code only - these definitions
- * are not really required but are included for completeness. */
+/*
+ * 仅用于调度器代码内部的向后兼容——这些定义并非真正必需，但为保证完整性而保留。
+ */
     #define tmrTIMER_CALLBACK             TimerCallbackFunction_t
     #define pdTASK_CODE                   TaskFunction_t
     #define xListItem                     ListItem_t
     #define xList                         List_t
 
-/* For libraries that break the list data hiding, and access list structure
- * members directly (which is not supposed to be done). */
+/*
+ * 供那些破坏链表数据隐藏、直接访问链表结构成员的库使用（不应这样做）。
+ */
     #define pxContainer                   pvContainer
-#endif /* configENABLE_BACKWARD_COMPATIBILITY */
+#endif /* configENABLE_BACKWARD_COMPATIBILITY 结束 */
 
 #if ( configUSE_ALTERNATIVE_API != 0 )
     #error The alternative API was deprecated some time ago, and was removed in FreeRTOS V9.0 0
 #endif
 
-/* Set configUSE_TASK_FPU_SUPPORT to 0 to omit floating point support even
- * if floating point hardware is otherwise supported by the FreeRTOS port in use.
- * This constant is not supported by all FreeRTOS ports that include floating
- * point support. */
+/*
+ * 将 configUSE_TASK_FPU_SUPPORT 设置为 0，即使所用 FreeRTOS 移植层支持浮点硬件，也省略浮点支持。
+ * 并非所有包含浮点支持的 FreeRTOS 移植层都支持该常量。
+ */
 #ifndef configUSE_TASK_FPU_SUPPORT
     #define configUSE_TASK_FPU_SUPPORT    1
 #endif
 
-/* Set configENABLE_MPU to 1 to enable MPU support and 0 to disable it. This is
- * currently used in ARMv8M ports. */
+/*
+ * 将 configENABLE_MPU 设置为 1 以启用 MPU 支持，设置为 0 则禁用。该配置目前用于 ARMv8M 移植层。
+ */
 #ifndef configENABLE_MPU
     #define configENABLE_MPU    0
 #endif
 
-/* Set configENABLE_FPU to 1 to enable FPU support and 0 to disable it. This is
- * currently used in ARMv8M ports. */
+/*
+ * 将 configENABLE_FPU 设置为 1 以启用 FPU 支持，设置为 0 则禁用。该配置目前用于 ARMv8M 移植层。
+ */
 #ifndef configENABLE_FPU
     #define configENABLE_FPU    1
 #endif
 
-/* Set configENABLE_MVE to 1 to enable MVE support and 0 to disable it. This is
- * currently used in ARMv8M ports. */
+/*
+ * 将 configENABLE_MVE 设置为 1 以启用 MVE 支持，设置为 0 则禁用。该配置目前用于 ARMv8M 移植层。
+ */
 #ifndef configENABLE_MVE
     #define configENABLE_MVE    0
 #endif
 
-/* Set configENABLE_TRUSTZONE to 1 enable TrustZone support and 0 to disable it.
- * This is currently used in ARMv8M ports. */
+/*
+ * 将 configENABLE_TRUSTZONE 设置为 1 以启用 TrustZone 支持，设置为 0 则禁用。该配置目前用于 ARMv8M 移植层。
+ */
 #ifndef configENABLE_TRUSTZONE
     #define configENABLE_TRUSTZONE    1
 #endif
 
-/* Set configRUN_FREERTOS_SECURE_ONLY to 1 to run the FreeRTOS ARMv8M port on
- * the Secure Side only. */
+/*
+ * 将 configRUN_FREERTOS_SECURE_ONLY 设置为 1，使 FreeRTOS ARMv8M 移植层仅在安全侧运行。
+ */
 #ifndef configRUN_FREERTOS_SECURE_ONLY
     #define configRUN_FREERTOS_SECURE_ONLY    0
 #endif
@@ -3062,31 +3085,23 @@
     #define configRUN_ADDITIONAL_TESTS    0
 #endif
 
-/* The following config allows infinite loop control. For example, control the
- * infinite loop in idle task function when performing unit tests. */
+/*
+ * 以下配置允许对死循环进行控制。例如，在执行单元测试时控制空闲任务函数中的死循环。
+ */
 #ifndef configCONTROL_INFINITE_LOOP
     #define configCONTROL_INFINITE_LOOP()
 #endif
 
-/* Sometimes the FreeRTOSConfig.h settings only allow a task to be created using
- * dynamically allocated RAM, in which case when any task is deleted it is known
- * that both the task's stack and TCB need to be freed.  Sometimes the
- * FreeRTOSConfig.h settings only allow a task to be created using statically
- * allocated RAM, in which case when any task is deleted it is known that neither
- * the task's stack or TCB should be freed.  Sometimes the FreeRTOSConfig.h
- * settings allow a task to be created using either statically or dynamically
- * allocated RAM, in which case a member of the TCB is used to record whether the
- * stack and/or TCB were allocated statically or dynamically, so when a task is
- * deleted the RAM that was allocated dynamically is freed again and no attempt is
- * made to free the RAM that was allocated statically.
- * tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE is only true if it is possible for a
- * task to be created using either statically or dynamically allocated RAM.  Note
- * that if portUSING_MPU_WRAPPERS is 1 then a protected task can be created with
- * a statically allocated stack and a dynamically allocated TCB.
+/*
+ * 有时 FreeRTOSConfig.h 的配置只允许使用动态分配的 RAM 创建任务，此时删除任何任务时，已知需要释放任务的栈和 TCB。
+ * 有时 FreeRTOSConfig.h 的配置只允许使用静态分配的 RAM 创建任务，此时删除任何任务时，已知既不应释放任务的栈也不应释放 TCB。
+ * 有时 FreeRTOSConfig.h 的配置允许使用静态或动态分配的 RAM 创建任务，此时 TCB 中的某个成员用于记录栈和/或 TCB 是静态还是动态分配的，
+ * 因此删除任务时会释放动态分配的 RAM，而不会尝试释放静态分配的 RAM。
+ * tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE 仅当任务既可使用静态分配的 RAM 也可使用动态分配的 RAM 创建时才为真。
+ * 注意，若 portUSING_MPU_WRAPPERS 为 1，则可创建栈为静态分配、TCB 为动态分配的受保护任务。
  *
- * The following table lists various combinations of portUSING_MPU_WRAPPERS,
- * configSUPPORT_DYNAMIC_ALLOCATION and configSUPPORT_STATIC_ALLOCATION and
- * when it is possible to have both static and dynamic allocation:
+ * 下表列出 portUSING_MPU_WRAPPERS、configSUPPORT_DYNAMIC_ALLOCATION 和 configSUPPORT_STATIC_ALLOCATION 的各种组合，
+ * 以及何时可能同时采用静态和动态分配：
  *  +-----+---------+--------+-----------------------------+-----------------------------------+------------------+-----------+
  * | MPU | Dynamic | Static |     Available Functions     |       Possible Allocations        | Both Dynamic and | Need Free |
  * |     |         |        |                             |                                   | Static Possible  |           |
@@ -3115,14 +3130,10 @@
       ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) )
 
 /*
- * In line with software engineering best practice, FreeRTOS implements a strict
- * data hiding policy, so the real structures used by FreeRTOS to maintain the
- * state of tasks, queues, semaphores, etc. are not accessible to the application
- * code.  However, if the application writer wants to statically allocate such
- * an object then the size of the object needs to be known.  Dummy structures
- * that are guaranteed to have the same size and alignment requirements of the
- * real objects are used for this purpose.  The dummy list and list item
- * structures below are used for inclusion in such a dummy structure.
+ * 遵循软件工程最佳实践，FreeRTOS 实现了严格的数据隐藏策略，因此 FreeRTOS 内部用于维护任务、队列、信号量等状态的真实结构对应用代码不可见。
+ * 但是，如果应用编写者希望静态分配此类对象，则需要知道对象的大小。
+ * 为此使用虚拟结构（dummy structure），保证其大小和对齐要求与真实对象相同。
+ * 下面的虚拟链表和链表项结构用于嵌入此类虚拟结构中。
  */
 struct xSTATIC_LIST_ITEM
 {
@@ -3138,7 +3149,7 @@ struct xSTATIC_LIST_ITEM
 typedef struct xSTATIC_LIST_ITEM StaticListItem_t;
 
 #if ( configUSE_MINI_LIST_ITEM == 1 )
-    /* See the comments above the struct xSTATIC_LIST_ITEM definition. */
+    /* 参见 struct xSTATIC_LIST_ITEM 定义上方的注释。 */
     struct xSTATIC_MINI_LIST_ITEM
     {
         #if ( configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES == 1 )
@@ -3148,11 +3159,11 @@ typedef struct xSTATIC_LIST_ITEM StaticListItem_t;
         void * pvDummy3[ 2 ];
     };
     typedef struct xSTATIC_MINI_LIST_ITEM StaticMiniListItem_t;
-#else /* if ( configUSE_MINI_LIST_ITEM == 1 ) */
+#else /* 结束：if ( configUSE_MINI_LIST_ITEM == 1 ) */
     typedef struct xSTATIC_LIST_ITEM      StaticMiniListItem_t;
-#endif /* if ( configUSE_MINI_LIST_ITEM == 1 ) */
+#endif /* 结束：if ( configUSE_MINI_LIST_ITEM == 1 ) */
 
-/* See the comments above the struct xSTATIC_LIST_ITEM definition. */
+/* 参见 struct xSTATIC_LIST_ITEM 定义上方的注释。 */
 typedef struct xSTATIC_LIST
 {
     #if ( configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES == 1 )
@@ -3167,17 +3178,11 @@ typedef struct xSTATIC_LIST
 } StaticList_t;
 
 /*
- * In line with software engineering best practice, especially when supplying a
- * library that is likely to change in future versions, FreeRTOS implements a
- * strict data hiding policy.  This means the Task structure used internally by
- * FreeRTOS is not accessible to application code.  However, if the application
- * writer wants to statically allocate the memory required to create a task then
- * the size of the task object needs to be known.  The StaticTask_t structure
- * below is provided for this purpose.  Its sizes and alignment requirements are
- * guaranteed to match those of the genuine structure, no matter which
- * architecture is being used, and no matter how the values in FreeRTOSConfig.h
- * are set.  Its contents are somewhat obfuscated in the hope users will
- * recognise that it would be unwise to make direct use of the structure members.
+ * 遵循软件工程最佳实践，特别是在提供可能在未来版本中变化的库时，FreeRTOS 实现了严格的数据隐藏策略。
+ * 这意味着 FreeRTOS 内部使用的任务结构对应用代码不可见。
+ * 但是，如果应用编写者希望静态分配创建任务所需的内存，则需要知道任务对象的大小。
+ * 为此提供了下面的 StaticTask_t 结构。无论使用何种架构、无论 FreeRTOSConfig.h 中的值如何设置，
+ * 其大小和对齐要求都保证与真实结构一致。其内容经过一定程度的混淆，希望用户认识到直接使用结构成员是不明智的。
  */
 typedef struct xSTATIC_TCB
 {
@@ -3240,18 +3245,11 @@ typedef struct xSTATIC_TCB
 } StaticTask_t;
 
 /*
- * In line with software engineering best practice, especially when supplying a
- * library that is likely to change in future versions, FreeRTOS implements a
- * strict data hiding policy.  This means the Queue structure used internally by
- * FreeRTOS is not accessible to application code.  However, if the application
- * writer wants to statically allocate the memory required to create a queue
- * then the size of the queue object needs to be known.  The StaticQueue_t
- * structure below is provided for this purpose.  Its sizes and alignment
- * requirements are guaranteed to match those of the genuine structure, no
- * matter which architecture is being used, and no matter how the values in
- * FreeRTOSConfig.h are set.  Its contents are somewhat obfuscated in the hope
- * users will recognise that it would be unwise to make direct use of the
- * structure members.
+ * 遵循软件工程最佳实践，特别是在提供可能在未来版本中变化的库时，FreeRTOS 实现了严格的数据隐藏策略。
+ * 这意味着 FreeRTOS 内部使用的队列结构对应用代码不可见。
+ * 但是，如果应用编写者希望静态分配创建队列所需的内存，则需要知道队列对象的大小。
+ * 为此提供了下面的 StaticQueue_t 结构。无论使用何种架构、无论 FreeRTOSConfig.h 中的值如何设置，
+ * 其大小和对齐要求都保证与真实结构一致。其内容经过一定程度的混淆，希望用户认识到直接使用结构成员是不明智的。
  */
 typedef struct xSTATIC_QUEUE
 {
@@ -3283,18 +3281,11 @@ typedef struct xSTATIC_QUEUE
 typedef StaticQueue_t StaticSemaphore_t;
 
 /*
- * In line with software engineering best practice, especially when supplying a
- * library that is likely to change in future versions, FreeRTOS implements a
- * strict data hiding policy.  This means the event group structure used
- * internally by FreeRTOS is not accessible to application code.  However, if
- * the application writer wants to statically allocate the memory required to
- * create an event group then the size of the event group object needs to be
- * know.  The StaticEventGroup_t structure below is provided for this purpose.
- * Its sizes and alignment requirements are guaranteed to match those of the
- * genuine structure, no matter which architecture is being used, and no matter
- * how the values in FreeRTOSConfig.h are set.  Its contents are somewhat
- * obfuscated in the hope users will recognise that it would be unwise to make
- * direct use of the structure members.
+ * 遵循软件工程最佳实践，特别是在提供可能在未来版本中变化的库时，FreeRTOS 实现了严格的数据隐藏策略。
+ * 这意味着 FreeRTOS 内部使用的事件组结构对应用代码不可见。
+ * 但是，如果应用编写者希望静态分配创建事件组所需的内存，则需要知道事件组对象的大小。
+ * 为此提供了下面的 StaticEventGroup_t 结构。无论使用何种架构、无论 FreeRTOSConfig.h 中的值如何设置，
+ * 其大小和对齐要求都保证与真实结构一致。其内容经过一定程度的混淆，希望用户认识到直接使用结构成员是不明智的。
  */
 typedef struct xSTATIC_EVENT_GROUP
 {
@@ -3311,18 +3302,11 @@ typedef struct xSTATIC_EVENT_GROUP
 } StaticEventGroup_t;
 
 /*
- * In line with software engineering best practice, especially when supplying a
- * library that is likely to change in future versions, FreeRTOS implements a
- * strict data hiding policy.  This means the software timer structure used
- * internally by FreeRTOS is not accessible to application code.  However, if
- * the application writer wants to statically allocate the memory required to
- * create a software timer then the size of the queue object needs to be known.
- * The StaticTimer_t structure below is provided for this purpose.  Its sizes
- * and alignment requirements are guaranteed to match those of the genuine
- * structure, no matter which architecture is being used, and no matter how the
- * values in FreeRTOSConfig.h are set.  Its contents are somewhat obfuscated in
- * the hope users will recognise that it would be unwise to make direct use of
- * the structure members.
+ * 遵循软件工程最佳实践，特别是在提供可能在未来版本中变化的库时，FreeRTOS 实现了严格的数据隐藏策略。
+ * 这意味着 FreeRTOS 内部使用的软件定时器结构对应用代码不可见。
+ * 但是，如果应用编写者希望静态分配创建软件定时器所需的内存，则需要知道软件定时器对象的大小。
+ * 为此提供了下面的 StaticTimer_t 结构。无论使用何种架构、无论 FreeRTOSConfig.h 中的值如何设置，
+ * 其大小和对齐要求都保证与真实结构一致。其内容经过一定程度的混淆，希望用户认识到直接使用结构成员是不明智的。
  */
 typedef struct xSTATIC_TIMER
 {
@@ -3338,18 +3322,11 @@ typedef struct xSTATIC_TIMER
 } StaticTimer_t;
 
 /*
- * In line with software engineering best practice, especially when supplying a
- * library that is likely to change in future versions, FreeRTOS implements a
- * strict data hiding policy.  This means the stream buffer structure used
- * internally by FreeRTOS is not accessible to application code.  However, if
- * the application writer wants to statically allocate the memory required to
- * create a stream buffer then the size of the stream buffer object needs to be
- * known.  The StaticStreamBuffer_t structure below is provided for this
- * purpose.  Its size and alignment requirements are guaranteed to match those
- * of the genuine structure, no matter which architecture is being used, and
- * no matter how the values in FreeRTOSConfig.h are set.  Its contents are
- * somewhat obfuscated in the hope users will recognise that it would be unwise
- * to make direct use of the structure members.
+ * 遵循软件工程最佳实践，特别是在提供可能在未来版本中变化的库时，FreeRTOS 实现了严格的数据隐藏策略。
+ * 这意味着 FreeRTOS 内部使用的流缓冲结构对应用代码不可见。
+ * 但是，如果应用编写者希望静态分配创建流缓冲所需的内存，则需要知道流缓冲对象的大小。
+ * 为此提供了下面的 StaticStreamBuffer_t 结构。无论使用何种架构、无论 FreeRTOSConfig.h 中的值如何设置，
+ * 其大小和对齐要求都保证与真实结构一致。其内容经过一定程度的混淆，希望用户认识到直接使用结构成员是不明智的。
  */
 typedef struct xSTATIC_STREAM_BUFFER
 {
@@ -3365,13 +3342,13 @@ typedef struct xSTATIC_STREAM_BUFFER
     UBaseType_t uxDummy6;
 } StaticStreamBuffer_t;
 
-/* Message buffers are built on stream buffers. */
+/* 消息缓冲建立在流缓冲之上。 */
 typedef StaticStreamBuffer_t StaticMessageBuffer_t;
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON* 恢复自动缩进 */
 
-#endif /* INC_FREERTOS_H */
+#endif /* INC_FREERTOS_H 结束 */

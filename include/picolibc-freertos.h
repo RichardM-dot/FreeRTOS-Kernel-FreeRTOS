@@ -29,13 +29,13 @@
 #ifndef INC_PICOLIBC_FREERTOS_H
 #define INC_PICOLIBC_FREERTOS_H
 
-/* Use picolibc TLS support to allocate space for __thread variables,
- * initialize them at thread creation and set the TLS context at
- * thread switch time.
+/*
+ * 使用 picolibc TLS 支持为 __thread 变量分配空间，
+ * 在线程创建时初始化它们，并在线程切换时设置 TLS 上下文。
  *
- * See the picolibc TLS docs:
- * https://github.com/picolibc/picolibc/blob/main/doc/tls.md
- * for additional information. */
+ * 更多信息请参见 picolibc TLS 文档：
+ * https://github.com/picolibc/picolibc/blob/main/doc/tls.md。
+ */
 
 #include <picotls.h>
 
@@ -48,19 +48,22 @@
 
 #if __PICOLIBC_MAJOR__ > 1 || __PICOLIBC_MINOR__ >= 8
 
-/* Picolibc 1.8 and newer have explicit alignment values provided
- * by the _tls_align() inline */
+/*
+ * Picolibc 1.8 及更新版本通过 _tls_align() 内联函数
+ * 提供显式的对齐值
+ */
     #define picolibcTLS_ALIGNMENT_MASK    ( ( portPOINTER_SIZE_TYPE ) ( _tls_align() - 1 ) )
 #else
 
-/* For older Picolibc versions, use the general port alignment value */
+/* 对于较早的 Picolibc 版本，使用移植层的通用对齐值 */
     #define picolibcTLS_ALIGNMENT_MASK    ( ( portPOINTER_SIZE_TYPE ) portBYTE_ALIGNMENT_MASK )
 #endif
 
-/* Allocate thread local storage block off the end of the
- * stack. The picolibcTLS_SIZE macro returns the size (in
- * bytes) of the total TLS area used by the application.
- * Calculate the top of stack address. */
+/*
+ * 在栈末尾之外分配线程局部存储块。picolibcTLS_SIZE 宏返回
+ * 应用程序所用 TLS 区域的总大小（字节）。
+ * 计算栈顶地址。
+ */
 #if ( portSTACK_GROWTH < 0 )
 
     #define configINIT_TLS_BLOCK( xTLSBlock, pxTopOfStack )                                  \
@@ -72,7 +75,7 @@
                                            ~picolibcSTACK_ALIGNMENT_MASK );                  \
         _init_tls( xTLSBlock );                                                              \
     } while( 0 )
-#else /* portSTACK_GROWTH */
+#else /* 条件不成立：portSTACK_GROWTH */
     #define configINIT_TLS_BLOCK( xTLSBlock, pxTopOfStack )                                          \
     do {                                                                                             \
         xTLSBlock = ( void * ) ( ( ( portPOINTER_SIZE_TYPE ) pxTopOfStack +                          \
@@ -82,10 +85,10 @@
                                            ~picolibcSTACK_ALIGNMENT_MASK );                          \
         _init_tls( xTLSBlock );                                                                      \
     } while( 0 )
-#endif /* portSTACK_GROWTH */
+#endif /* 条件编译结束：portSTACK_GROWTH */
 
 #define configSET_TLS_BLOCK( xTLSBlock )    _set_tls( xTLSBlock )
 
 #define configDEINIT_TLS_BLOCK( xTLSBlock )
 
-#endif /* INC_PICOLIBC_FREERTOS_H */
+#endif /* 头文件保护：INC_PICOLIBC_FREERTOS_H */

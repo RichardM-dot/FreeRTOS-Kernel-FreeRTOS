@@ -35,30 +35,32 @@
 
 #include "list.h"
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON* 恢复自动缩进 */
 
-/* Used to hide the implementation of the co-routine control block.  The
- * control block structure however has to be included in the header due to
- * the macro implementation of the co-routine functionality. */
+/*
+ * 用于隐藏协程控制块的实现。
+ * 不过，由于协程功能采用宏实现，
+ * 控制块结构仍必须包含在头文件中。
+ */
 typedef void * CoRoutineHandle_t;
 
-/* Defines the prototype to which co-routine functions must conform. */
+/* 定义协程函数必须遵循的函数原型。 */
 typedef void (* crCOROUTINE_CODE)( CoRoutineHandle_t xHandle,
                                    UBaseType_t uxIndex );
 
 typedef struct corCoRoutineControlBlock
 {
     crCOROUTINE_CODE pxCoRoutineFunction;
-    ListItem_t xGenericListItem; /**< List item used to place the CRCB in ready and blocked queues. */
-    ListItem_t xEventListItem;   /**< List item used to place the CRCB in event lists. */
-    UBaseType_t uxPriority;      /**< The priority of the co-routine in relation to other co-routines. */
-    UBaseType_t uxIndex;         /**< Used to distinguish between co-routines when multiple co-routines use the same co-routine function. */
-    uint16_t uxState;            /**< Used internally by the co-routine implementation. */
-} CRCB_t;                        /* Co-routine control block.  Note must be identical in size down to uxPriority with TCB_t. */
+    ListItem_t xGenericListItem; /**< 用于将 CRCB 放入就绪队列和阻塞队列的链表项。 */
+    ListItem_t xEventListItem;   /**< 用于将 CRCB 放入事件链表的链表项。 */
+    UBaseType_t uxPriority;      /**< 协程相对于其他协程的优先级。 */
+    UBaseType_t uxIndex;         /**< 当多个协程使用同一协程函数时，用于区分这些协程。 */
+    uint16_t uxState;            /**< 由协程实现内部使用。 */
+} CRCB_t;                        /* 协程控制块。注意：其大小直到 uxPriority 为止必须与 TCB_t 完全一致。 */
 
 /**
  * croutine. h
@@ -70,60 +72,56 @@ typedef struct corCoRoutineControlBlock
  *                             );
  * @endcode
  *
- * Create a new co-routine and add it to the list of co-routines that are
- * ready to run.
+ * 创建一个新的协程，并将其加入已就绪可运行的协程链表。
  *
- * @param pxCoRoutineCode Pointer to the co-routine function.  Co-routine
- * functions require special syntax - see the co-routine section of the WEB
- * documentation for more information.
+ * @param pxCoRoutineCode 指向协程函数的指针。协程函数
+ * 需要使用特殊语法——更多信息请参见 WEB 文档中的协程章节。
  *
- * @param uxPriority The priority with respect to other co-routines at which
- *  the co-routine will run.
+ * @param uxPriority 该协程相对其他协程运行时的优先级。
  *
- * @param uxIndex Used to distinguish between different co-routines that
- * execute the same function.  See the example below and the co-routine section
- * of the WEB documentation for further information.
+ * @param uxIndex 用于区分执行同一函数的不同协程。
+ * 详情请参见下面的示例以及 WEB 文档中的协程章节。
  *
- * @return pdPASS if the co-routine was successfully created and added to a ready
- * list, otherwise an error code defined with ProjDefs.h.
+ * @return 若协程创建成功并加入就绪链表，则返回 pdPASS，
+ * 否则返回 ProjDefs.h 中定义的错误码。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // Co-routine to be created.
+ * // 待创建的协程。
  * void vFlashCoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // Variables in co-routines must be declared static if they must maintain value across a blocking call.
- * // This may not be necessary for const variables.
+ * // 若协程变量需要在阻塞调用前后保持取值，则必须声明为 static。
+ * // 对于 const 变量，可能无需这样做。
  * static const char cLedToFlash[ 2 ] = { 5, 6 };
  * static const TickType_t uxFlashRates[ 2 ] = { 200, 400 };
  *
- *   // Must start every co-routine with a call to crSTART();
+ *   // 每个协程都必须以调用 crSTART() 开始；
  *   crSTART( xHandle );
  *
  *   for( ;; )
  *   {
- *       // This co-routine just delays for a fixed period, then toggles
- *       // an LED.  Two co-routines are created using this function, so
- *       // the uxIndex parameter is used to tell the co-routine which
- *       // LED to flash and how int32_t to delay.  This assumes xQueue has
- *       // already been created.
+ *       // 该协程仅延时固定时间，然后翻转
+ *       // 一个 LED。使用此函数创建两个协程，因此
+ *       // 通过 uxIndex 参数告诉协程要闪烁哪个
+ *       // LED 以及延时多长时间。这里假设 xQueue 已
+ *       // 创建。
  *       vParTestToggleLED( cLedToFlash[ uxIndex ] );
  *       crDELAY( xHandle, uxFlashRates[ uxIndex ] );
  *   }
  *
- *   // Must end every co-routine with a call to crEND();
+ *   // 每个协程都必须以调用 crEND() 结束；
  *   crEND();
  * }
  *
- * // Function that creates two co-routines.
+ * // 创建两个协程的函数。
  * void vOtherFunction( void )
  * {
  * uint8_t ucParameterToPass;
  * TaskHandle_t xHandle;
  *
- *   // Create two co-routines at priority 0.  The first is given index 0
- *   // so (from the code above) toggles LED 5 every 200 ticks.  The second
- *   // is given index 1 so toggles LED 6 every 400 ticks.
+ *   // 创建两个优先级为 0 的协程。第一个协程使用索引 0，
+ *   // 因此（根据上面的代码）每 200 个时钟节拍翻转一次 LED 5。第二个
+ *   // 协程使用索引 1，因此每 400 个时钟节拍翻转一次 LED 6。
  *   for( uxIndex = 0; uxIndex < 2; uxIndex++ )
  *   {
  *       xCoRoutineCreate( vFlashCoRoutine, 0, uxIndex );
@@ -144,29 +142,27 @@ BaseType_t xCoRoutineCreate( crCOROUTINE_CODE pxCoRoutineCode,
  * void vCoRoutineSchedule( void );
  * @endcode
  *
- * Run a co-routine.
+ * 运行协程。
  *
- * vCoRoutineSchedule() executes the highest priority co-routine that is able
- * to run.  The co-routine will execute until it either blocks, yields or is
- * preempted by a task.  Co-routines execute cooperatively so one
- * co-routine cannot be preempted by another, but can be preempted by a task.
+ * vCoRoutineSchedule() 执行能够运行的最高优先级协程。该协程会一直执行，
+ * 直到它阻塞、让出 CPU 或被任务抢占。协程以协作方式执行，因此一个
+ * 协程不能被另一个协程抢占，但可以被任务抢占。
  *
- * If an application comprises of both tasks and co-routines then
- * vCoRoutineSchedule should be called from the idle task (in an idle task
- * hook).
+ * 若应用程序同时包含任务和协程，则
+ * 应由空闲任务（在空闲任务钩子函数中）调用 vCoRoutineSchedule。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // This idle task hook will schedule a co-routine each time it is called.
- * // The rest of the idle task will execute between co-routine calls.
+ * // 该空闲任务钩子函数每次被调用时都会调度一个协程。
+ * // 空闲任务的其余部分将在两次协程调用之间执行。
  * void vApplicationIdleHook( void )
  * {
  *  vCoRoutineSchedule();
  * }
  *
- * // Alternatively, if you do not require any other part of the idle task to
- * // execute, the idle task hook can call vCoRoutineSchedule() within an
- * // infinite loop.
+ * // 或者，如果不需要空闲任务的其他部分执行，
+ * // 则空闲任务钩子函数可以在无限循环中调用
+ * // vCoRoutineSchedule()。
  * void vApplicationIdleHook( void )
  * {
  *  for( ;; )
@@ -186,25 +182,25 @@ void vCoRoutineSchedule( void );
  * crSTART( CoRoutineHandle_t xHandle );
  * @endcode
  *
- * This macro MUST always be called at the start of a co-routine function.
+ * 此宏必须始终在协程函数的开头调用。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // Co-routine to be created.
+ * // 待创建的协程。
  * void vACoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // Variables in co-routines must be declared static if they must maintain value across a blocking call.
+ * // 若协程变量需要在阻塞调用前后保持取值，则必须声明为 static。
  * static int32_t ulAVariable;
  *
- *   // Must start every co-routine with a call to crSTART();
+ *   // 每个协程都必须以调用 crSTART() 开始；
  *   crSTART( xHandle );
  *
  *   for( ;; )
  *   {
- *        // Co-routine functionality goes here.
+ *        // 协程功能代码放在此处。
  *   }
  *
- *   // Must end every co-routine with a call to crEND();
+ *   // 每个协程都必须以调用 crEND() 结束；
  *   crEND();
  * }
  * @endcode
@@ -221,25 +217,25 @@ void vCoRoutineSchedule( void );
  * crEND();
  * @endcode
  *
- * This macro MUST always be called at the end of a co-routine function.
+ * 此宏必须始终在协程函数的末尾调用。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // Co-routine to be created.
+ * // 待创建的协程。
  * void vACoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // Variables in co-routines must be declared static if they must maintain value across a blocking call.
+ * // 若协程变量需要在阻塞调用前后保持取值，则必须声明为 static。
  * static int32_t ulAVariable;
  *
- *   // Must start every co-routine with a call to crSTART();
+ *   // 每个协程都必须以调用 crSTART() 开始；
  *   crSTART( xHandle );
  *
  *   for( ;; )
  *   {
- *        // Co-routine functionality goes here.
+ *        // 协程功能代码放在此处。
  *   }
  *
- *   // Must end every co-routine with a call to crEND();
+ *   // 每个协程都必须以调用 crEND() 结束；
  *   crEND();
  * }
  * @endcode
@@ -247,13 +243,13 @@ void vCoRoutineSchedule( void );
  * \ingroup Tasks
  */
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #define crEND()    }
-/* *INDENT-ON* */
+/* *INDENT-ON* 恢复自动缩进 */
 
 /*
- * These macros are intended for internal use by the co-routine implementation
- * only.  The macros should not be used directly by application writers.
+ * 这些宏仅供协程实现内部使用。
+ * 应用程序编写者不应直接使用这些宏。
  */
 #define crSET_STATE0( xHandle )                                       \
     ( ( CRCB_t * ) ( xHandle ) )->uxState = ( __LINE__ * 2 ); return; \
@@ -268,42 +264,41 @@ void vCoRoutineSchedule( void );
  * crDELAY( CoRoutineHandle_t xHandle, TickType_t xTicksToDelay );
  * @endcode
  *
- * Delay a co-routine for a fixed period of time.
+ * 将协程延时固定的一段时间。
  *
- * crDELAY can only be called from the co-routine function itself - not
- * from within a function called by the co-routine function.  This is because
- * co-routines do not maintain their own stack.
+ * crDELAY 只能从协程函数本身调用——不能
+ * 从协程函数所调用的函数内部调用。这是因为
+ * 协程不维护自己的栈。
  *
- * @param xHandle The handle of the co-routine to delay.  This is the xHandle
- * parameter of the co-routine function.
+ * @param xHandle 要延时的协程的句柄。这是协程函数的
+ * xHandle 参数。
  *
- * @param xTickToDelay The number of ticks that the co-routine should delay
- * for.  The actual amount of time this equates to is defined by
- * configTICK_RATE_HZ (set in FreeRTOSConfig.h).  The constant portTICK_PERIOD_MS
- * can be used to convert ticks to milliseconds.
+ * @param xTickToDelay 协程应延时的时钟节拍数。
+ * 该值对应的实际时间由 configTICK_RATE_HZ（在 FreeRTOSConfig.h 中设置）
+ * 定义。可使用常量 portTICK_PERIOD_MS 将时钟节拍转换为毫秒。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // Co-routine to be created.
+ * // 待创建的协程。
  * void vACoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // Variables in co-routines must be declared static if they must maintain value across a blocking call.
- * // This may not be necessary for const variables.
- * // We are to delay for 200ms.
+ * // 若协程变量需要在阻塞调用前后保持取值，则必须声明为 static。
+ * // 对于 const 变量，可能无需这样做。
+ * // 需要延时 200ms。
  * static const xTickType xDelayTime = 200 / portTICK_PERIOD_MS;
  *
- *   // Must start every co-routine with a call to crSTART();
+ *   // 每个协程都必须以调用 crSTART() 开始；
  *   crSTART( xHandle );
  *
  *   for( ;; )
  *   {
- *      // Delay for 200ms.
+ *      // 延时 200ms。
  *      crDELAY( xHandle, xDelayTime );
  *
- *      // Do something here.
+ *      // 在此处执行某些操作。
  *   }
  *
- *   // Must end every co-routine with a call to crEND();
+ *   // 每个协程都必须以调用 crEND() 结束；
  *   crEND();
  * }
  * @endcode
@@ -330,74 +325,67 @@ void vCoRoutineSchedule( void );
  *           )
  * @endcode
  *
- * The macro's crQUEUE_SEND() and crQUEUE_RECEIVE() are the co-routine
- * equivalent to the xQueueSend() and xQueueReceive() functions used by tasks.
+ * 宏 crQUEUE_SEND() 和 crQUEUE_RECEIVE() 相当于任务所使用的
+ * xQueueSend() 和 xQueueReceive() 函数的协程版本。
  *
- * crQUEUE_SEND and crQUEUE_RECEIVE can only be used from a co-routine whereas
- * xQueueSend() and xQueueReceive() can only be used from tasks.
+ * crQUEUE_SEND 和 crQUEUE_RECEIVE 只能从协程中使用，而
+ * xQueueSend() 和 xQueueReceive() 只能从任务中使用。
  *
- * crQUEUE_SEND can only be called from the co-routine function itself - not
- * from within a function called by the co-routine function.  This is because
- * co-routines do not maintain their own stack.
+ * crQUEUE_SEND 只能从协程函数本身调用——不能
+ * 从协程函数所调用的函数内部调用。这是因为
+ * 协程不维护自己的栈。
  *
- * See the co-routine section of the WEB documentation for information on
- * passing data between tasks and co-routines and between ISR's and
- * co-routines.
+ * 关于在任务与协程之间以及中断服务程序（ISR）与协程之间传递数据的信息，
+ * 请参见 WEB 文档中的协程章节。
  *
- * @param xHandle The handle of the calling co-routine.  This is the xHandle
- * parameter of the co-routine function.
+ * @param xHandle 调用协程的句柄。这是协程函数的 xHandle
+ * 参数。
  *
- * @param pxQueue The handle of the queue on which the data will be posted.
- * The handle is obtained as the return value when the queue is created using
- * the xQueueCreate() API function.
+ * @param pxQueue 数据将要投递到的队列句柄。
+ * 该句柄是在使用 xQueueCreate() API 函数创建队列时作为返回值获得的。
  *
- * @param pvItemToQueue A pointer to the data being posted onto the queue.
- * The number of bytes of each queued item is specified when the queue is
- * created.  This number of bytes is copied from pvItemToQueue into the queue
- * itself.
+ * @param pvItemToQueue 指向要投递到队列的数据的指针。
+ * 每个入队项包含的字节数在创建队列时指定。系统会从 pvItemToQueue
+ * 复制这么多个字节到队列本身。
  *
- * @param xTickToDelay The number of ticks that the co-routine should block
- * to wait for space to become available on the queue, should space not be
- * available immediately. The actual amount of time this equates to is defined
- * by configTICK_RATE_HZ (set in FreeRTOSConfig.h).  The constant
- * portTICK_PERIOD_MS can be used to convert ticks to milliseconds (see example
- * below).
+ * @param xTickToDelay 若队列空间不能立即可用，协程为等待队列空间
+ * 变为可用而应阻塞的时钟节拍数。该值对应的实际时间由
+ * configTICK_RATE_HZ（在 FreeRTOSConfig.h 中设置）定义。可使用常量
+ * portTICK_PERIOD_MS 将时钟节拍转换为毫秒（参见下面的示例）。
  *
- * @param pxResult The variable pointed to by pxResult will be set to pdPASS if
- * data was successfully posted onto the queue, otherwise it will be set to an
- * error defined within ProjDefs.h.
+ * @param pxResult 若数据成功投递到队列，则 pxResult 所指向的变量将被设为 pdPASS；
+ * 否则将被设为 ProjDefs.h 中定义的错误码。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // Co-routine function that blocks for a fixed period then posts a number onto
- * // a queue.
+ * // 协程函数：阻塞固定时间，然后向队列投递一个数字。
  * static void prvCoRoutineFlashTask( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // Variables in co-routines must be declared static if they must maintain value across a blocking call.
+ * // 若协程变量需要在阻塞调用前后保持取值，则必须声明为 static。
  * static BaseType_t xNumberToPost = 0;
  * static BaseType_t xResult;
  *
- *  // Co-routines must begin with a call to crSTART().
+ *  // 协程必须以调用 crSTART() 开始。
  *  crSTART( xHandle );
  *
  *  for( ;; )
  *  {
- *      // This assumes the queue has already been created.
+ *      // 这里假设队列已经创建。
  *      crQUEUE_SEND( xHandle, xCoRoutineQueue, &xNumberToPost, NO_DELAY, &xResult );
  *
  *      if( xResult != pdPASS )
  *      {
- *          // The message was not posted!
+ *          // 消息未投递成功！
  *      }
  *
- *      // Increment the number to be posted onto the queue.
+ *      // 递增要投递到队列的数字。
  *      xNumberToPost++;
  *
- *      // Delay for 100 ticks.
+ *      // 延时 100 个时钟节拍。
  *      crDELAY( xHandle, 100 );
  *  }
  *
- *  // Co-routines must end with a call to crEND().
+ *  // 协程必须以调用 crEND() 结束。
  *  crEND();
  * }
  * @endcode
@@ -431,63 +419,59 @@ void vCoRoutineSchedule( void );
  *               )
  * @endcode
  *
- * The macro's crQUEUE_SEND() and crQUEUE_RECEIVE() are the co-routine
- * equivalent to the xQueueSend() and xQueueReceive() functions used by tasks.
+ * 宏 crQUEUE_SEND() 和 crQUEUE_RECEIVE() 相当于任务所使用的
+ * xQueueSend() 和 xQueueReceive() 函数的协程版本。
  *
- * crQUEUE_SEND and crQUEUE_RECEIVE can only be used from a co-routine whereas
- * xQueueSend() and xQueueReceive() can only be used from tasks.
+ * crQUEUE_SEND 和 crQUEUE_RECEIVE 只能从协程中使用，而
+ * xQueueSend() 和 xQueueReceive() 只能从任务中使用。
  *
- * crQUEUE_RECEIVE can only be called from the co-routine function itself - not
- * from within a function called by the co-routine function.  This is because
- * co-routines do not maintain their own stack.
+ * crQUEUE_RECEIVE 只能从协程函数本身调用——不能
+ * 从协程函数所调用的函数内部调用。这是因为
+ * 协程不维护自己的栈。
  *
- * See the co-routine section of the WEB documentation for information on
- * passing data between tasks and co-routines and between ISR's and
- * co-routines.
+ * 关于在任务与协程之间以及 ISR 与协程之间传递数据的信息，
+ * 请参见 WEB 文档中的协程章节。
  *
- * @param xHandle The handle of the calling co-routine.  This is the xHandle
- * parameter of the co-routine function.
+ * @param xHandle 调用协程的句柄。这是协程函数的 xHandle
+ * 参数。
  *
- * @param pxQueue The handle of the queue from which the data will be received.
- * The handle is obtained as the return value when the queue is created using
- * the xQueueCreate() API function.
+ * @param pxQueue 数据将从中接收的队列句柄。
+ * 该句柄是在使用 xQueueCreate() API 函数创建队列时作为返回值获得的。
  *
- * @param pvBuffer The buffer into which the received item is to be copied.
- * The number of bytes of each queued item is specified when the queue is
- * created.  This number of bytes is copied into pvBuffer.
+ * @param pvBuffer 接收到的数据项要复制到的缓冲区。
+ * 每个入队项包含的字节数在创建队列时指定。系统会复制
+ * 这么多个字节到 pvBuffer。
  *
- * @param xTickToDelay The number of ticks that the co-routine should block
- * to wait for data to become available from the queue, should data not be
- * available immediately. The actual amount of time this equates to is defined
- * by configTICK_RATE_HZ (set in FreeRTOSConfig.h).  The constant
- * portTICK_PERIOD_MS can be used to convert ticks to milliseconds (see the
- * crQUEUE_SEND example).
+ * @param xTickToDelay 若数据不能立即可用，协程为等待队列中的数据
+ * 变为可用而应阻塞的时钟节拍数。该值对应的实际时间由
+ * configTICK_RATE_HZ（在 FreeRTOSConfig.h 中设置）定义。可使用常量
+ * portTICK_PERIOD_MS 将时钟节拍转换为毫秒（参见
+ * crQUEUE_SEND 示例）。
  *
- * @param pxResult The variable pointed to by pxResult will be set to pdPASS if
- * data was successfully retrieved from the queue, otherwise it will be set to
- * an error code as defined within ProjDefs.h.
+ * @param pxResult 若成功从队列获取数据，则 pxResult 所指向的变量将被设为 pdPASS；
+ * 否则将被设为 ProjDefs.h 中定义的错误码。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // A co-routine receives the number of an LED to flash from a queue.  It
- * // blocks on the queue until the number is received.
+ * // 协程从队列接收要闪烁的 LED 编号。它在队列上阻塞，
+ * // 直到接收到该编号。
  * static void prvCoRoutineFlashWorkTask( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // Variables in co-routines must be declared static if they must maintain value across a blocking call.
+ * // 若协程变量需要在阻塞调用前后保持取值，则必须声明为 static。
  * static BaseType_t xResult;
  * static UBaseType_t uxLEDToFlash;
  *
- *  // All co-routines must start with a call to crSTART().
+ *  // 所有协程都必须以调用 crSTART() 开始。
  *  crSTART( xHandle );
  *
  *  for( ;; )
  *  {
- *      // Wait for data to become available on the queue.
+ *      // 等待队列中的数据变为可用。
  *      crQUEUE_RECEIVE( xHandle, xCoRoutineQueue, &uxLEDToFlash, portMAX_DELAY, &xResult );
  *
  *      if( xResult == pdPASS )
  *      {
- *          // We received the LED to flash - flash it!
+ *          // 已收到要闪烁的 LED 编号——闪烁它！
  *          vParTestToggleLED( uxLEDToFlash );
  *      }
  *  }
@@ -523,85 +507,78 @@ void vCoRoutineSchedule( void );
  *                     )
  * @endcode
  *
- * The macro's crQUEUE_SEND_FROM_ISR() and crQUEUE_RECEIVE_FROM_ISR() are the
- * co-routine equivalent to the xQueueSendFromISR() and xQueueReceiveFromISR()
- * functions used by tasks.
+ * 宏 crQUEUE_SEND_FROM_ISR() 和 crQUEUE_RECEIVE_FROM_ISR() 相当于任务所使用的
+ * xQueueSendFromISR() 和 xQueueReceiveFromISR() 函数的协程版本。
  *
- * crQUEUE_SEND_FROM_ISR() and crQUEUE_RECEIVE_FROM_ISR() can only be used to
- * pass data between a co-routine and ISR, whereas xQueueSendFromISR() and
- * xQueueReceiveFromISR() can only be used to pass data between a task and and
- * ISR.
+ * crQUEUE_SEND_FROM_ISR() 和 crQUEUE_RECEIVE_FROM_ISR() 只能用于
+ * 在协程与 ISR 之间传递数据，而 xQueueSendFromISR() 和
+ * xQueueReceiveFromISR() 只能用于在任务与 ISR 之间传递数据。
  *
- * crQUEUE_SEND_FROM_ISR can only be called from an ISR to send data to a queue
- * that is being used from within a co-routine.
+ * crQUEUE_SEND_FROM_ISR 只能从 ISR 调用，用于向协程内使用的队列
+ * 发送数据。
  *
- * See the co-routine section of the WEB documentation for information on
- * passing data between tasks and co-routines and between ISR's and
- * co-routines.
+ * 关于在任务与协程之间以及 ISR 与协程之间传递数据的信息，
+ * 请参见 WEB 文档中的协程章节。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 数据项将要投递到的队列句柄。
  *
- * @param pvItemToQueue A pointer to the item that is to be placed on the
- * queue.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from pvItemToQueue
- * into the queue storage area.
+ * @param pvItemToQueue 指向要放入队列的数据项的指针。
+ * 队列可容纳数据项的大小在创建队列时已经定义，因此会从 pvItemToQueue
+ * 复制这么多字节到队列存储区。
  *
- * @param xCoRoutinePreviouslyWoken This is included so an ISR can post onto
- * the same queue multiple times from a single interrupt.  The first call
- * should always pass in pdFALSE.  Subsequent calls should pass in
- * the value returned from the previous call.
+ * @param xCoRoutinePreviouslyWoken 包含此参数是为了让 ISR 能够在一次中断中
+ * 多次向同一队列投递数据。第一次调用应始终传入 pdFALSE。
+ * 后续调用应传入上一次调用返回的值。
  *
- * @return pdTRUE if a co-routine was woken by posting onto the queue.  This is
- * used by the ISR to determine if a context switch may be required following
- * the ISR.
+ * @return 若投递到队列的操作唤醒了某个协程，则返回 pdTRUE。ISR 使用该返回值
+ * 判断在退出 ISR 后是否可能需要进行上下文切换。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // A co-routine that blocks on a queue waiting for characters to be received.
+ * // 一个在队列上阻塞、等待接收字符的协程。
  * static void vReceivingCoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
  * char cRxedChar;
  * BaseType_t xResult;
  *
- *   // All co-routines must start with a call to crSTART().
+ *   // 所有协程都必须以调用 crSTART() 开始。
  *   crSTART( xHandle );
  *
  *   for( ;; )
  *   {
- *       // Wait for data to become available on the queue.  This assumes the
- *       // queue xCommsRxQueue has already been created!
+ *       // 等待队列中的数据变为可用。这里假设
+ *       // 队列 xCommsRxQueue 已经创建！
  *       crQUEUE_RECEIVE( xHandle, xCommsRxQueue, &uxLEDToFlash, portMAX_DELAY, &xResult );
  *
- *       // Was a character received?
+ *       // 是否接收到字符？
  *       if( xResult == pdPASS )
  *       {
- *           // Process the character here.
+ *           // 在此处处理该字符。
  *       }
  *   }
  *
- *   // All co-routines must end with a call to crEND().
+ *   // 所有协程都必须以调用 crEND() 结束。
  *   crEND();
  * }
  *
- * // An ISR that uses a queue to send characters received on a serial port to
- * // a co-routine.
+ * // 一个使用队列将串口接收到的字符发送给
+ * // 协程的 ISR。
  * void vUART_ISR( void )
  * {
  * char cRxedChar;
  * BaseType_t xCRWokenByPost = pdFALSE;
  *
- *   // We loop around reading characters until there are none left in the UART.
+ *   // 循环读取字符，直到 UART 中没有剩余字符。
  *   while( UART_RX_REG_NOT_EMPTY() )
  *   {
- *       // Obtain the character from the UART.
+ *       // 从 UART 获取字符。
  *       cRxedChar = UART_RX_REG;
  *
- *       // Post the character onto a queue.  xCRWokenByPost will be pdFALSE
- *       // the first time around the loop.  If the post causes a co-routine
- *       // to be woken (unblocked) then xCRWokenByPost will be set to pdTRUE.
- *       // In this manner we can ensure that if more than one co-routine is
- *       // blocked on the queue only one is woken by this ISR no matter how
- *       // many characters are posted to the queue.
+ *       // 将字符投递到队列。xCRWokenByPost 在
+ *       // 第一次循环时为 pdFALSE。若投递操作导致某个协程
+ *       // 被唤醒（解除阻塞），则 xCRWokenByPost 将被设为 pdTRUE。
+ *       // 这样就能确保：即使有多个协程阻塞在队列上，
+ *       // 无论向队列投递多少字符，此 ISR 也只唤醒其中一个。
  *       xCRWokenByPost = crQUEUE_SEND_FROM_ISR( xCommsRxQueue, &cRxedChar, xCRWokenByPost );
  *   }
  * }
@@ -623,74 +600,68 @@ void vCoRoutineSchedule( void );
  *                     )
  * @endcode
  *
- * The macro's crQUEUE_SEND_FROM_ISR() and crQUEUE_RECEIVE_FROM_ISR() are the
- * co-routine equivalent to the xQueueSendFromISR() and xQueueReceiveFromISR()
- * functions used by tasks.
+ * 宏 crQUEUE_SEND_FROM_ISR() 和 crQUEUE_RECEIVE_FROM_ISR() 相当于任务所使用的
+ * xQueueSendFromISR() 和 xQueueReceiveFromISR() 函数的协程版本。
  *
- * crQUEUE_SEND_FROM_ISR() and crQUEUE_RECEIVE_FROM_ISR() can only be used to
- * pass data between a co-routine and ISR, whereas xQueueSendFromISR() and
- * xQueueReceiveFromISR() can only be used to pass data between a task and and
- * ISR.
+ * crQUEUE_SEND_FROM_ISR() 和 crQUEUE_RECEIVE_FROM_ISR() 只能用于
+ * 在协程与 ISR 之间传递数据，而 xQueueSendFromISR() 和
+ * xQueueReceiveFromISR() 只能用于在任务与 ISR 之间传递数据。
  *
- * crQUEUE_RECEIVE_FROM_ISR can only be called from an ISR to receive data
- * from a queue that is being used from within a co-routine (a co-routine
- * posted to the queue).
+ * crQUEUE_RECEIVE_FROM_ISR 只能从 ISR 调用，用于从协程内使用的队列
+ * （由协程投递数据的队列）接收数据。
  *
- * See the co-routine section of the WEB documentation for information on
- * passing data between tasks and co-routines and between ISR's and
- * co-routines.
+ * 关于在任务与协程之间以及 ISR 与协程之间传递数据的信息，
+ * 请参见 WEB 文档中的协程章节。
  *
- * @param xQueue The handle to the queue on which the item is to be posted.
+ * @param xQueue 数据项将要投递到的队列句柄。
  *
- * @param pvBuffer A pointer to a buffer into which the received item will be
- * placed.  The size of the items the queue will hold was defined when the
- * queue was created, so this many bytes will be copied from the queue into
- * pvBuffer.
+ * @param pvBuffer 指向接收数据项所要放入的缓冲区的指针。
+ * 队列可容纳数据项的大小在创建队列时已经定义，因此会从队列
+ * 复制这么多字节到 pvBuffer。
  *
- * @param pxCoRoutineWoken A co-routine may be blocked waiting for space to become
- * available on the queue.  If crQUEUE_RECEIVE_FROM_ISR causes such a
- * co-routine to unblock *pxCoRoutineWoken will get set to pdTRUE, otherwise
- * *pxCoRoutineWoken will remain unchanged.
+ * @param pxCoRoutineWoken 协程可能阻塞等待队列空间变为可用。
+ * 若 crQUEUE_RECEIVE_FROM_ISR 导致这样的协程解除阻塞，
+ * *pxCoRoutineWoken 将被设为 pdTRUE；否则 *pxCoRoutineWoken 保持不变。
  *
- * @return pdTRUE an item was successfully received from the queue, otherwise
- * pdFALSE.
+ * @return 若成功从队列接收到一个数据项则返回 pdTRUE，否则
+ * 返回 pdFALSE。
  *
- * Example usage:
+ * 示例用法：
  * @code{c}
- * // A co-routine that posts a character to a queue then blocks for a fixed
- * // period.  The character is incremented each time.
+ * // 一个先向队列投递字符、然后阻塞固定时间的协程。
+ * // 每次字符都会递增。
  * static void vSendingCoRoutine( CoRoutineHandle_t xHandle, UBaseType_t uxIndex )
  * {
- * // cChar holds its value while this co-routine is blocked and must therefore
- * // be declared static.
+ * // 该协程阻塞期间 cChar 需要保持其值，因此
+ * // 必须声明为 static。
  * static char cCharToTx = 'a';
  * BaseType_t xResult;
  *
- *   // All co-routines must start with a call to crSTART().
+ *   // 所有协程都必须以调用 crSTART() 开始。
  *   crSTART( xHandle );
  *
  *   for( ;; )
  *   {
- *       // Send the next character to the queue.
+ *       // 将下一个字符发送到队列。
  *       crQUEUE_SEND( xHandle, xCoRoutineQueue, &cCharToTx, NO_DELAY, &xResult );
  *
  *       if( xResult == pdPASS )
  *       {
- *           // The character was successfully posted to the queue.
+ *           // 字符已成功投递到队列。
  *       }
  *       else
  *       {
- *          // Could not post the character to the queue.
+ *          // 无法将字符投递到队列。
  *       }
  *
- *       // Enable the UART Tx interrupt to cause an interrupt in this
- *       // hypothetical UART.  The interrupt will obtain the character
- *       // from the queue and send it.
+ *       // 使能 UART 发送中断，以便在这个
+ *       // 假想的 UART 中产生中断。该中断将从队列
+ *       // 获取字符并发送。
  *       ENABLE_RX_INTERRUPT();
  *
- *       // Increment to the next character then block for a fixed period.
- *       // cCharToTx will maintain its value across the delay as it is
- *       // declared static.
+ *       // 递增到下一个字符，然后阻塞固定时间。
+ *       // cCharToTx 在延时期间会保持其值，因为它
+ *       // 声明为 static。
  *       cCharToTx++;
  *       if( cCharToTx > 'x' )
  *       {
@@ -699,11 +670,11 @@ void vCoRoutineSchedule( void );
  *       crDELAY( 100 );
  *   }
  *
- *   // All co-routines must end with a call to crEND().
+ *   // 所有协程都必须以调用 crEND() 结束。
  *   crEND();
  * }
  *
- * // An ISR that uses a queue to receive characters to send on a UART.
+ * // 一个使用队列接收字符并通过 UART 发送的 ISR。
  * void vUART_ISR( void )
  * {
  * char cCharToTx;
@@ -711,10 +682,10 @@ void vCoRoutineSchedule( void );
  *
  *   while( UART_TX_REG_EMPTY() )
  *   {
- *       // Are there any characters in the queue waiting to be sent?
- *       // xCRWokenByPost will automatically be set to pdTRUE if a co-routine
- *       // is woken by the post - ensuring that only a single co-routine is
- *       // woken no matter how many times we go around this loop.
+ *       // 队列中是否有等待发送的字符？
+ *       // 若某个协程被投递操作唤醒，xCRWokenByPost
+ *       // 会自动设为 pdTRUE——从而确保无论
+ *       // 该循环执行多少次，都只唤醒一个协程。
  *       if( crQUEUE_RECEIVE_FROM_ISR( pxQueue, &cCharToTx, &xCRWokenByPost ) )
  *       {
  *           SEND_CHARACTER( cCharToTx );
@@ -729,37 +700,36 @@ void vCoRoutineSchedule( void );
     xQueueCRReceiveFromISR( ( pxQueue ), ( pvBuffer ), ( pxCoRoutineWoken ) )
 
 /*
- * This function is intended for internal use by the co-routine macros only.
- * The macro nature of the co-routine implementation requires that the
- * prototype appears here.  The function should not be used by application
- * writers.
+ * 此函数仅供协程宏内部使用。
+ * 由于协程实现采用宏形式，该函数原型必须
+ * 出现在此处。应用程序编写者不应使用此函数。
  *
- * Removes the current co-routine from its ready list and places it in the
- * appropriate delayed list.
+ * 将当前协程从其就绪链表中移除，并放入
+ * 相应的延时链表。
  */
 void vCoRoutineAddToDelayedList( TickType_t xTicksToDelay,
                                  List_t * pxEventList );
 
 /*
- * This function is intended for internal use by the queue implementation only.
- * The function should not be used by application writers.
+ * 此函数仅供队列实现内部使用。
+ * 应用程序编写者不应使用此函数。
  *
- * Removes the highest priority co-routine from the event list and places it in
- * the pending ready list.
+ * 从事件链表中移除最高优先级的协程，并将其放入
+ * 待处理就绪链表。
  */
 BaseType_t xCoRoutineRemoveFromEventList( const List_t * pxEventList );
 
 
 /*
- * This function resets the internal state of the coroutine module. It must be
- * called by the application before restarting the scheduler.
+ * 此函数复位协程模块的内部状态。应用程序必须在
+ * 重新启动调度器之前调用它。
  */
 void vCoRoutineResetState( void ) PRIVILEGED_FUNCTION;
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF* 关闭自动缩进 */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON* 恢复自动缩进 */
 
-#endif /* CO_ROUTINE_H */
+#endif /* CO_ROUTINE_H 头文件包含保护 */

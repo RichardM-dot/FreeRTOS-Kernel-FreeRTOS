@@ -27,26 +27,9 @@
  */
 
 /*
- * Stream buffers are used to send a continuous stream of data from one task or
- * interrupt to another.  Their implementation is light weight, making them
- * particularly suited for interrupt to task and core to core communication
- * scenarios.
+ * 流缓冲用于在一个任务或中断与另一个任务或中断之间发送连续的数据流。其实现轻量，因此特别适合中断到任务以及核间通信等场景。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
- *
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  */
 
 #ifndef STREAM_BUFFER_H
@@ -56,30 +39,27 @@
     #error "include FreeRTOS.h must appear in source files before include stream_buffer.h"
 #endif
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #if defined( __cplusplus )
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
 /**
- * Type of stream buffer. For internal use only.
+ * 流缓冲的类型。仅供内部使用。
  */
 #define sbTYPE_STREAM_BUFFER             ( ( BaseType_t ) 0 )
 #define sbTYPE_MESSAGE_BUFFER            ( ( BaseType_t ) 1 )
 #define sbTYPE_STREAM_BATCHING_BUFFER    ( ( BaseType_t ) 2 )
 
 /**
- * Type by which stream buffers are referenced.  For example, a call to
- * xStreamBufferCreate() returns an StreamBufferHandle_t variable that can
- * then be used as a parameter to xStreamBufferSend(), xStreamBufferReceive(),
- * etc.
+ * 用于引用流缓冲的类型。例如，调用 xStreamBufferCreate() 会返回一个 StreamBufferHandle_t 变量，该变量随后可作为参数传给 xStreamBufferSend()、xStreamBufferReceive() 等函数。
  */
 struct StreamBufferDef_t;
 typedef struct StreamBufferDef_t * StreamBufferHandle_t;
 
 /**
- *  Type used as a stream buffer's optional callback.
+ * 用作流缓冲可选回调的类型。
  */
 typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuffer,
                                                  BaseType_t xIsInsideISR,
@@ -92,50 +72,21 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  * StreamBufferHandle_t xStreamBufferCreate( size_t xBufferSizeBytes, size_t xTriggerLevelBytes );
  * @endcode
  *
- * Creates a new stream buffer using dynamically allocated memory.  See
- * xStreamBufferCreateStatic() for a version that uses statically allocated
- * memory (memory that is allocated at compile time).
+ * 使用动态分配的内存创建新的流缓冲。若需使用静态分配内存（在编译时分配的内存）的版本，请参见 xStreamBufferCreateStatic()。
  *
- * configSUPPORT_DYNAMIC_ALLOCATION must be set to 1 or left undefined in
- * FreeRTOSConfig.h for xStreamBufferCreate() to be available.
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferCreate() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferCreate()，必须将 configSUPPORT_DYNAMIC_ALLOCATION 设置为 1，或将其保留为未定义状态。要在 FreeRTOSConfig.h 中使用 xStreamBufferCreate()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xBufferSizeBytes The total number of bytes the stream buffer will be
- * able to hold at any one time.
+ * @param xBufferSizeBytes 流缓冲在任意时刻能够容纳的总字节数。
  *
- * @param xTriggerLevelBytes The number of bytes that must be in the stream
- * buffer before a task that is blocked on the stream buffer to wait for data is
- * moved out of the blocked state.  For example, if a task is blocked on a read
- * of an empty stream buffer that has a trigger level of 1 then the task will be
- * unblocked when a single byte is written to the buffer or the task's block
- * time expires.  As another example, if a task is blocked on a read of an empty
- * stream buffer that has a trigger level of 10 then the task will not be
- * unblocked until the stream buffer contains at least 10 bytes or the task's
- * block time expires.  If a reading task's block time expires before the
- * trigger level is reached then the task will still receive however many bytes
- * are actually available.  Setting a trigger level of 0 will result in a
- * trigger level of 1 being used.  It is not valid to specify a trigger level
- * that is greater than the buffer size.
+ * @param xTriggerLevelBytes 在阻塞等待数据的任务被移出阻塞状态之前，流缓冲中必须达到的字节数。例如，若某任务阻塞读取一个触发水位为 1 的空流缓冲，则当向缓冲区写入一个字节或该任务的阻塞时间到期时，任务将被解除阻塞。再例如，若某任务阻塞读取一个触发水位为 10 的空流缓冲，则直到流缓冲中至少包含 10 个字节，或该任务的阻塞时间到期，任务才会被解除阻塞。如果读取任务的阻塞时间在达到触发水位之前到期，任务仍将接收到实际可用的字节。将触发水位设置为 0 将导致实际使用 1 作为触发水位。指定的触发水位不得大于缓冲区大小。
  *
- * @param pxSendCompletedCallback Callback invoked when number of bytes at least equal to
- * trigger level is sent to the stream buffer. If the parameter is NULL, it will use the default
- * implementation provided by sbSEND_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxSendCompletedCallback 当发送到流缓冲的字节数至少等于触发水位时调用的回调。如果该参数为 NULL，则使用 sbSEND_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @param pxReceiveCompletedCallback Callback invoked when more than zero bytes are read from a
- * stream buffer. If the parameter is NULL, it will use the default
- * implementation provided by sbRECEIVE_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxReceiveCompletedCallback 当从流缓冲读取的字节数大于零时调用的回调。如果该参数为 NULL，则使用 sbRECEIVE_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @return If NULL is returned, then the stream buffer cannot be created
- * because there is insufficient heap memory available for FreeRTOS to allocate
- * the stream buffer data structures and storage area.  A non-NULL value being
- * returned indicates that the stream buffer has been created successfully -
- * the returned value should be stored as the handle to the created stream
- * buffer.
+ * @return 如果返回 NULL，则表示无法创建流缓冲，原因是 FreeRTOS 没有足够的堆内存来分配流缓冲的数据结构和存储区域。返回非 NULL 值表示流缓冲已成功创建——返回的值应保存为所创建流缓冲的句柄。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  *
  * void vAFunction( void )
@@ -143,19 +94,17 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  * StreamBufferHandle_t xStreamBuffer;
  * const size_t xStreamBufferSizeBytes = 100, xTriggerLevel = 10;
  *
- *  // Create a stream buffer that can hold 100 bytes.  The memory used to hold
- *  // both the stream buffer structure and the data in the stream buffer is
- *  // allocated dynamically.
+ *  // 创建一个可容纳 100 字节的流缓冲。用于保存流缓冲结构体及流缓冲中数据的内存
+ *  // 均通过动态方式分配。
  *  xStreamBuffer = xStreamBufferCreate( xStreamBufferSizeBytes, xTriggerLevel );
  *
  *  if( xStreamBuffer == NULL )
  *  {
- *      // There was not enough heap memory space available to create the
- *      // stream buffer.
+ *      // 没有足够的堆内存空间来创建流缓冲。
  *  }
  *  else
  *  {
- *      // The stream buffer was created successfully and can now be used.
+ *      // 流缓冲创建成功，现在可以使用。
  *  }
  * }
  * @endcode
@@ -180,65 +129,34 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  *                                                 uint8_t *pucStreamBufferStorageArea,
  *                                                 StaticStreamBuffer_t *pxStaticStreamBuffer );
  * @endcode
- * Creates a new stream buffer using statically allocated memory.  See
- * xStreamBufferCreate() for a version that uses dynamically allocated memory.
+ * 使用静态分配的内存创建新的流缓冲。若需使用动态分配内存的版本，请参见 xStreamBufferCreate()。
  *
- * configSUPPORT_STATIC_ALLOCATION must be set to 1 in FreeRTOSConfig.h for
- * xStreamBufferCreateStatic() to be available. configUSE_STREAM_BUFFERS must be
- * set to 1 in for FreeRTOSConfig.h for xStreamBufferCreateStatic() to be
- * available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferCreateStatic()，必须将 configSUPPORT_STATIC_ALLOCATION 设置为 1。要在 FreeRTOSConfig.h 中使用 xStreamBufferCreateStatic()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xBufferSizeBytes The size, in bytes, of the buffer pointed to by the
- * pucStreamBufferStorageArea parameter.
+ * @param xBufferSizeBytes 由 pucStreamBufferStorageArea 参数所指向缓冲区的大小（字节数）。
  *
- * @param xTriggerLevelBytes The number of bytes that must be in the stream
- * buffer before a task that is blocked on the stream buffer to wait for data is
- * moved out of the blocked state.  For example, if a task is blocked on a read
- * of an empty stream buffer that has a trigger level of 1 then the task will be
- * unblocked when a single byte is written to the buffer or the task's block
- * time expires.  As another example, if a task is blocked on a read of an empty
- * stream buffer that has a trigger level of 10 then the task will not be
- * unblocked until the stream buffer contains at least 10 bytes or the task's
- * block time expires.  If a reading task's block time expires before the
- * trigger level is reached then the task will still receive however many bytes
- * are actually available.  Setting a trigger level of 0 will result in a
- * trigger level of 1 being used.  It is not valid to specify a trigger level
- * that is greater than the buffer size.
+ * @param xTriggerLevelBytes 在阻塞等待数据的任务被移出阻塞状态之前，流缓冲中必须达到的字节数。例如，若某任务阻塞读取一个触发水位为 1 的空流缓冲，则当向缓冲区写入一个字节或该任务的阻塞时间到期时，任务将被解除阻塞。再例如，若某任务阻塞读取一个触发水位为 10 的空流缓冲，则直到流缓冲中至少包含 10 个字节，或该任务的阻塞时间到期，任务才会被解除阻塞。如果读取任务的阻塞时间在达到触发水位之前到期，任务仍将接收到实际可用的字节。将触发水位设置为 0 将导致实际使用 1 作为触发水位。指定的触发水位不得大于缓冲区大小。
  *
- * @param pucStreamBufferStorageArea Must point to a uint8_t array that is at
- * least xBufferSizeBytes big.  This is the array to which streams are
- * copied when they are written to the stream buffer.
+ * @param pucStreamBufferStorageArea 必须指向一个大小至少为 xBufferSizeBytes 的 uint8_t 数组。当数据流写入流缓冲时，数据将复制到该数组。
  *
- * @param pxStaticStreamBuffer Must point to a variable of type
- * StaticStreamBuffer_t, which will be used to hold the stream buffer's data
- * structure.
+ * @param pxStaticStreamBuffer 必须指向一个 StaticStreamBuffer_t 类型的变量，用于保存流缓冲的数据结构。
  *
- * @param pxSendCompletedCallback Callback invoked when number of bytes at least equal to
- * trigger level is sent to the stream buffer. If the parameter is NULL, it will use the default
- * implementation provided by sbSEND_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxSendCompletedCallback 当发送到流缓冲的字节数至少等于触发水位时调用的回调。如果该参数为 NULL，则使用 sbSEND_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @param pxReceiveCompletedCallback Callback invoked when more than zero bytes are read from a
- * stream buffer. If the parameter is NULL, it will use the default
- * implementation provided by sbRECEIVE_COMPLETED macro. To enable the callback,
- * configUSE_SB_COMPLETED_CALLBACK must be set to 1 in FreeRTOSConfig.h.
+ * @param pxReceiveCompletedCallback 当从流缓冲读取的字节数大于零时调用的回调。如果该参数为 NULL，则使用 sbRECEIVE_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @return If the stream buffer is created successfully then a handle to the
- * created stream buffer is returned. If either pucStreamBufferStorageArea or
- * pxStaticstreamBuffer are NULL then NULL is returned.
+ * @return 如果流缓冲创建成功，则返回所创建流缓冲的句柄。如果 pucStreamBufferStorageArea 或 pxStaticStreamBuffer 为 NULL，则返回 NULL。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  *
- * // Used to dimension the array used to hold the streams.  The available space
- * // will actually be one less than this, so 999.
- #define STORAGE_SIZE_BYTES 1000
+ * // 用于指定保存数据流的数组大小。实际可用空间将比该值少 1，因此为 999。
+ * #define STORAGE_SIZE_BYTES 1000
  *
- * // Defines the memory that will actually hold the streams within the stream
- * // buffer.
+ * // 定义实际用于保存流缓冲中数据流的内存。
  * static uint8_t ucStorageBuffer[ STORAGE_SIZE_BYTES ];
  *
- * // The variable used to hold the stream buffer structure.
+ * // 用于保存流缓冲结构体的变量。
  * StaticStreamBuffer_t xStreamBufferStruct;
  *
  * void MyFunction( void )
@@ -251,11 +169,11 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  *                                             ucStorageBuffer,
  *                                             &xStreamBufferStruct );
  *
- *  // As neither the pucStreamBufferStorageArea or pxStaticStreamBuffer
- *  // parameters were NULL, xStreamBuffer will not be NULL, and can be used to
- *  // reference the created stream buffer in other stream buffer API calls.
+ *  // 由于 pucStreamBufferStorageArea 和 pxStaticStreamBuffer 参数均不为 NULL，
+ *  // xStreamBuffer 不会为 NULL，可用于在其他流缓冲 API 调用中引用
+ *  // 已创建的流缓冲。
  *
- *  // Other code that uses the stream buffer can go here.
+ *  // 使用该流缓冲的其他代码可放在此处。
  * }
  *
  * @endcode
@@ -278,50 +196,25 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  * StreamBufferHandle_t xStreamBatchingBufferCreate( size_t xBufferSizeBytes, size_t xTriggerLevelBytes );
  * @endcode
  *
- * Creates a new stream batching buffer using dynamically allocated memory.  See
- * xStreamBatchingBufferCreateStatic() for a version that uses statically
- * allocated memory (memory that is allocated at compile time).
+ * 使用动态分配的内存创建新的流批量缓冲。若需使用静态分配内存（在编译时分配的内存）的版本，请参见 xStreamBatchingBufferCreateStatic()。
  *
- * configSUPPORT_DYNAMIC_ALLOCATION must be set to 1 or left undefined in
- * FreeRTOSConfig.h for xStreamBatchingBufferCreate() to be available.
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBatchingBufferCreate() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBatchingBufferCreate()，必须将 configSUPPORT_DYNAMIC_ALLOCATION 设置为 1，或将其保留为未定义状态。要在 FreeRTOSConfig.h 中使用 xStreamBatchingBufferCreate()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * The difference between a stream buffer and a stream batching buffer is when
- * a task performs read on a non-empty buffer:
- * - The task reading from a non-empty stream buffer returns immediately
- *   regardless of the amount of data in the buffer.
- * - The task reading from a non-empty steam batching buffer blocks until the
- *   amount of data in the buffer exceeds the trigger level or the block time
- *   expires.
+ * 流缓冲与流批量缓冲的区别在于任务对非空缓冲区执行读取时的行为：
+ * - 从非空流缓冲读取的任务立即返回，无论缓冲区中的数据量多少。
+ * - 从非空流批量缓冲读取的任务将阻塞，直到缓冲区中的数据量超过触发水位，或阻塞时间到期。
  *
- * @param xBufferSizeBytes The total number of bytes the stream batching buffer
- * will be able to hold at any one time.
+ * @param xBufferSizeBytes 流批量缓冲在任意时刻能够容纳的总字节数。
  *
- * @param xTriggerLevelBytes The number of bytes that must be in the stream
- * batching buffer to unblock a task calling xStreamBufferReceive before the
- * block time expires.
+ * @param xTriggerLevelBytes 在阻塞时间到期之前，为使调用 xStreamBufferReceive 的任务解除阻塞，流批量缓冲中必须达到的字节数。
  *
- * @param pxSendCompletedCallback Callback invoked when number of bytes at least
- * equal to trigger level is sent to the stream batching buffer. If the
- * parameter is NULL, it will use the default implementation provided by
- * sbSEND_COMPLETED macro. To enable the callback, configUSE_SB_COMPLETED_CALLBACK
- * must be set to 1 in FreeRTOSConfig.h.
+ * @param pxSendCompletedCallback 当发送到流批量缓冲的字节数至少等于触发水位时调用的回调。如果该参数为 NULL，则使用 sbSEND_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @param pxReceiveCompletedCallback Callback invoked when more than zero bytes
- * are read from a stream batching buffer. If the parameter is NULL, it will use
- * the default implementation provided by sbRECEIVE_COMPLETED macro. To enable
- * the callback, configUSE_SB_COMPLETED_CALLBACK must be set to 1 in
- * FreeRTOSConfig.h.
+ * @param pxReceiveCompletedCallback 当从流批量缓冲读取的字节数大于零时调用的回调。如果该参数为 NULL，则使用 sbRECEIVE_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @return If NULL is returned, then the stream batching buffer cannot be created
- * because there is insufficient heap memory available for FreeRTOS to allocate
- * the stream batching buffer data structures and storage area.  A non-NULL value
- * being returned indicates that the stream batching buffer has been created
- * successfully - the returned value should be stored as the handle to the
- * created stream batching buffer.
+ * @return 如果返回 NULL，则表示无法创建流批量缓冲，原因是 FreeRTOS 没有足够的堆内存来分配流批量缓冲的数据结构和存储区域。返回非 NULL 值表示流批量缓冲已成功创建——返回的值应保存为所创建流批量缓冲的句柄。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  *
  * void vAFunction( void )
@@ -329,19 +222,17 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  * StreamBufferHandle_t xStreamBatchingBuffer;
  * const size_t xStreamBufferSizeBytes = 100, xTriggerLevel = 10;
  *
- *  // Create a stream batching buffer that can hold 100 bytes.  The memory used
- *  // to hold both the stream batching buffer structure and the data in the stream
- *  // batching buffer is allocated dynamically.
+ *  // 创建一个可容纳 100 字节的流批量缓冲。用于保存流批量缓冲结构体及其
+ *  // 数据的内存均通过动态方式分配。
  *  xStreamBatchingBuffer = xStreamBatchingBufferCreate( xStreamBufferSizeBytes, xTriggerLevel );
  *
  *  if( xStreamBatchingBuffer == NULL )
  *  {
- *      // There was not enough heap memory space available to create the
- *      // stream batching buffer.
+ *      // 没有足够的堆内存空间来创建流批量缓冲。
  *  }
  *  else
  *  {
- *      // The stream batching buffer was created successfully and can now be used.
+ *      // 流批量缓冲创建成功，现在可以使用。
  *  }
  * }
  * @endcode
@@ -366,66 +257,38 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  *                                                         uint8_t *pucStreamBufferStorageArea,
  *                                                         StaticStreamBuffer_t *pxStaticStreamBuffer );
  * @endcode
- * Creates a new stream batching buffer using statically allocated memory.  See
- * xStreamBatchingBufferCreate() for a version that uses dynamically allocated
- * memory.
+ * 使用静态分配的内存创建新的流批量缓冲。若需使用动态分配内存的版本，请参见 xStreamBatchingBufferCreate()。
  *
- * configSUPPORT_STATIC_ALLOCATION must be set to 1 in FreeRTOSConfig.h for
- * xStreamBatchingBufferCreateStatic() to be available. configUSE_STREAM_BUFFERS
- * must be set to 1 in for FreeRTOSConfig.h for xStreamBatchingBufferCreateStatic()
- * to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBatchingBufferCreateStatic()，必须将 configSUPPORT_STATIC_ALLOCATION 设置为 1。要在 FreeRTOSConfig.h 中使用 xStreamBatchingBufferCreateStatic()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * The difference between a stream buffer and a stream batching buffer is when
- * a task performs read on a non-empty buffer:
- * - The task reading from a non-empty stream buffer returns immediately
- *   regardless of the amount of data in the buffer.
- * - The task reading from a non-empty steam batching buffer blocks until the
- *   amount of data in the buffer exceeds the trigger level or the block time
- *   expires.
+ * 流缓冲与流批量缓冲的区别在于任务对非空缓冲区执行读取时的行为：
+ * - 从非空流缓冲读取的任务立即返回，无论缓冲区中的数据量多少。
+ * - 从非空流批量缓冲读取的任务将阻塞，直到缓冲区中的数据量超过触发水位，或阻塞时间到期。
  *
- * @param xBufferSizeBytes The size, in bytes, of the buffer pointed to by the
- * pucStreamBufferStorageArea parameter.
+ * @param xBufferSizeBytes 由 pucStreamBufferStorageArea 参数所指向缓冲区的大小（字节数）。
  *
- * @param xTriggerLevelBytes The number of bytes that must be in the stream
- * batching buffer to unblock a task calling xStreamBufferReceive before the
- * block time expires.
+ * @param xTriggerLevelBytes 在阻塞时间到期之前，为使调用 xStreamBufferReceive 的任务解除阻塞，流批量缓冲中必须达到的字节数。
  *
- * @param pucStreamBufferStorageArea Must point to a uint8_t array that is at
- * least xBufferSizeBytes big.  This is the array to which streams are
- * copied when they are written to the stream batching buffer.
+ * @param pucStreamBufferStorageArea 必须指向一个大小至少为 xBufferSizeBytes 的 uint8_t 数组。当数据流写入流批量缓冲时，数据将复制到该数组。
  *
- * @param pxStaticStreamBuffer Must point to a variable of type
- * StaticStreamBuffer_t, which will be used to hold the stream batching buffer's
- * data structure.
+ * @param pxStaticStreamBuffer 必须指向一个 StaticStreamBuffer_t 类型的变量，用于保存流批量缓冲的数据结构。
  *
- * @param pxSendCompletedCallback Callback invoked when number of bytes at least
- * equal to trigger level is sent to the stream batching buffer. If the parameter
- * is NULL, it will use the default implementation provided by sbSEND_COMPLETED
- * macro. To enable the callback, configUSE_SB_COMPLETED_CALLBACK must be set to
- * 1 in FreeRTOSConfig.h.
+ * @param pxSendCompletedCallback 当发送到流批量缓冲的字节数至少等于触发水位时调用的回调。如果该参数为 NULL，则使用 sbSEND_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @param pxReceiveCompletedCallback Callback invoked when more than zero bytes
- * are read from a stream batching buffer. If the parameter is NULL, it will use
- * the default implementation provided by sbRECEIVE_COMPLETED macro. To enable
- * the callback, configUSE_SB_COMPLETED_CALLBACK must be set to 1 in
- * FreeRTOSConfig.h.
+ * @param pxReceiveCompletedCallback 当从流批量缓冲读取的字节数大于零时调用的回调。如果该参数为 NULL，则使用 sbRECEIVE_COMPLETED 宏提供的默认实现。要启用该回调，必须在 FreeRTOSConfig.h 中将 configUSE_SB_COMPLETED_CALLBACK 设置为 1。
  *
- * @return If the stream batching buffer is created successfully then a handle
- * to the created stream batching buffer is returned. If either pucStreamBufferStorageArea
- * or pxStaticstreamBuffer are NULL then NULL is returned.
+ * @return 如果流批量缓冲创建成功，则返回所创建流批量缓冲的句柄。如果 pucStreamBufferStorageArea 或 pxStaticStreamBuffer 为 NULL，则返回 NULL。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  *
- * // Used to dimension the array used to hold the streams.  The available space
- * // will actually be one less than this, so 999.
+ * // 用于指定保存数据流的数组大小。实际可用空间将比该值少 1，因此为 999。
  * #define STORAGE_SIZE_BYTES 1000
  *
- * // Defines the memory that will actually hold the streams within the stream
- * // batching buffer.
+ * // 定义实际用于保存流批量缓冲中数据流的内存。
  * static uint8_t ucStorageBuffer[ STORAGE_SIZE_BYTES ];
  *
- * // The variable used to hold the stream batching buffer structure.
+ * // 用于保存流批量缓冲结构体的变量。
  * StaticStreamBuffer_t xStreamBufferStruct;
  *
  * void MyFunction( void )
@@ -438,12 +301,11 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  *                                                             ucStorageBuffer,
  *                                                             &xStreamBufferStruct );
  *
- *  // As neither the pucStreamBufferStorageArea or pxStaticStreamBuffer
- *  // parameters were NULL, xStreamBatchingBuffer will not be NULL, and can be
- *  // used to reference the created stream batching buffer in other stream
- *  // buffer API calls.
+ *  // 由于 pucStreamBufferStorageArea 和 pxStaticStreamBuffer 参数均不为 NULL，
+ *  // xStreamBatchingBuffer 不会为 NULL，可用于在其他流缓冲 API 调用中
+ *  // 引用已创建的流批量缓冲。
  *
- *  // Other code that uses the stream batching buffer can go here.
+ *  // 使用该流批量缓冲的其他代码可放在此处。
  * }
  *
  * @endcode
@@ -468,22 +330,17 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  *                                           StaticStreamBuffer_t ** ppxStaticStreamBuffer );
  * @endcode
  *
- * Retrieve pointers to a statically created stream buffer's data structure
- * buffer and storage area buffer. These are the same buffers that are supplied
- * at the time of creation.
+ * 检索静态创建的流缓冲的数据结构缓冲区和存储区缓冲区的指针。这些缓冲区与创建时提供的缓冲区相同。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferGetStaticBuffers() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferGetStaticBuffers()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The stream buffer for which to retrieve the buffers.
+ * @param xStreamBuffer 要检索其缓冲区的流缓冲。
  *
- * @param ppucStreamBufferStorageArea Used to return a pointer to the stream
- * buffer's storage area buffer.
+ * @param ppucStreamBufferStorageArea 用于返回指向流缓冲存储区缓冲区的指针。
  *
- * @param ppxStaticStreamBuffer Used to return a pointer to the stream
- * buffer's data structure buffer.
+ * @param ppxStaticStreamBuffer 用于返回指向流缓冲数据结构缓冲区的指针。
  *
- * @return pdTRUE if buffers were retrieved, pdFALSE otherwise.
+ * @return 如果成功检索到缓冲区则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xStreamBufferGetStaticBuffers xStreamBufferGetStaticBuffers
  * \ingroup StreamBufferManagement
@@ -492,7 +349,7 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
     BaseType_t xStreamBufferGetStaticBuffers( StreamBufferHandle_t xStreamBuffer,
                                               uint8_t ** ppucStreamBufferStorageArea,
                                               StaticStreamBuffer_t ** ppxStaticStreamBuffer ) PRIVILEGED_FUNCTION;
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 配置项 */
 
 /**
  * stream_buffer.h
@@ -504,57 +361,25 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  *                           TickType_t xTicksToWait );
  * @endcode
  *
- * Sends bytes to a stream buffer.  The bytes are copied into the stream buffer.
+ * 向流缓冲发送字节。这些字节将被复制到流缓冲中。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xStreamBufferSend() to write to a stream buffer from a task.  Use
- * xStreamBufferSendFromISR() to write to a stream buffer from an interrupt
- * service routine (ISR).
+ * 使用 xStreamBufferSend() 从任务向流缓冲写入。使用 xStreamBufferSendFromISR() 从中断服务程序（ISR）向流缓冲写入。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferSend() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferSend()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer to which a stream is
- * being sent.
+ * @param xStreamBuffer 要将数据流发送到的流缓冲的句柄。
  *
- * @param pvTxData A pointer to the buffer that holds the bytes to be copied
- * into the stream buffer.
+ * @param pvTxData 指向包含要复制到流缓冲中的字节的缓冲区的指针。
  *
- * @param xDataLengthBytes   The maximum number of bytes to copy from pvTxData
- * into the stream buffer.
+ * @param xDataLengthBytes 从 pvTxData 复制到流缓冲中的最大字节数。
  *
- * @param xTicksToWait The maximum amount of time the task should remain in the
- * Blocked state to wait for enough space to become available in the stream
- * buffer, should the stream buffer contain too little space to hold the
- * another xDataLengthBytes bytes.  The block time is specified in tick periods,
- * so the absolute time it represents is dependent on the tick frequency.  The
- * macro pdMS_TO_TICKS() can be used to convert a time specified in milliseconds
- * into a time specified in ticks.  Setting xTicksToWait to portMAX_DELAY will
- * cause the task to wait indefinitely (without timing out), provided
- * INCLUDE_vTaskSuspend is set to 1 in FreeRTOSConfig.h.  If a task times out
- * before it can write all xDataLengthBytes into the buffer it will still write
- * as many bytes as possible.  A task does not use any CPU time when it is in
- * the blocked state.
+ * @param xTicksToWait 如果流缓冲中的空间不足以再容纳 xDataLengthBytes 个字节，任务应保持在阻塞状态以等待流缓冲中出现足够空间的最长时间。阻塞时间以时钟节拍周期为单位指定，因此其代表的绝对时间取决于时钟节拍频率。可使用 pdMS_TO_TICKS() 宏将按毫秒指定的时间转换为按时钟节拍指定的时间。将 xTicksToWait 设置为 portMAX_DELAY 将使任务无限期等待（不超时），前提是 FreeRTOSConfig.h 中将 INCLUDE_vTaskSuspend 设置为 1。如果任务在将全部 xDataLengthBytes 写入缓冲区之前超时，它仍将尽可能多地写入字节。任务处于阻塞状态时不占用任何 CPU 时间。
  *
- * @return The number of bytes written to the stream buffer.  If a task times
- * out before it can write all xDataLengthBytes into the buffer it will still
- * write as many bytes as possible.
+ * @return 写入流缓冲的字节数。如果任务在将全部 xDataLengthBytes 写入缓冲区之前超时，它仍将尽可能多地写入字节。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  * void vAFunction( StreamBufferHandle_t xStreamBuffer )
  * {
@@ -563,26 +388,22 @@ typedef void (* StreamBufferCallbackFunction_t)( StreamBufferHandle_t xStreamBuf
  * char *pcStringToSend = "String to send";
  * const TickType_t x100ms = pdMS_TO_TICKS( 100 );
  *
- *  // Send an array to the stream buffer, blocking for a maximum of 100ms to
- *  // wait for enough space to be available in the stream buffer.
+ *  // 向流缓冲发送一个数组，最多阻塞 100ms 以等待流缓冲中出现足够空间。
  *  xBytesSent = xStreamBufferSend( xStreamBuffer, ( void * ) ucArrayToSend, sizeof( ucArrayToSend ), x100ms );
  *
  *  if( xBytesSent != sizeof( ucArrayToSend ) )
  *  {
- *      // The call to xStreamBufferSend() times out before there was enough
- *      // space in the buffer for the data to be written, but it did
- *      // successfully write xBytesSent bytes.
+ *      // 对 xStreamBufferSend() 的调用在缓冲区中有足够空间写入数据之前超时，
+ *      // 但已成功写入 xBytesSent 个字节。
  *  }
  *
- *  // Send the string to the stream buffer.  Return immediately if there is not
- *  // enough space in the buffer.
+ *  // 将字符串发送到流缓冲。如果缓冲区中没有足够空间则立即返回。
  *  xBytesSent = xStreamBufferSend( xStreamBuffer, ( void * ) pcStringToSend, strlen( pcStringToSend ), 0 );
  *
  *  if( xBytesSent != strlen( pcStringToSend ) )
  *  {
- *      // The entire string could not be added to the stream buffer because
- *      // there was not enough free space in the buffer, but xBytesSent bytes
- *      // were sent.  Could try again to send the remaining bytes.
+ *      // 由于缓冲区中没有足够的空闲空间，整个字符串无法全部添加到流缓冲，
+ *      // 但已发送 xBytesSent 个字节。可以再次尝试发送剩余字节。
  *  }
  * }
  * @endcode
@@ -604,70 +425,36 @@ size_t xStreamBufferSend( StreamBufferHandle_t xStreamBuffer,
  *                                  BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * Interrupt safe version of the API function that sends a stream of bytes to
- * the stream buffer.
+ * 向流缓冲发送字节流的 API 函数的中断安全版本。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xStreamBufferSend() to write to a stream buffer from a task.  Use
- * xStreamBufferSendFromISR() to write to a stream buffer from an interrupt
- * service routine (ISR).
+ * 使用 xStreamBufferSend() 从任务向流缓冲写入。使用 xStreamBufferSendFromISR() 从中断服务程序（ISR）向流缓冲写入。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferSendFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferSendFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer to which a stream is
- * being sent.
+ * @param xStreamBuffer 要将数据流发送到的流缓冲的句柄。
  *
- * @param pvTxData A pointer to the data that is to be copied into the stream
- * buffer.
+ * @param pvTxData 指向要复制到流缓冲中的数据的指针。
  *
- * @param xDataLengthBytes The maximum number of bytes to copy from pvTxData
- * into the stream buffer.
+ * @param xDataLengthBytes 从 pvTxData 复制到流缓冲中的最大字节数。
  *
- * @param pxHigherPriorityTaskWoken  It is possible that a stream buffer will
- * have a task blocked on it waiting for data.  Calling
- * xStreamBufferSendFromISR() can make data available, and so cause a task that
- * was waiting for data to leave the Blocked state.  If calling
- * xStreamBufferSendFromISR() causes a task to leave the Blocked state, and the
- * unblocked task has a priority higher than the currently executing task (the
- * task that was interrupted), then, internally, xStreamBufferSendFromISR()
- * will set *pxHigherPriorityTaskWoken to pdTRUE.  If
- * xStreamBufferSendFromISR() sets this value to pdTRUE, then normally a
- * context switch should be performed before the interrupt is exited.  This will
- * ensure that the interrupt returns directly to the highest priority Ready
- * state task.  *pxHigherPriorityTaskWoken should be set to pdFALSE before it
- * is passed into the function.  See the example code below for an example.
+ * @param pxHigherPriorityTaskWoken 流缓冲上可能有任务阻塞等待数据。调用 xStreamBufferSendFromISR() 可使数据变为可用，从而使等待数据的任务离开阻塞状态。如果调用 xStreamBufferSendFromISR() 导致某任务离开阻塞状态，且被解除阻塞的任务优先级高于当前正在执行的任务（被中断的任务），则 xStreamBufferSendFromISR() 会在内部将 *pxHigherPriorityTaskWoken 设置为 pdTRUE。如果 xStreamBufferSendFromISR() 将该值设置为 pdTRUE，通常应在退出中断之前执行一次上下文切换。这将确保中断直接返回到优先级最高的就绪态任务。在传入函数之前，应将 *pxHigherPriorityTaskWoken 设置为 pdFALSE。示例参见下面的示例代码。
  *
- * @return The number of bytes actually written to the stream buffer, which will
- * be less than xDataLengthBytes if the stream buffer didn't have enough free
- * space for all the bytes to be written.
+ * @return 实际写入流缓冲的字节数；如果流缓冲没有足够的空闲空间写入全部字节，则该值小于 xDataLengthBytes。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
- * // A stream buffer that has already been created.
+ * // 一个已经创建好的流缓冲。
  * StreamBufferHandle_t xStreamBuffer;
  *
  * void vAnInterruptServiceRoutine( void )
  * {
  * size_t xBytesSent;
  * char *pcStringToSend = "String to send";
- * BaseType_t xHigherPriorityTaskWoken = pdFALSE; // Initialised to pdFALSE.
+ * BaseType_t xHigherPriorityTaskWoken = pdFALSE; // 初始化为 pdFALSE。
  *
- *  // Attempt to send the string to the stream buffer.
+ *  // 尝试将字符串发送到流缓冲。
  *  xBytesSent = xStreamBufferSendFromISR( xStreamBuffer,
  *                                         ( void * ) pcStringToSend,
  *                                         strlen( pcStringToSend ),
@@ -675,18 +462,15 @@ size_t xStreamBufferSend( StreamBufferHandle_t xStreamBuffer,
  *
  *  if( xBytesSent != strlen( pcStringToSend ) )
  *  {
- *      // There was not enough free space in the stream buffer for the entire
- *      // string to be written, ut xBytesSent bytes were written.
+ *      // 流缓冲中没有足够的空闲空间写入整个字符串，但已写入 xBytesSent 个字节。
  *  }
  *
- *  // If xHigherPriorityTaskWoken was set to pdTRUE inside
- *  // xStreamBufferSendFromISR() then a task that has a priority above the
- *  // priority of the currently executing task was unblocked and a context
- *  // switch should be performed to ensure the ISR returns to the unblocked
- *  // task.  In most FreeRTOS ports this is done by simply passing
- *  // xHigherPriorityTaskWoken into portYIELD_FROM_ISR(), which will test the
- *  // variables value, and perform the context switch if necessary.  Check the
- *  // documentation for the port in use for port specific instructions.
+ *  // 如果在 xStreamBufferSendFromISR() 内部将 xHigherPriorityTaskWoken 设置为 pdTRUE，
+ *  // 则说明有优先级高于当前正在执行任务的任务被解除阻塞，应执行上下文切换，
+ *  // 以确保 ISR 返回到被解除阻塞的任务。在大多数 FreeRTOS 移植层中，
+ *  // 只需将 xHigherPriorityTaskWoken 传给 portYIELD_FROM_ISR()，该宏会检查
+ *  // 该变量的值，并在需要时执行上下文切换。具体移植层相关说明请查阅
+ *  // 所用移植层的文档。
  *  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  * }
  * @endcode
@@ -708,57 +492,25 @@ size_t xStreamBufferSendFromISR( StreamBufferHandle_t xStreamBuffer,
  *                              TickType_t xTicksToWait );
  * @endcode
  *
- * Receives bytes from a stream buffer.
+ * 从流缓冲接收字节。
  *
- * ***NOTE***:  Uniquely among FreeRTOS objects, the stream buffer
- * implementation (so also the message buffer implementation, as message buffers
- * are built on top of stream buffers) assumes there is only one task or
- * interrupt that will write to the buffer (the writer), and only one task or
- * interrupt that will read from the buffer (the reader).  It is safe for the
- * writer and reader to be different tasks or interrupts, but, unlike other
- * FreeRTOS objects, it is not safe to have multiple different writers or
- * multiple different readers.  If there are to be multiple different writers
- * then the application writer must serialize calls to writing API functions
- * (such as xStreamBufferSend()).  Likewise, if there are to be multiple
- * different readers then the application writer must serialize calls to reading
- * API functions (such as xStreamBufferReceive()).  One way to achieve such
- * serialization in single core or SMP kernel is to place each API call inside a
- * critical section and use a block time of 0.
+ * ***注意***：在 FreeRTOS 各类对象中，流缓冲实现（以及构建于流缓冲之上的消息缓冲实现）的独特之处在于：它假定只有一个任务或中断会向缓冲区写入（写者），并且只有一个任务或中断会从缓冲区读取（读者）。写者与读者可以是不同的任务或中断，这一点是安全的；但与其他 FreeRTOS 对象不同，存在多个不同的写者或多个不同的读者时不安全。如果有多个不同的写者，应用编写者必须对写入 API 函数（例如 xStreamBufferSend()）的调用进行串行化。同样，如果有多个不同的读者，应用编写者必须对读取 API 函数（例如 xStreamBufferReceive()）的调用进行串行化。在单核或 SMP 内核中实现这种串行化的一种方法是：将每次 API 调用放入临界区，并使用为 0 的阻塞时间。
  *
- * Use xStreamBufferReceive() to read from a stream buffer from a task.  Use
- * xStreamBufferReceiveFromISR() to read from a stream buffer from an
- * interrupt service routine (ISR).
+ * 使用 xStreamBufferReceive() 从任务读取流缓冲。使用 xStreamBufferReceiveFromISR() 从中断服务程序（ISR）读取流缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferReceive() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferReceive()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer from which bytes are to
- * be received.
+ * @param xStreamBuffer 要接收其字节的流缓冲的句柄。
  *
- * @param pvRxData A pointer to the buffer into which the received bytes will be
- * copied.
+ * @param pvRxData 指向将复制所接收字节的缓冲区的指针。
  *
- * @param xBufferLengthBytes The length of the buffer pointed to by the
- * pvRxData parameter.  This sets the maximum number of bytes to receive in one
- * call.  xStreamBufferReceive will return as many bytes as possible up to a
- * maximum set by xBufferLengthBytes.
+ * @param xBufferLengthBytes pvRxData 参数所指向缓冲区的长度。这设置了一次调用中可接收的最大字节数。xStreamBufferReceive 将在 xBufferLengthBytes 设置的上限内返回尽可能多的字节。
  *
- * @param xTicksToWait The maximum amount of time the task should remain in the
- * Blocked state to wait for data to become available if the stream buffer is
- * empty.  xStreamBufferReceive() will return immediately if xTicksToWait is
- * zero.  The block time is specified in tick periods, so the absolute time it
- * represents is dependent on the tick frequency.  The macro pdMS_TO_TICKS() can
- * be used to convert a time specified in milliseconds into a time specified in
- * ticks.  Setting xTicksToWait to portMAX_DELAY will cause the task to wait
- * indefinitely (without timing out), provided INCLUDE_vTaskSuspend is set to 1
- * in FreeRTOSConfig.h.  A task does not use any CPU time when it is in the
- * Blocked state.
+ * @param xTicksToWait 如果流缓冲为空，任务应保持在阻塞状态以等待数据变为可用的最长时间。如果 xTicksToWait 为零，xStreamBufferReceive() 将立即返回。阻塞时间以时钟节拍周期为单位指定，因此其代表的绝对时间取决于时钟节拍频率。可使用 pdMS_TO_TICKS() 宏将按毫秒指定的时间转换为按时钟节拍指定的时间。将 xTicksToWait 设置为 portMAX_DELAY 将使任务无限期等待（不超时），前提是 FreeRTOSConfig.h 中将 INCLUDE_vTaskSuspend 设置为 1。任务处于阻塞状态时不占用任何 CPU 时间。
  *
- * @return The number of bytes actually read from the stream buffer, which will
- * be less than xBufferLengthBytes if the call to xStreamBufferReceive() timed
- * out before xBufferLengthBytes were available.
+ * @return 实际从流缓冲读取的字节数；如果对 xStreamBufferReceive() 的调用在获得 xBufferLengthBytes 个字节之前超时，则该值小于 xBufferLengthBytes。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
  * void vAFunction( StreamBufferHandle_t xStreamBuffer )
  * {
@@ -766,10 +518,9 @@ size_t xStreamBufferSendFromISR( StreamBufferHandle_t xStreamBuffer,
  * size_t xReceivedBytes;
  * const TickType_t xBlockTime = pdMS_TO_TICKS( 20 );
  *
- *  // Receive up to another sizeof( ucRxData ) bytes from the stream buffer.
- *  // Wait in the Blocked state (so not using any CPU processing time) for a
- *  // maximum of 20ms for the full sizeof( ucRxData ) number of bytes to be
- *  // available.
+ *  // 从流缓冲再接收最多 sizeof( ucRxData ) 个字节。
+ *  // 在阻塞状态（不占用任何 CPU 处理时间）最多等待 20ms，
+ *  // 以等待完整的 sizeof( ucRxData ) 个字节可用。
  *  xReceivedBytes = xStreamBufferReceive( xStreamBuffer,
  *                                         ( void * ) ucRxData,
  *                                         sizeof( ucRxData ),
@@ -777,8 +528,7 @@ size_t xStreamBufferSendFromISR( StreamBufferHandle_t xStreamBuffer,
  *
  *  if( xReceivedBytes > 0 )
  *  {
- *      // A ucRxData contains another xReceivedBytes bytes of data, which can
- *      // be processed here....
+ *      // ucRxData 中包含另外 xReceivedBytes 个字节的数据，可在此处处理...
  *  }
  * }
  * @endcode
@@ -800,55 +550,34 @@ size_t xStreamBufferReceive( StreamBufferHandle_t xStreamBuffer,
  *                                     BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * An interrupt safe version of the API function that receives bytes from a
- * stream buffer.
+ * 从流缓冲接收字节的 API 函数的中断安全版本。
  *
- * Use xStreamBufferReceive() to read bytes from a stream buffer from a task.
- * Use xStreamBufferReceiveFromISR() to read bytes from a stream buffer from an
- * interrupt service routine (ISR).
+ * 使用 xStreamBufferReceive() 从任务读取流缓冲中的字节。使用 xStreamBufferReceiveFromISR() 从中断服务程序（ISR）读取流缓冲中的字节。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferReceiveFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferReceiveFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer from which a stream
- * is being received.
+ * @param xStreamBuffer 要接收其数据流的流缓冲的句柄。
  *
- * @param pvRxData A pointer to the buffer into which the received bytes are
- * copied.
+ * @param pvRxData 指向将复制所接收字节的缓冲区的指针。
  *
- * @param xBufferLengthBytes The length of the buffer pointed to by the
- * pvRxData parameter.  This sets the maximum number of bytes to receive in one
- * call.  xStreamBufferReceive will return as many bytes as possible up to a
- * maximum set by xBufferLengthBytes.
+ * @param xBufferLengthBytes pvRxData 参数所指向缓冲区的长度。这设置了一次调用中可接收的最大字节数。xStreamBufferReceive 将在 xBufferLengthBytes 设置的上限内返回尽可能多的字节。
  *
- * @param pxHigherPriorityTaskWoken  It is possible that a stream buffer will
- * have a task blocked on it waiting for space to become available.  Calling
- * xStreamBufferReceiveFromISR() can make space available, and so cause a task
- * that is waiting for space to leave the Blocked state.  If calling
- * xStreamBufferReceiveFromISR() causes a task to leave the Blocked state, and
- * the unblocked task has a priority higher than the currently executing task
- * (the task that was interrupted), then, internally,
- * xStreamBufferReceiveFromISR() will set *pxHigherPriorityTaskWoken to pdTRUE.
- * If xStreamBufferReceiveFromISR() sets this value to pdTRUE, then normally a
- * context switch should be performed before the interrupt is exited.  That will
- * ensure the interrupt returns directly to the highest priority Ready state
- * task.  *pxHigherPriorityTaskWoken should be set to pdFALSE before it is
- * passed into the function.  See the code example below for an example.
+ * @param pxHigherPriorityTaskWoken 流缓冲上可能有任务阻塞等待空间变为可用。调用 xStreamBufferReceiveFromISR() 可使空间变为可用，从而使等待空间的任务离开阻塞状态。如果调用 xStreamBufferReceiveFromISR() 导致某任务离开阻塞状态，且被解除阻塞的任务优先级高于当前正在执行的任务（被中断的任务），则 xStreamBufferReceiveFromISR() 会在内部将 *pxHigherPriorityTaskWoken 设置为 pdTRUE。如果 xStreamBufferReceiveFromISR() 将该值设置为 pdTRUE，通常应在退出中断之前执行一次上下文切换。这将确保中断直接返回到优先级最高的就绪态任务。在传入函数之前，应将 *pxHigherPriorityTaskWoken 设置为 pdFALSE。示例参见下面的代码示例。
  *
- * @return The number of bytes read from the stream buffer, if any.
+ * @return 从流缓冲读取的字节数（如果有）。
  *
- * Example use:
+ * 示例用法：
  * @code{c}
- * // A stream buffer that has already been created.
+ * // 一个已经创建好的流缓冲。
  * StreamBufferHandle_t xStreamBuffer;
  *
  * void vAnInterruptServiceRoutine( void )
  * {
  * uint8_t ucRxData[ 20 ];
  * size_t xReceivedBytes;
- * BaseType_t xHigherPriorityTaskWoken = pdFALSE;  // Initialised to pdFALSE.
+ * BaseType_t xHigherPriorityTaskWoken = pdFALSE;  // 初始化为 pdFALSE。
  *
- *  // Receive the next stream from the stream buffer.
+ *  // 从流缓冲接收下一个数据流。
  *  xReceivedBytes = xStreamBufferReceiveFromISR( xStreamBuffer,
  *                                                ( void * ) ucRxData,
  *                                                sizeof( ucRxData ),
@@ -856,18 +585,16 @@ size_t xStreamBufferReceive( StreamBufferHandle_t xStreamBuffer,
  *
  *  if( xReceivedBytes > 0 )
  *  {
- *      // ucRxData contains xReceivedBytes read from the stream buffer.
- *      // Process the stream here....
+ *      // ucRxData 中包含从流缓冲读取的 xReceivedBytes 个字节。
+ *      // 在此处处理该数据流...
  *  }
  *
- *  // If xHigherPriorityTaskWoken was set to pdTRUE inside
- *  // xStreamBufferReceiveFromISR() then a task that has a priority above the
- *  // priority of the currently executing task was unblocked and a context
- *  // switch should be performed to ensure the ISR returns to the unblocked
- *  // task.  In most FreeRTOS ports this is done by simply passing
- *  // xHigherPriorityTaskWoken into portYIELD_FROM_ISR(), which will test the
- *  // variables value, and perform the context switch if necessary.  Check the
- *  // documentation for the port in use for port specific instructions.
+ *  // 如果在 xStreamBufferReceiveFromISR() 内部将 xHigherPriorityTaskWoken 设置为 pdTRUE，
+ *  // 则说明有优先级高于当前正在执行任务的任务被解除阻塞，应执行上下文切换，
+ *  // 以确保 ISR 返回到被解除阻塞的任务。在大多数 FreeRTOS 移植层中，
+ *  // 只需将 xHigherPriorityTaskWoken 传给 portYIELD_FROM_ISR()，该宏会检查
+ *  // 该变量的值，并在需要时执行上下文切换。具体移植层相关说明请查阅
+ *  // 所用移植层的文档。
  *  portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
  * }
  * @endcode
@@ -886,18 +613,13 @@ size_t xStreamBufferReceiveFromISR( StreamBufferHandle_t xStreamBuffer,
  * void vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Deletes a stream buffer that was previously created using a call to
- * xStreamBufferCreate() or xStreamBufferCreateStatic().  If the stream
- * buffer was created using dynamic memory (that is, by xStreamBufferCreate()),
- * then the allocated memory is freed.
+ * 删除先前通过调用 xStreamBufferCreate() 或 xStreamBufferCreateStatic() 创建的流缓冲。如果流缓冲是使用动态内存创建的（即通过 xStreamBufferCreate() 创建），则释放已分配的内存。
  *
- * A stream buffer handle must not be used after the stream buffer has been
- * deleted.
+ * 流缓冲被删除后，不得再使用其句柄。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * vStreamBufferDelete() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 vStreamBufferDelete()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer to be deleted.
+ * @param xStreamBuffer 要删除的流缓冲的句柄。
  *
  * \defgroup vStreamBufferDelete vStreamBufferDelete
  * \ingroup StreamBufferManagement
@@ -911,16 +633,13 @@ void vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTI
  * BaseType_t xStreamBufferIsFull( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Queries a stream buffer to see if it is full.  A stream buffer is full if it
- * does not have any free space, and therefore cannot accept any more data.
+ * 查询流缓冲是否已满。如果流缓冲没有任何空闲空间，因而不能再接收任何数据，则流缓冲为满。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferIsFull() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferIsFull()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being queried.
+ * @param xStreamBuffer 要查询的流缓冲的句柄。
  *
- * @return If the stream buffer is full then pdTRUE is returned.  Otherwise
- * pdFALSE is returned.
+ * @return 如果流缓冲已满则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xStreamBufferIsFull xStreamBufferIsFull
  * \ingroup StreamBufferManagement
@@ -934,16 +653,13 @@ BaseType_t xStreamBufferIsFull( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_
  * BaseType_t xStreamBufferIsEmpty( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Queries a stream buffer to see if it is empty.  A stream buffer is empty if
- * it does not contain any data.
+ * 查询流缓冲是否为空。如果流缓冲不包含任何数据，则流缓冲为空。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferIsEmpty() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferIsEmpty()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being queried.
+ * @param xStreamBuffer 要查询的流缓冲的句柄。
  *
- * @return If the stream buffer is empty then pdTRUE is returned.  Otherwise
- * pdFALSE is returned.
+ * @return 如果流缓冲为空则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xStreamBufferIsEmpty xStreamBufferIsEmpty
  * \ingroup StreamBufferManagement
@@ -957,23 +673,15 @@ BaseType_t xStreamBufferIsEmpty( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED
  * BaseType_t xStreamBufferReset( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Resets a stream buffer to its initial, empty, state.  Any data that was in
- * the stream buffer is discarded.  A stream buffer can only be reset if there
- * are no tasks blocked waiting to either send to or receive from the stream
- * buffer.
+ * 将流缓冲重置为初始的空状态。流缓冲中原有的任何数据都将被丢弃。只有在没有任务阻塞等待向流缓冲发送或从流缓冲接收时，才能重置流缓冲。
  *
- * Use xStreamBufferReset() to reset a stream buffer from a task.
- * Use xStreamBufferResetFromISR() to reset a stream buffer from an
- * interrupt service routine (ISR).
+ * 使用 xStreamBufferReset() 从任务重置流缓冲。使用 xStreamBufferResetFromISR() 从中断服务程序（ISR）重置流缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferReset() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferReset()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being reset.
+ * @param xStreamBuffer 要重置的流缓冲的句柄。
  *
- * @return If the stream buffer is reset then pdPASS is returned.  If there was
- * a task blocked waiting to send to or read from the stream buffer then the
- * stream buffer is not reset and pdFAIL is returned.
+ * @return 如果流缓冲已重置则返回 pdPASS。如果有任务阻塞等待向流缓冲发送或从流缓冲读取，则流缓冲不会被重置，并返回 pdFAIL。
  *
  * \defgroup xStreamBufferReset xStreamBufferReset
  * \ingroup StreamBufferManagement
@@ -987,25 +695,17 @@ BaseType_t xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_F
  * BaseType_t xStreamBufferResetFromISR( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * An interrupt safe version of the API function that resets the stream buffer.
+ * 重置流缓冲的 API 函数的中断安全版本。
  *
- * Resets a stream buffer to its initial, empty, state.  Any data that was in
- * the stream buffer is discarded.  A stream buffer can only be reset if there
- * are no tasks blocked waiting to either send to or receive from the stream
- * buffer.
+ * 将流缓冲重置为初始的空状态。流缓冲中原有的任何数据都将被丢弃。只有在没有任务阻塞等待向流缓冲发送或从流缓冲接收时，才能重置流缓冲。
  *
- * Use xStreamBufferReset() to reset a stream buffer from a task.
- * Use xStreamBufferResetFromISR() to reset a stream buffer from an
- * interrupt service routine (ISR).
+ * 使用 xStreamBufferReset() 从任务重置流缓冲。使用 xStreamBufferResetFromISR() 从中断服务程序（ISR）重置流缓冲。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferResetFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferResetFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being reset.
+ * @param xStreamBuffer 要重置的流缓冲的句柄。
  *
- * @return If the stream buffer is reset then pdPASS is returned.  If there was
- * a task blocked waiting to send to or read from the stream buffer then the
- * stream buffer is not reset and pdFAIL is returned.
+ * @return 如果流缓冲已重置则返回 pdPASS。如果有任务阻塞等待向流缓冲发送或从流缓冲读取，则流缓冲不会被重置，并返回 pdFAIL。
  *
  * \defgroup xStreamBufferResetFromISR xStreamBufferResetFromISR
  * \ingroup StreamBufferManagement
@@ -1019,17 +719,13 @@ BaseType_t xStreamBufferResetFromISR( StreamBufferHandle_t xStreamBuffer ) PRIVI
  * size_t xStreamBufferSpacesAvailable( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Queries a stream buffer to see how much free space it contains, which is
- * equal to the amount of data that can be sent to the stream buffer before it
- * is full.
+ * 查询流缓冲中包含多少空闲空间，该值等于在流缓冲变满之前还可发送到流缓冲的数据量。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferSpacesAvailable() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferSpacesAvailable()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being queried.
+ * @param xStreamBuffer 要查询的流缓冲的句柄。
  *
- * @return The number of bytes that can be written to the stream buffer before
- * the stream buffer would be full.
+ * @return 在流缓冲变满之前可写入流缓冲的字节数。
  *
  * \defgroup xStreamBufferSpacesAvailable xStreamBufferSpacesAvailable
  * \ingroup StreamBufferManagement
@@ -1043,17 +739,13 @@ size_t xStreamBufferSpacesAvailable( StreamBufferHandle_t xStreamBuffer ) PRIVIL
  * size_t xStreamBufferBytesAvailable( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Queries a stream buffer to see how much data it contains, which is equal to
- * the number of bytes that can be read from the stream buffer before the stream
- * buffer would be empty.
+ * 查询流缓冲中包含多少数据，该值等于在流缓冲变空之前可从流缓冲读取的字节数。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferBytesAvailable() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferBytesAvailable()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being queried.
+ * @param xStreamBuffer 要查询的流缓冲的句柄。
  *
- * @return The number of bytes that can be read from the stream buffer before
- * the stream buffer would be empty.
+ * @return 在流缓冲变空之前可从流缓冲读取的字节数。
  *
  * \defgroup xStreamBufferBytesAvailable xStreamBufferBytesAvailable
  * \ingroup StreamBufferManagement
@@ -1067,33 +759,17 @@ size_t xStreamBufferBytesAvailable( StreamBufferHandle_t xStreamBuffer ) PRIVILE
  * BaseType_t xStreamBufferSetTriggerLevel( StreamBufferHandle_t xStreamBuffer, size_t xTriggerLevel );
  * @endcode
  *
- * A stream buffer's trigger level is the number of bytes that must be in the
- * stream buffer before a task that is blocked on the stream buffer to
- * wait for data is moved out of the blocked state.  For example, if a task is
- * blocked on a read of an empty stream buffer that has a trigger level of 1
- * then the task will be unblocked when a single byte is written to the buffer
- * or the task's block time expires.  As another example, if a task is blocked
- * on a read of an empty stream buffer that has a trigger level of 10 then the
- * task will not be unblocked until the stream buffer contains at least 10 bytes
- * or the task's block time expires.  If a reading task's block time expires
- * before the trigger level is reached then the task will still receive however
- * many bytes are actually available.  Setting a trigger level of 0 will result
- * in a trigger level of 1 being used.  It is not valid to specify a trigger
- * level that is greater than the buffer size.
+ * 流缓冲的触发水位是指：在阻塞等待数据的任务被移出阻塞状态之前，流缓冲中必须达到的字节数。例如，若某任务阻塞读取一个触发水位为 1 的空流缓冲，则当向缓冲区写入一个字节或该任务的阻塞时间到期时，任务将被解除阻塞。再例如，若某任务阻塞读取一个触发水位为 10 的空流缓冲，则直到流缓冲中至少包含 10 个字节，或该任务的阻塞时间到期，任务才会被解除阻塞。如果读取任务的阻塞时间在达到触发水位之前到期，任务仍将接收到实际可用的字节。将触发水位设置为 0 将导致实际使用 1 作为触发水位。指定的触发水位不得大于缓冲区大小。
  *
- * A trigger level is set when the stream buffer is created, and can be modified
- * using xStreamBufferSetTriggerLevel().
+ * 创建流缓冲时会设置触发水位，并可使用 xStreamBufferSetTriggerLevel() 修改。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferSetTriggerLevel() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferSetTriggerLevel()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer being updated.
+ * @param xStreamBuffer 要更新的流缓冲的句柄。
  *
- * @param xTriggerLevel The new trigger level for the stream buffer.
+ * @param xTriggerLevel 流缓冲的新触发水位。
  *
- * @return If xTriggerLevel was less than or equal to the stream buffer's length
- * then the trigger level will be updated and pdTRUE is returned.  Otherwise
- * pdFALSE is returned.
+ * @return 如果 xTriggerLevel 小于或等于流缓冲长度，则更新触发水位并返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xStreamBufferSetTriggerLevel xStreamBufferSetTriggerLevel
  * \ingroup StreamBufferManagement
@@ -1108,35 +784,19 @@ BaseType_t xStreamBufferSetTriggerLevel( StreamBufferHandle_t xStreamBuffer,
  * BaseType_t xStreamBufferSendCompletedFromISR( StreamBufferHandle_t xStreamBuffer, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * For advanced users only.
+ * 仅供高级用户使用。
  *
- * The sbSEND_COMPLETED() macro is called from within the FreeRTOS APIs when
- * data is sent to a message buffer or stream buffer.  If there was a task that
- * was blocked on the message or stream buffer waiting for data to arrive then
- * the sbSEND_COMPLETED() macro sends a notification to the task to remove it
- * from the Blocked state.  xStreamBufferSendCompletedFromISR() does the same
- * thing.  It is provided to enable application writers to implement their own
- * version of sbSEND_COMPLETED(), and MUST NOT BE USED AT ANY OTHER TIME.
+ * 当数据被发送到消息缓冲或流缓冲时，FreeRTOS API 内部会调用 sbSEND_COMPLETED() 宏。如果有任务阻塞在消息缓冲或流缓冲上等待数据到达，则 sbSEND_COMPLETED() 宏会向该任务发送通知，使其离开阻塞状态。xStreamBufferSendCompletedFromISR() 完成相同的工作。提供该函数是为了让应用编写者实现自己的 sbSEND_COMPLETED() 版本，且不得在任何其他时间使用。
  *
- * See the example implemented in FreeRTOS/Demo/Minimal/MessageBufferAMP.c for
- * additional information.
+ * 有关更多信息，请参见 FreeRTOS/Demo/Minimal/MessageBufferAMP.c 中实现的示例。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferSendCompletedFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferSendCompletedFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer to which data was
- * written.
+ * @param xStreamBuffer 已向其中写入数据的流缓冲的句柄。
  *
- * @param pxHigherPriorityTaskWoken *pxHigherPriorityTaskWoken should be
- * initialised to pdFALSE before it is passed into
- * xStreamBufferSendCompletedFromISR().  If calling
- * xStreamBufferSendCompletedFromISR() removes a task from the Blocked state,
- * and the task has a priority above the priority of the currently running task,
- * then *pxHigherPriorityTaskWoken will get set to pdTRUE indicating that a
- * context switch should be performed before exiting the ISR.
+ * @param pxHigherPriorityTaskWoken 在将 *pxHigherPriorityTaskWoken 传入 xStreamBufferSendCompletedFromISR() 之前，应将其初始化为 pdFALSE。如果调用 xStreamBufferSendCompletedFromISR() 使某任务离开阻塞状态，且该任务优先级高于当前正在运行的任务，则 *pxHigherPriorityTaskWoken 将被设置为 pdTRUE，表示应在退出 ISR 之前执行上下文切换。
  *
- * @return If a task was removed from the Blocked state then pdTRUE is returned.
- * Otherwise pdFALSE is returned.
+ * @return 如果有任务被移出阻塞状态则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xStreamBufferSendCompletedFromISR xStreamBufferSendCompletedFromISR
  * \ingroup StreamBufferManagement
@@ -1151,36 +811,19 @@ BaseType_t xStreamBufferSendCompletedFromISR( StreamBufferHandle_t xStreamBuffer
  * BaseType_t xStreamBufferReceiveCompletedFromISR( StreamBufferHandle_t xStreamBuffer, BaseType_t *pxHigherPriorityTaskWoken );
  * @endcode
  *
- * For advanced users only.
+ * 仅供高级用户使用。
  *
- * The sbRECEIVE_COMPLETED() macro is called from within the FreeRTOS APIs when
- * data is read out of a message buffer or stream buffer.  If there was a task
- * that was blocked on the message or stream buffer waiting for data to arrive
- * then the sbRECEIVE_COMPLETED() macro sends a notification to the task to
- * remove it from the Blocked state.  xStreamBufferReceiveCompletedFromISR()
- * does the same thing.  It is provided to enable application writers to
- * implement their own version of sbRECEIVE_COMPLETED(), and MUST NOT BE USED AT
- * ANY OTHER TIME.
+ * 当从消息缓冲或流缓冲读取数据时，FreeRTOS API 内部会调用 sbRECEIVE_COMPLETED() 宏。如果有任务阻塞在消息缓冲或流缓冲上等待数据到达，则 sbRECEIVE_COMPLETED() 宏会向该任务发送通知，使其离开阻塞状态。xStreamBufferReceiveCompletedFromISR() 完成相同的工作。提供该函数是为了让应用编写者实现自己的 sbRECEIVE_COMPLETED() 版本，且不得在任何其他时间使用。
  *
- * See the example implemented in FreeRTOS/Demo/Minimal/MessageBufferAMP.c for
- * additional information.
+ * 有关更多信息，请参见 FreeRTOS/Demo/Minimal/MessageBufferAMP.c 中实现的示例。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * xStreamBufferReceiveCompletedFromISR() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 xStreamBufferReceiveCompletedFromISR()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer from which data was
- * read.
+ * @param xStreamBuffer 已从其中读取数据的流缓冲的句柄。
  *
- * @param pxHigherPriorityTaskWoken *pxHigherPriorityTaskWoken should be
- * initialised to pdFALSE before it is passed into
- * xStreamBufferReceiveCompletedFromISR().  If calling
- * xStreamBufferReceiveCompletedFromISR() removes a task from the Blocked state,
- * and the task has a priority above the priority of the currently running task,
- * then *pxHigherPriorityTaskWoken will get set to pdTRUE indicating that a
- * context switch should be performed before exiting the ISR.
+ * @param pxHigherPriorityTaskWoken 在将 *pxHigherPriorityTaskWoken 传入 xStreamBufferReceiveCompletedFromISR() 之前，应将其初始化为 pdFALSE。如果调用 xStreamBufferReceiveCompletedFromISR() 使某任务离开阻塞状态，且该任务优先级高于当前正在运行的任务，则 *pxHigherPriorityTaskWoken 将被设置为 pdTRUE，表示应在退出 ISR 之前执行上下文切换。
  *
- * @return If a task was removed from the Blocked state then pdTRUE is returned.
- * Otherwise pdFALSE is returned.
+ * @return 如果有任务被移出阻塞状态则返回 pdTRUE，否则返回 pdFALSE。
  *
  * \defgroup xStreamBufferReceiveCompletedFromISR xStreamBufferReceiveCompletedFromISR
  * \ingroup StreamBufferManagement
@@ -1195,19 +838,13 @@ BaseType_t xStreamBufferReceiveCompletedFromISR( StreamBufferHandle_t xStreamBuf
  * UBaseType_t uxStreamBufferGetStreamBufferNotificationIndex( StreamBufferHandle_t xStreamBuffer );
  * @endcode
  *
- * Get the task notification index used for the supplied stream buffer which can
- * be set using vStreamBufferSetStreamBufferNotificationIndex. If the task
- * notification index for the stream buffer is not changed using
- * vStreamBufferSetStreamBufferNotificationIndex, this function returns the
- * default value (tskDEFAULT_INDEX_TO_NOTIFY).
+ * 获取所提供流缓冲使用的任务通知索引，该索引可使用 vStreamBufferSetStreamBufferNotificationIndex 设置。如果未使用 vStreamBufferSetStreamBufferNotificationIndex 更改流缓冲的任务通知索引，则本函数返回默认值（tskDEFAULT_INDEX_TO_NOTIFY）。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * uxStreamBufferGetStreamBufferNotificationIndex() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 uxStreamBufferGetStreamBufferNotificationIndex()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer for which the task
- * notification index is retrieved.
+ * @param xStreamBuffer 要检索其任务通知索引的流缓冲的句柄。
  *
- * @return The task notification index for the stream buffer.
+ * @return 该流缓冲的任务通知索引。
  *
  * \defgroup uxStreamBufferGetStreamBufferNotificationIndex uxStreamBufferGetStreamBufferNotificationIndex
  * \ingroup StreamBufferManagement
@@ -1221,23 +858,15 @@ UBaseType_t uxStreamBufferGetStreamBufferNotificationIndex( StreamBufferHandle_t
  * void vStreamBufferSetStreamBufferNotificationIndex ( StreamBufferHandle_t xStreamBuffer, UBaseType_t uxNotificationIndex );
  * @endcode
  *
- * Set the task notification index used for the supplied stream buffer.
- * Successive calls to stream buffer APIs (like xStreamBufferSend or
- * xStreamBufferReceive) for this stream buffer will use this new index for
- * their task notifications.
+ * 设置所提供流缓冲使用的任务通知索引。此后针对该流缓冲的流缓冲 API 调用（如 xStreamBufferSend 或 xStreamBufferReceive）将使用该新索引发送任务通知。
  *
- * If this function is not called, the default index (tskDEFAULT_INDEX_TO_NOTIFY)
- * is used for task notifications. It is recommended to call this function
- * before attempting to send or receive data from the stream buffer to avoid
- * inconsistencies.
+ * 如果未调用本函数，任务通知将使用默认索引（tskDEFAULT_INDEX_TO_NOTIFY）。建议在尝试向流缓冲发送或接收数据之前调用本函数，以避免出现不一致。
  *
- * configUSE_STREAM_BUFFERS must be set to 1 in for FreeRTOSConfig.h for
- * vStreamBufferSetStreamBufferNotificationIndex() to be available.
+ * 要在 FreeRTOSConfig.h 中使用 vStreamBufferSetStreamBufferNotificationIndex()，必须将 configUSE_STREAM_BUFFERS 设置为 1。
  *
- * @param xStreamBuffer The handle of the stream buffer for which the task
- * notification index is set.
+ * @param xStreamBuffer 要设置其任务通知索引的流缓冲的句柄。
  *
- * @param uxNotificationIndex The task notification index to set.
+ * @param uxNotificationIndex 要设置的任务通知索引。
  *
  * \defgroup vStreamBufferSetStreamBufferNotificationIndex vStreamBufferSetStreamBufferNotificationIndex
  * \ingroup StreamBufferManagement
@@ -1245,7 +874,7 @@ UBaseType_t uxStreamBufferGetStreamBufferNotificationIndex( StreamBufferHandle_t
 void vStreamBufferSetStreamBufferNotificationIndex( StreamBufferHandle_t xStreamBuffer,
                                                     UBaseType_t uxNotificationIndex ) PRIVILEGED_FUNCTION;
 
-/* Functions below here are not part of the public API. */
+/* 以下函数不属于公共 API。 */
 StreamBufferHandle_t xStreamBufferGenericCreate( size_t xBufferSizeBytes,
                                                  size_t xTriggerLevelBytes,
                                                  BaseType_t xStreamBufferType,
@@ -1271,10 +900,10 @@ size_t xStreamBufferNextMessageLengthBytes( StreamBufferHandle_t xStreamBuffer )
     uint8_t ucStreamBufferGetStreamBufferType( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 #endif
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进） */
 #if defined( __cplusplus )
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进） */
 
-#endif /* !defined( STREAM_BUFFER_H ) */
+#endif /* !defined( STREAM_BUFFER_H )（头文件包含保护） */
