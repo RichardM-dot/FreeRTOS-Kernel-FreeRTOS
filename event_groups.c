@@ -36,54 +36,55 @@
  * ============================================================================
  */
 
-/* Standard includes. */
+/* 标准库头文件。 */
 #include <stdlib.h>
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers. That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 将全部 API 函数重定义为使用 MPU 包装函数。
+ * 仅当从应用文件包含 task.h 时才应这样做。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/* FreeRTOS includes. */
+/* FreeRTOS 头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
 #include "event_groups.h"
 
-/* The MPU ports require MPU_WRAPPERS_INCLUDED_FROM_API_FILE to be defined
- * for the header files above, but not in this file, in order to generate the
- * correct privileged Vs unprivileged linkage and placement. */
+/*
+ * MPU 移植层需要上述头文件在包含时定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE，
+ * 但在本文件中不能保留该定义，以便生成正确的特权与非特权链接及布局。
+ */
 #undef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/* This entire source file will be skipped if the application is not configured
- * to include event groups functionality. This #if is closed at the very bottom
- * of this file. If you want to include event groups then ensure
- * configUSE_EVENT_GROUPS is set to 1 in FreeRTOSConfig.h. */
+/*
+ * 若应用未配置事件组功能，整个源文件都将被跳过。该 #if 在本文件末尾闭合。
+ * 如需启用事件组功能，请确保 FreeRTOSConfig.h 中 configUSE_EVENT_GROUPS 设置为 1。
+ */
 #if ( configUSE_EVENT_GROUPS == 1 )
 
     typedef struct EventGroupDef_t
     {
         EventBits_t uxEventBits;
-        List_t xTasksWaitingForBits; /**< List of tasks waiting for a bit to be set. */
+        List_t xTasksWaitingForBits; /**< 等待某个事件位被置位的任务链表。 */
 
         #if ( configUSE_TRACE_FACILITY == 1 )
             UBaseType_t uxEventGroupNumber;
         #endif
 
         #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
-            uint8_t ucStaticallyAllocated; /**< Set to pdTRUE if the event group is statically allocated to ensure no attempt is made to free the memory. */
+            uint8_t ucStaticallyAllocated; /**< 若事件组为静态分配则置为 pdTRUE，以确保不会尝试释放该内存。 */
         #endif
     } EventGroup_t;
 
 /*-----------------------------------------------------------*/
 
 /*
- * Test the bits set in uxCurrentEventBits to see if the wait condition is met.
- * The wait condition is defined by xWaitForAllBits.  If xWaitForAllBits is
- * pdTRUE then the wait condition is met if all the bits set in uxBitsToWaitFor
- * are also set in uxCurrentEventBits.  If xWaitForAllBits is pdFALSE then the
- * wait condition is met if any of the bits set in uxBitsToWaitFor are also set
- * in uxCurrentEventBits.
+ * 检查 uxCurrentEventBits 中置位的各位，判断等待条件是否满足。
+ * 等待条件由 xWaitForAllBits 定义：若 xWaitForAllBits 为 pdTRUE，则当 uxBitsToWaitFor
+ * 中置位的所有位在 uxCurrentEventBits 中也都置位时，等待条件即满足；若 xWaitForAllBits
+ * 为 pdFALSE，则当 uxBitsToWaitFor 中置位的任意一位在 uxCurrentEventBits 中也置位时，
+ * 等待条件即满足。
  */
     static BaseType_t prvTestWaitCondition( const EventBits_t uxCurrentEventBits,
                                             const EventBits_t uxBitsToWaitFor,
@@ -99,23 +100,24 @@
 
             traceENTER_xEventGroupCreateStatic( pxEventGroupBuffer );
 
-            /* A StaticEventGroup_t object must be provided. */
+            /* 必须提供 StaticEventGroup_t 对象。 */
             configASSERT( pxEventGroupBuffer );
 
             #if ( configASSERT_DEFINED == 1 )
             {
-                /* Sanity check that the size of the structure used to declare a
-                 * variable of type StaticEventGroup_t equals the size of the real
-                 * event group structure. */
+                /*
+                 * 检查用于声明 StaticEventGroup_t 类型变量的结构体大小是否等于
+                 * 实际事件组结构体的大小。
+                 */
                 volatile size_t xSize = sizeof( StaticEventGroup_t );
                 configASSERT( xSize == sizeof( EventGroup_t ) );
             }
-            #endif /* configASSERT_DEFINED */
+            #endif /* configASSERT_DEFINED 已定义 */
 
-            /* The user has provided a statically allocated event group - use it. */
-            /* MISRA Ref 11.3.1 [Misaligned access] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
-            /* coverity[misra_c_2012_rule_11_3_violation] */
+            /* 用户已提供静态分配的事件组——直接使用。 */
+            /* MISRA 参考 11.3.1【非对齐访问】 */
+            /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
+            /* coverity[misra_c_2012_rule_11_3_violation]（Coverity 告警抑制标记） */
             pxEventBits = ( EventGroup_t * ) pxEventGroupBuffer;
 
             if( pxEventBits != NULL )
@@ -125,20 +127,22 @@
 
                 #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
                 {
-                    /* Both static and dynamic allocation can be used, so note that
-                     * this event group was created statically in case the event group
-                     * is later deleted. */
+                    /*
+                     * 静态分配和动态分配都可能使用，因此在此记录该事件组
+                     * 是以静态方式创建的，以便之后删除事件组时使用。
+                     */
                     pxEventBits->ucStaticallyAllocated = pdTRUE;
                 }
-                #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+                #endif /* configSUPPORT_DYNAMIC_ALLOCATION 为 1 时 */
 
                 traceEVENT_GROUP_CREATE( pxEventBits );
             }
             else
             {
-                /* xEventGroupCreateStatic should only ever be called with
-                 * pxEventGroupBuffer pointing to a pre-allocated (compile time
-                 * allocated) StaticEventGroup_t variable. */
+                /*
+                 * xEventGroupCreateStatic 只应在 pxEventGroupBuffer 指向预分配（编译期分配）
+                 * 的 StaticEventGroup_t 变量时调用。
+                 */
                 traceEVENT_GROUP_CREATE_FAILED();
             }
 
@@ -147,7 +151,7 @@
             return pxEventBits;
         }
 
-    #endif /* configSUPPORT_STATIC_ALLOCATION */
+    #endif /* configSUPPORT_STATIC_ALLOCATION 为 1 时 */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
@@ -158,9 +162,9 @@
 
             traceENTER_xEventGroupCreate();
 
-            /* MISRA Ref 11.5.1 [Malloc memory assignment] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
-            /* coverity[misra_c_2012_rule_11_5_violation] */
+            /* MISRA 参考 11.5.1【malloc 内存赋值】 */
+            /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
+            /* coverity[misra_c_2012_rule_11_5_violation]（Coverity 告警抑制标记） */
             pxEventBits = ( EventGroup_t * ) pvPortMalloc( sizeof( EventGroup_t ) );
 
             if( pxEventBits != NULL )
@@ -170,12 +174,13 @@
 
                 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
                 {
-                    /* Both static and dynamic allocation can be used, so note this
-                     * event group was allocated statically in case the event group is
-                     * later deleted. */
+                    /*
+                     * 静态分配和动态分配都可能使用，因此在此记录该事件组是否采用
+                     * 静态分配，以便之后删除事件组时使用。
+                     */
                     pxEventBits->ucStaticallyAllocated = pdFALSE;
                 }
-                #endif /* configSUPPORT_STATIC_ALLOCATION */
+                #endif /* configSUPPORT_STATIC_ALLOCATION 为 1 时 */
 
                 traceEVENT_GROUP_CREATE( pxEventBits );
             }
@@ -189,7 +194,7 @@
             return pxEventBits;
         }
 
-    #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+    #endif /* configSUPPORT_DYNAMIC_ALLOCATION 为 1 时 */
 /*-----------------------------------------------------------*/
 
     EventBits_t xEventGroupSync( EventGroupHandle_t xEventGroup,
@@ -220,11 +225,13 @@
 
             if( ( ( uxOriginalBitValue | uxBitsToSet ) & uxBitsToWaitFor ) == uxBitsToWaitFor )
             {
-                /* All the rendezvous bits are now set - no need to block. */
+                /* 所有同步会合位均已置位——无需阻塞。 */
                 uxReturn = ( uxOriginalBitValue | uxBitsToSet );
 
-                /* Rendezvous always clear the bits.  They will have been cleared
-                 * already unless this is the only task in the rendezvous. */
+                /*
+                 * 同步会合总是清除这些位；除非本任务是会合中唯一的任务，
+                 * 否则这些位应已被清除。
+                 */
                 pxEventBits->uxEventBits &= ~uxBitsToWaitFor;
 
                 xTicksToWait = 0;
@@ -235,21 +242,23 @@
                 {
                     traceEVENT_GROUP_SYNC_BLOCK( xEventGroup, uxBitsToSet, uxBitsToWaitFor );
 
-                    /* Store the bits that the calling task is waiting for in the
-                     * task's event list item so the kernel knows when a match is
-                     * found.  Then enter the blocked state. */
+                    /*
+                     * 将调用任务正在等待的位存入该任务的事件链表项，以便内核
+                     * 在找到匹配时能够识别；随后进入阻塞态。
+                     */
                     vTaskPlaceOnUnorderedEventList( &( pxEventBits->xTasksWaitingForBits ), ( uxBitsToWaitFor | eventCLEAR_EVENTS_ON_EXIT_BIT | eventWAIT_FOR_ALL_BITS ), xTicksToWait );
 
-                    /* This assignment is obsolete as uxReturn will get set after
-                     * the task unblocks, but some compilers mistakenly generate a
-                     * warning about uxReturn being returned without being set if the
-                     * assignment is omitted. */
+                    /*
+                     * 该赋值是多余的，因为任务解除阻塞后 uxReturn 会被赋值；但若省略该赋值，
+                     * 部分编译器会误报 uxReturn 未赋值即被返回。
+                     */
                     uxReturn = 0;
                 }
                 else
                 {
-                    /* The rendezvous bits were not set, but no block time was
-                     * specified - just return the current event bit value. */
+                    /*
+                     * 同步会合位未置位，且未指定阻塞时间——直接返回当前事件位值。
+                     */
                     uxReturn = pxEventBits->uxEventBits;
                     xTimeoutOccurred = pdTRUE;
                 }
@@ -268,23 +277,23 @@
                 mtCOVERAGE_TEST_MARKER();
             }
 
-            /* The task blocked to wait for its required bits to be set - at this
-             * point either the required bits were set or the block time expired.  If
-             * the required bits were set they will have been stored in the task's
-             * event list item, and they should now be retrieved then cleared. */
+            /*
+             * 任务阻塞等待所需位被置位——此时要么所需位已置位，要么阻塞时间已到期。
+             * 若所需位已置位，它们已存入任务的事件链表项，此时应将其取出并清除。
+             */
             uxReturn = uxTaskResetEventItemValue();
 
             if( ( uxReturn & eventUNBLOCKED_DUE_TO_BIT_SET ) == ( EventBits_t ) 0 )
             {
-                /* The task timed out, just return the current event bit value. */
+                /* 任务已超时，直接返回当前事件位值。 */
                 taskENTER_CRITICAL();
                 {
                     uxReturn = pxEventBits->uxEventBits;
 
-                    /* Although the task got here because it timed out before the
-                     * bits it was waiting for were set, it is possible that since it
-                     * unblocked another task has set the bits.  If this is the case
-                     * then it needs to clear the bits before exiting. */
+                    /*
+                     * 尽管任务是因为等待的位在置位前超时而走到这里，但自其解除阻塞以来，
+                     * 可能有其他任务已将这些位置位。若如此，则需在退出前清除这些位。
+                     */
                     if( ( uxReturn & uxBitsToWaitFor ) == uxBitsToWaitFor )
                     {
                         pxEventBits->uxEventBits &= ~uxBitsToWaitFor;
@@ -300,17 +309,18 @@
             }
             else
             {
-                /* The task unblocked because the bits were set. */
+                /* 任务因这些位被置位而解除阻塞。 */
             }
 
-            /* Control bits might be set as the task had blocked should not be
-             * returned. */
+            /*
+             * 任务阻塞期间可能置位了控制位，这些控制位不应被返回。
+             */
             uxReturn &= ~eventEVENT_BITS_CONTROL_BYTES;
         }
 
         traceEVENT_GROUP_SYNC_END( xEventGroup, uxBitsToSet, uxBitsToWaitFor, xTimeoutOccurred );
 
-        /* Prevent compiler warnings when trace macros are not used. */
+        /* 避免未使用跟踪宏时产生编译告警。 */
         ( void ) xTimeoutOccurred;
 
         traceRETURN_xEventGroupSync( uxReturn );
@@ -332,8 +342,9 @@
 
         traceENTER_xEventGroupWaitBits( xEventGroup, uxBitsToWaitFor, xClearOnExit, xWaitForAllBits, xTicksToWait );
 
-        /* Check the user is not attempting to wait on the bits used by the kernel
-         * itself, and that at least one bit is being requested. */
+        /*
+         * 检查用户是否试图等待内核自身使用的位，并确认至少请求了一位。
+         */
         configASSERT( xEventGroup );
         configASSERT( ( uxBitsToWaitFor & eventEVENT_BITS_CONTROL_BYTES ) == 0 );
         configASSERT( uxBitsToWaitFor != 0 );
@@ -347,17 +358,18 @@
         {
             const EventBits_t uxCurrentEventBits = pxEventBits->uxEventBits;
 
-            /* Check to see if the wait condition is already met or not. */
+            /* 检查等待条件是否已经满足。 */
             xWaitConditionMet = prvTestWaitCondition( uxCurrentEventBits, uxBitsToWaitFor, xWaitForAllBits );
 
             if( xWaitConditionMet != pdFALSE )
             {
-                /* The wait condition has already been met so there is no need to
-                 * block. */
+                /*
+                 * 等待条件已经满足，因此无需阻塞。
+                 */
                 uxReturn = uxCurrentEventBits;
                 xTicksToWait = ( TickType_t ) 0;
 
-                /* Clear the wait bits if requested to do so. */
+                /* 若要求退出时清除，则清除这些等待位。 */
                 if( xClearOnExit != pdFALSE )
                 {
                     pxEventBits->uxEventBits &= ~uxBitsToWaitFor;
@@ -369,17 +381,18 @@
             }
             else if( xTicksToWait == ( TickType_t ) 0 )
             {
-                /* The wait condition has not been met, but no block time was
-                 * specified, so just return the current value. */
+                /*
+                 * 等待条件尚未满足，且未指定阻塞时间，因此直接返回当前值。
+                 */
                 uxReturn = uxCurrentEventBits;
                 xTimeoutOccurred = pdTRUE;
             }
             else
             {
-                /* The task is going to block to wait for its required bits to be
-                 * set.  uxControlBits are used to remember the specified behaviour of
-                 * this call to xEventGroupWaitBits() - for use when the event bits
-                 * unblock the task. */
+                /*
+                 * 任务即将阻塞等待其所需位被置位。uxControlBits 用于记录本次
+                 * xEventGroupWaitBits() 调用的指定行为，以便事件位解除任务阻塞时使用。
+                 */
                 if( xClearOnExit != pdFALSE )
                 {
                     uxControlBits |= eventCLEAR_EVENTS_ON_EXIT_BIT;
@@ -398,14 +411,16 @@
                     mtCOVERAGE_TEST_MARKER();
                 }
 
-                /* Store the bits that the calling task is waiting for in the
-                 * task's event list item so the kernel knows when a match is
-                 * found.  Then enter the blocked state. */
+                /*
+                 * 将调用任务正在等待的位存入该任务的事件链表项，以便内核
+                 * 在找到匹配时能够识别；随后进入阻塞态。
+                 */
                 vTaskPlaceOnUnorderedEventList( &( pxEventBits->xTasksWaitingForBits ), ( uxBitsToWaitFor | uxControlBits ), xTicksToWait );
 
-                /* This is obsolete as it will get set after the task unblocks, but
-                 * some compilers mistakenly generate a warning about the variable
-                 * being returned without being set if it is not done. */
+                /*
+                 * 该赋值是多余的，因为任务解除阻塞后该变量会被赋值；但若不这样做，
+                 * 部分编译器会误报该变量未赋值即被返回。
+                 */
                 uxReturn = 0;
 
                 traceEVENT_GROUP_WAIT_BITS_BLOCK( xEventGroup, uxBitsToWaitFor );
@@ -424,21 +439,22 @@
                 mtCOVERAGE_TEST_MARKER();
             }
 
-            /* The task blocked to wait for its required bits to be set - at this
-             * point either the required bits were set or the block time expired.  If
-             * the required bits were set they will have been stored in the task's
-             * event list item, and they should now be retrieved then cleared. */
+            /*
+             * 任务阻塞等待所需位被置位——此时要么所需位已置位，要么阻塞时间已到期。
+             * 若所需位已置位，它们已存入任务的事件链表项，此时应将其取出并清除。
+             */
             uxReturn = uxTaskResetEventItemValue();
 
             if( ( uxReturn & eventUNBLOCKED_DUE_TO_BIT_SET ) == ( EventBits_t ) 0 )
             {
                 taskENTER_CRITICAL();
                 {
-                    /* The task timed out, just return the current event bit value. */
+                    /* 任务已超时，直接返回当前事件位值。 */
                     uxReturn = pxEventBits->uxEventBits;
 
-                    /* It is possible that the event bits were updated between this
-                     * task leaving the Blocked state and running again. */
+                    /*
+                     * 本任务离开阻塞态到再次运行之间，事件位可能已被更新。
+                     */
                     if( prvTestWaitCondition( uxReturn, uxBitsToWaitFor, xWaitForAllBits ) != pdFALSE )
                     {
                         if( xClearOnExit != pdFALSE )
@@ -461,16 +477,16 @@
             }
             else
             {
-                /* The task unblocked because the bits were set. */
+                /* 任务因这些位被置位而解除阻塞。 */
             }
 
-            /* The task blocked so control bits may have been set. */
+            /* 任务曾进入阻塞，因此可能已置位控制位。 */
             uxReturn &= ~eventEVENT_BITS_CONTROL_BYTES;
         }
 
         traceEVENT_GROUP_WAIT_BITS_END( xEventGroup, uxBitsToWaitFor, xTimeoutOccurred );
 
-        /* Prevent compiler warnings when trace macros are not used. */
+        /* 避免未使用跟踪宏时产生编译告警。 */
         ( void ) xTimeoutOccurred;
 
         traceRETURN_xEventGroupWaitBits( uxReturn );
@@ -487,8 +503,9 @@
 
         traceENTER_xEventGroupClearBits( xEventGroup, uxBitsToClear );
 
-        /* Check the user is not attempting to clear the bits used by the kernel
-         * itself. */
+        /*
+         * 检查用户是否试图清除内核自身使用的位。
+         */
         configASSERT( xEventGroup );
         configASSERT( ( uxBitsToClear & eventEVENT_BITS_CONTROL_BYTES ) == 0 );
 
@@ -496,11 +513,12 @@
         {
             traceEVENT_GROUP_CLEAR_BITS( xEventGroup, uxBitsToClear );
 
-            /* The value returned is the event group value prior to the bits being
-             * cleared. */
+            /*
+             * 返回值为清除这些位之前的事件组值。
+             */
             uxReturn = pxEventBits->uxEventBits;
 
-            /* Clear the bits. */
+            /* 清除这些位。 */
             pxEventBits->uxEventBits &= ~uxBitsToClear;
         }
         taskEXIT_CRITICAL();
@@ -528,7 +546,7 @@
             return xReturn;
         }
 
-    #endif /* if ( ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
+    #endif /* 条件：( ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     EventBits_t xEventGroupGetBitsFromISR( EventGroupHandle_t xEventGroup )
@@ -539,9 +557,9 @@
 
         traceENTER_xEventGroupGetBitsFromISR( xEventGroup );
 
-        /* MISRA Ref 4.7.1 [Return value shall be checked] */
-        /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
-        /* coverity[misra_c_2012_directive_4_7_violation] */
+        /* MISRA 参考 4.7.1【返回值必须检查】 */
+        /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
+        /* coverity[misra_c_2012_directive_4_7_violation]（Coverity 告警抑制标记） */
         uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
         {
             uxReturn = pxEventBits->uxEventBits;
@@ -567,8 +585,9 @@
 
         traceENTER_xEventGroupSetBits( xEventGroup, uxBitsToSet );
 
-        /* Check the user is not attempting to set the bits used by the kernel
-         * itself. */
+        /*
+         * 检查用户是否试图置位内核自身使用的位。
+         */
         configASSERT( xEventGroup );
         configASSERT( ( uxBitsToSet & eventEVENT_BITS_CONTROL_BYTES ) == 0 );
 
@@ -580,23 +599,23 @@
 
             pxListItem = listGET_HEAD_ENTRY( pxList );
 
-            /* Set the bits. */
+            /* 置位这些位。 */
             pxEventBits->uxEventBits |= uxBitsToSet;
 
-            /* See if the new bit value should unblock any tasks. */
+            /* 检查新的位值是否应解除某些任务的阻塞。 */
             while( pxListItem != pxListEnd )
             {
                 pxNext = listGET_NEXT( pxListItem );
                 uxBitsWaitedFor = listGET_LIST_ITEM_VALUE( pxListItem );
                 xMatchFound = pdFALSE;
 
-                /* Split the bits waited for from the control bits. */
+                /* 分离等待位与控制位。 */
                 uxControlBits = uxBitsWaitedFor & eventEVENT_BITS_CONTROL_BYTES;
                 uxBitsWaitedFor &= ~eventEVENT_BITS_CONTROL_BYTES;
 
                 if( ( uxControlBits & eventWAIT_FOR_ALL_BITS ) == ( EventBits_t ) 0 )
                 {
-                    /* Just looking for single bit being set. */
+                    /* 只要求任意一位被置位。 */
                     if( ( uxBitsWaitedFor & pxEventBits->uxEventBits ) != ( EventBits_t ) 0 )
                     {
                         xMatchFound = pdTRUE;
@@ -608,17 +627,17 @@
                 }
                 else if( ( uxBitsWaitedFor & pxEventBits->uxEventBits ) == uxBitsWaitedFor )
                 {
-                    /* All bits are set. */
+                    /* 所有位均已置位。 */
                     xMatchFound = pdTRUE;
                 }
                 else
                 {
-                    /* Need all bits to be set, but not all the bits were set. */
+                    /* 要求所有位均置位，但并非所有位都已置位。 */
                 }
 
                 if( xMatchFound != pdFALSE )
                 {
-                    /* The bits match.  Should the bits be cleared on exit? */
+                    /* 各位匹配。退出时是否清除这些位？ */
                     if( ( uxControlBits & eventCLEAR_EVENTS_ON_EXIT_BIT ) != ( EventBits_t ) 0 )
                     {
                         uxBitsToClear |= uxBitsWaitedFor;
@@ -628,25 +647,28 @@
                         mtCOVERAGE_TEST_MARKER();
                     }
 
-                    /* Store the actual event flag value in the task's event list
-                     * item before removing the task from the event list.  The
-                     * eventUNBLOCKED_DUE_TO_BIT_SET bit is set so the task knows
-                     * that is was unblocked due to its required bits matching, rather
-                     * than because it timed out. */
+                    /*
+                     * 在将任务从事件链表中移除之前，将实际事件标志值存入该任务的
+                     * 事件链表项。同时置位 eventUNBLOCKED_DUE_TO_BIT_SET 位，使任务
+                     * 知道自己是因为所需位匹配而解除阻塞，而不是因为超时。
+                     */
                     vTaskRemoveFromUnorderedEventList( pxListItem, pxEventBits->uxEventBits | eventUNBLOCKED_DUE_TO_BIT_SET );
                 }
 
-                /* Move onto the next list item.  Note pxListItem->pxNext is not
-                 * used here as the list item may have been removed from the event list
-                 * and inserted into the ready/pending reading list. */
+                /*
+                 * 移动到下一个链表项。注意此处不使用 pxListItem->pxNext，
+                 * 因为该链表项可能已被移出事件链表并插入就绪/待就绪链表。
+                 */
                 pxListItem = pxNext;
             }
 
-            /* Clear any bits that matched when the eventCLEAR_EVENTS_ON_EXIT_BIT
-             * bit was set in the control word. */
+            /*
+             * 当控制字中置位了 eventCLEAR_EVENTS_ON_EXIT_BIT 位时，
+             * 清除所有匹配的位。
+             */
             pxEventBits->uxEventBits &= ~uxBitsToClear;
 
-            /* Snapshot resulting bits. */
+            /* 对结果位进行快照。 */
             uxReturnBits = pxEventBits->uxEventBits;
         }
         ( void ) xTaskResumeAll();
@@ -674,8 +696,10 @@
 
             while( listCURRENT_LIST_LENGTH( pxTasksWaitingForBits ) > ( UBaseType_t ) 0 )
             {
-                /* Unblock the task, returning 0 as the event list is being deleted
-                 * and cannot therefore have any bits set. */
+                /*
+                 * 解除任务阻塞，返回 0，因为事件链表正在被删除，
+                 * 因而不可能有任何位被置位。
+                 */
                 configASSERT( pxTasksWaitingForBits->xListEnd.pxNext != ( const ListItem_t * ) &( pxTasksWaitingForBits->xListEnd ) );
                 vTaskRemoveFromUnorderedEventList( pxTasksWaitingForBits->xListEnd.pxNext, eventUNBLOCKED_DUE_TO_BIT_SET );
             }
@@ -684,14 +708,16 @@
 
         #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 0 ) )
         {
-            /* The event group can only have been allocated dynamically - free
-             * it again. */
+            /*
+             * 该事件组只可能是动态分配的——将其释放。
+             */
             vPortFree( pxEventBits );
         }
         #elif ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
         {
-            /* The event group could have been allocated statically or
-             * dynamically, so check before attempting to free the memory. */
+            /*
+             * 该事件组可能是静态或动态分配的，因此在释放内存前需先检查。
+             */
             if( pxEventBits->ucStaticallyAllocated == ( uint8_t ) pdFALSE )
             {
                 vPortFree( pxEventBits );
@@ -701,7 +727,7 @@
                 mtCOVERAGE_TEST_MARKER();
             }
         }
-        #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+        #endif /* configSUPPORT_DYNAMIC_ALLOCATION 为 1 时 */
 
         traceRETURN_vEventGroupDelete();
     }
@@ -721,12 +747,12 @@
 
             #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
             {
-                /* Check if the event group was statically allocated. */
+                /* 检查该事件组是否为静态分配。 */
                 if( pxEventBits->ucStaticallyAllocated == ( uint8_t ) pdTRUE )
                 {
-                    /* MISRA Ref 11.3.1 [Misaligned access] */
-                    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
-                    /* coverity[misra_c_2012_rule_11_3_violation] */
+                    /* MISRA 参考 11.3.1【非对齐访问】 */
+                    /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
+                    /* coverity[misra_c_2012_rule_11_3_violation]（Coverity 告警抑制标记） */
                     *ppxEventGroupBuffer = ( StaticEventGroup_t * ) pxEventBits;
                     xReturn = pdTRUE;
                 }
@@ -735,50 +761,52 @@
                     xReturn = pdFALSE;
                 }
             }
-            #else /* configSUPPORT_DYNAMIC_ALLOCATION */
+            #else /* configSUPPORT_DYNAMIC_ALLOCATION 为 1 时 */
             {
-                /* Event group must have been statically allocated. */
-                /* MISRA Ref 11.3.1 [Misaligned access] */
-                /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
-                /* coverity[misra_c_2012_rule_11_3_violation] */
+                /* 事件组必定是静态分配的。 */
+                /* MISRA 参考 11.3.1【非对齐访问】 */
+                /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
+                /* coverity[misra_c_2012_rule_11_3_violation]（Coverity 告警抑制标记） */
                 *ppxEventGroupBuffer = ( StaticEventGroup_t * ) pxEventBits;
                 xReturn = pdTRUE;
             }
-            #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+            #endif /* configSUPPORT_DYNAMIC_ALLOCATION 为 1 时 */
 
             traceRETURN_xEventGroupGetStaticBuffer( xReturn );
 
             return xReturn;
         }
-    #endif /* configSUPPORT_STATIC_ALLOCATION */
+    #endif /* configSUPPORT_STATIC_ALLOCATION 为 1 时 */
 /*-----------------------------------------------------------*/
 
-/* For internal use only - execute a 'set bits' command that was pended from
- * an interrupt. */
+/*
+ * 仅供内部使用——执行由中断挂起的“置位”命令。
+ */
     void vEventGroupSetBitsCallback( void * pvEventGroup,
                                      uint32_t ulBitsToSet )
     {
         traceENTER_vEventGroupSetBitsCallback( pvEventGroup, ulBitsToSet );
 
-        /* MISRA Ref 11.5.4 [Callback function parameter] */
-        /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
-        /* coverity[misra_c_2012_rule_11_5_violation] */
+        /* MISRA 参考 11.5.4【回调函数参数】 */
+        /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
+        /* coverity[misra_c_2012_rule_11_5_violation]（Coverity 告警抑制标记） */
         ( void ) xEventGroupSetBits( pvEventGroup, ( EventBits_t ) ulBitsToSet );
 
         traceRETURN_vEventGroupSetBitsCallback();
     }
 /*-----------------------------------------------------------*/
 
-/* For internal use only - execute a 'clear bits' command that was pended from
- * an interrupt. */
+/*
+ * 仅供内部使用——执行由中断挂起的“清除位”命令。
+ */
     void vEventGroupClearBitsCallback( void * pvEventGroup,
                                        uint32_t ulBitsToClear )
     {
         traceENTER_vEventGroupClearBitsCallback( pvEventGroup, ulBitsToClear );
 
-        /* MISRA Ref 11.5.4 [Callback function parameter] */
-        /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
-        /* coverity[misra_c_2012_rule_11_5_violation] */
+        /* MISRA 参考 11.5.4【回调函数参数】 */
+        /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
+        /* coverity[misra_c_2012_rule_11_5_violation]（Coverity 告警抑制标记） */
         ( void ) xEventGroupClearBits( pvEventGroup, ( EventBits_t ) ulBitsToClear );
 
         traceRETURN_vEventGroupClearBitsCallback();
@@ -793,8 +821,9 @@
 
         if( xWaitForAllBits == pdFALSE )
         {
-            /* Task only has to wait for one bit within uxBitsToWaitFor to be
-             * set.  Is one already set? */
+            /*
+             * 任务只需等待 uxBitsToWaitFor 中的一位被置位。是否已有某位置位？
+             */
             if( ( uxCurrentEventBits & uxBitsToWaitFor ) != ( EventBits_t ) 0 )
             {
                 xWaitConditionMet = pdTRUE;
@@ -806,8 +835,9 @@
         }
         else
         {
-            /* Task has to wait for all the bits in uxBitsToWaitFor to be set.
-             * Are they set already? */
+            /*
+             * 任务需等待 uxBitsToWaitFor 中的所有位均被置位。它们是否已经置位？
+             */
             if( ( uxCurrentEventBits & uxBitsToWaitFor ) == uxBitsToWaitFor )
             {
                 xWaitConditionMet = pdTRUE;
@@ -840,7 +870,7 @@
             return xReturn;
         }
 
-    #endif /* if ( ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
+    #endif /* 条件：( ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TRACE_FACILITY == 1 )
@@ -849,9 +879,9 @@
         {
             UBaseType_t xReturn;
 
-            /* MISRA Ref 11.5.2 [Opaque pointer] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
-            /* coverity[misra_c_2012_rule_11_5_violation] */
+            /* MISRA 参考 11.5.2【不透明指针】 */
+            /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
+            /* coverity[misra_c_2012_rule_11_5_violation]（Coverity 告警抑制标记） */
             EventGroup_t const * pxEventBits = ( EventGroup_t * ) xEventGroup;
 
             traceENTER_uxEventGroupGetNumber( xEventGroup );
@@ -870,7 +900,7 @@
             return xReturn;
         }
 
-    #endif /* configUSE_TRACE_FACILITY */
+    #endif /* configUSE_TRACE_FACILITY 为 1 时 */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TRACE_FACILITY == 1 )
@@ -880,18 +910,19 @@
         {
             traceENTER_vEventGroupSetNumber( xEventGroup, uxEventGroupNumber );
 
-            /* MISRA Ref 11.5.2 [Opaque pointer] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
-            /* coverity[misra_c_2012_rule_11_5_violation] */
+            /* MISRA 参考 11.5.2【不透明指针】 */
+            /* 更多细节参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
+            /* coverity[misra_c_2012_rule_11_5_violation]（Coverity 告警抑制标记） */
             ( ( EventGroup_t * ) xEventGroup )->uxEventGroupNumber = uxEventGroupNumber;
 
             traceRETURN_vEventGroupSetNumber();
         }
 
-    #endif /* configUSE_TRACE_FACILITY */
+    #endif /* configUSE_TRACE_FACILITY 为 1 时 */
 /*-----------------------------------------------------------*/
 
-/* This entire source file will be skipped if the application is not configured
- * to include event groups functionality. If you want to include event groups
- * then ensure configUSE_EVENT_GROUPS is set to 1 in FreeRTOSConfig.h. */
-#endif /* configUSE_EVENT_GROUPS == 1 */
+/*
+ * 若应用未配置事件组功能，整个源文件都将被跳过。如需启用事件组功能，
+ * 请确保 FreeRTOSConfig.h 中 configUSE_EVENT_GROUPS 设置为 1。
+ */
+#endif /* configUSE_EVENT_GROUPS == 1 时 */

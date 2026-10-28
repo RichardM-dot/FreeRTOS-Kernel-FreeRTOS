@@ -47,9 +47,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers.  That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 把全部 API 函数重定义为使用 MPU 包装函数。该宏只应在应用程序文件包含 task.h 时定义。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 #include "FreeRTOS.h"
@@ -60,87 +60,81 @@
     #include "croutine.h"
 #endif
 
-/* The MPU ports require MPU_WRAPPERS_INCLUDED_FROM_API_FILE to be defined
- * for the header files above, but not in this file, in order to generate the
- * correct privileged Vs unprivileged linkage and placement. */
+/*
+ * MPU 移植层要求上述头文件中定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE，但本文件不能保留该定义，以便生成正确的特权态与非特权态链接和放置。
+ */
 #undef MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 
-/* Constants used with the cRxLock and cTxLock structure members. */
+/* cRxLock 和 cTxLock 结构体成员使用的常量。 */
 #define queueUNLOCKED             ( ( int8_t ) -1 )
 #define queueLOCKED_UNMODIFIED    ( ( int8_t ) 0 )
 #define queueINT8_MAX             ( ( int8_t ) 127 )
 
-/* When the Queue_t structure is used to represent a base queue its pcHead and
- * pcTail members are used as pointers into the queue storage area.  When the
- * Queue_t structure is used to represent a mutex pcHead and pcTail pointers are
- * not necessary, and the pcHead pointer is set to NULL to indicate that the
- * structure instead holds a pointer to the mutex holder (if any).  Map alternative
- * names to the pcHead and structure member to ensure the readability of the code
- * is maintained.  The QueuePointers_t and SemaphoreData_t types are used to form
- * a union as their usage is mutually exclusive dependent on what the queue is
- * being used for. */
+/*
+ * 当 Queue_t 结构体用于表示基础队列时，其 pcHead 和 pcTail 成员用作指向队列存储区的指针。当 Queue_t 结构体用于表示互斥量时，不需要 pcHead 和 pcTail 指针，此时 pcHead 被置为 NULL，表示该结构体改为保存互斥量持有者的指针（如果有）。为保持代码可读性，为 pcHead 及相应结构体成员映射了替代名称。QueuePointers_t 与 SemaphoreData_t 类型组成联合体，因为二者的用途互斥，取决于队列的具体用途。
+ */
 #define uxQueueType               pcHead
 #define queueQUEUE_IS_MUTEX       NULL
 
 typedef struct QueuePointers
 {
-    int8_t * pcTail;     /**< Points to the byte at the end of the queue storage area.  Once more byte is allocated than necessary to store the queue items, this is used as a marker. */
-    int8_t * pcReadFrom; /**< Points to the last place that a queued item was read from when the structure is used as a queue. */
+    int8_t * pcTail;     /**< 指向队列存储区末尾的字节。分配时比存储队列项所需多出一个字节，该指针用作边界标记。 */
+    int8_t * pcReadFrom; /**< 当结构体用作队列时，指向最近一次读取队列项的位置。 */
 } QueuePointers_t;
 
 typedef struct SemaphoreData
 {
-    TaskHandle_t xMutexHolder;        /**< The handle of the task that holds the mutex. */
-    UBaseType_t uxRecursiveCallCount; /**< Maintains a count of the number of times a recursive mutex has been recursively 'taken' when the structure is used as a mutex. */
+    TaskHandle_t xMutexHolder;        /**< 持有互斥量的任务句柄。 */
+    UBaseType_t uxRecursiveCallCount; /**< 当结构体用作互斥量时，记录递归互斥量被递归获取（take）的次数。 */
 } SemaphoreData_t;
 
-/* Semaphores do not actually store or copy data, so have an item size of
- * zero. */
+/*
+ * 信号量并不实际存储或复制数据，因此其消息项大小为 0。
+ */
 #define queueSEMAPHORE_QUEUE_ITEM_LENGTH    ( ( UBaseType_t ) 0 )
 #define queueMUTEX_GIVE_BLOCK_TIME          ( ( TickType_t ) 0U )
 
 #if ( configUSE_PREEMPTION == 0 )
 
-/* If the cooperative scheduler is being used then a yield should not be
- * performed just because a higher priority task has been woken. */
+/*
+ * 如果使用协作式调度器，则不应仅因为唤醒了更高优先级的任务就执行让出 CPU 操作。
+ */
     #define queueYIELD_IF_USING_PREEMPTION()
 #else
     #if ( configNUMBER_OF_CORES == 1 )
         #define queueYIELD_IF_USING_PREEMPTION()    portYIELD_WITHIN_API()
-    #else /* #if ( configNUMBER_OF_CORES == 1 ) */
+    #else /* 对应 #if ( configNUMBER_OF_CORES == 1 ) */
         #define queueYIELD_IF_USING_PREEMPTION()    vTaskYieldWithinAPI()
-    #endif /* #if ( configNUMBER_OF_CORES == 1 ) */
+    #endif /* 对应 #if ( configNUMBER_OF_CORES == 1 ) */
 #endif
 
 /*
- * Definition of the queue used by the scheduler.
- * Items are queued by copy, not reference.  See the following link for the
- * rationale: https://www.FreeRTOS.org/Embedded-RTOS-Queues.html
+ * 调度器所用队列的定义。队列项按值复制入队，而不是按引用入队。原因参见以下链接：https://www.FreeRTOS.org/Embedded-RTOS-Queues.html
  */
-typedef struct QueueDefinition /* The old naming convention is used to prevent breaking kernel aware debuggers. */
+typedef struct QueueDefinition /* 沿用旧命名约定，以避免破坏内核感知调试器。 */
 {
-    int8_t * pcHead;           /**< Points to the beginning of the queue storage area. */
-    int8_t * pcWriteTo;        /**< Points to the free next place in the storage area. */
+    int8_t * pcHead;           /**< 指向队列存储区起始位置。 */
+    int8_t * pcWriteTo;        /**< 指向存储区中下一个空闲位置。 */
 
     union
     {
-        QueuePointers_t xQueue;     /**< Data required exclusively when this structure is used as a queue. */
-        SemaphoreData_t xSemaphore; /**< Data required exclusively when this structure is used as a semaphore. */
+        QueuePointers_t xQueue;     /**< 仅当该结构体用作队列时需要的数据。 */
+        SemaphoreData_t xSemaphore; /**< 仅当该结构体用作信号量时需要的数据。 */
     } u;
 
-    List_t xTasksWaitingToSend;             /**< List of tasks that are blocked waiting to post onto this queue.  Stored in priority order. */
-    List_t xTasksWaitingToReceive;          /**< List of tasks that are blocked waiting to read from this queue.  Stored in priority order. */
+    List_t xTasksWaitingToSend;             /**< 因等待向该队列发送消息而阻塞的任务链表，按优先级顺序存放。 */
+    List_t xTasksWaitingToReceive;          /**< 因等待从该队列读取消息而阻塞的任务链表，按优先级顺序存放。 */
 
-    volatile UBaseType_t uxMessagesWaiting; /**< The number of items currently in the queue. */
-    UBaseType_t uxLength;                   /**< The length of the queue defined as the number of items it will hold, not the number of bytes. */
-    UBaseType_t uxItemSize;                 /**< The size of each items that the queue will hold. */
+    volatile UBaseType_t uxMessagesWaiting; /**< 队列中当前的消息项数量。 */
+    UBaseType_t uxLength;                   /**< 队列长度，以可容纳的消息项数量（而非字节数）定义。 */
+    UBaseType_t uxItemSize;                 /**< 队列中每个消息项的大小。 */
 
-    volatile int8_t cRxLock;                /**< Stores the number of items received from the queue (removed from the queue) while the queue was locked.  Set to queueUNLOCKED when the queue is not locked. */
-    volatile int8_t cTxLock;                /**< Stores the number of items transmitted to the queue (added to the queue) while the queue was locked.  Set to queueUNLOCKED when the queue is not locked. */
+    volatile int8_t cRxLock;                /**< 记录队列被锁定期间从队列接收（移除）的消息项数量。队列未锁定时置为 queueUNLOCKED。 */
+    volatile int8_t cTxLock;                /**< 记录队列被锁定期间向队列发送（添加）的消息项数量。队列未锁定时置为 queueUNLOCKED。 */
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
-        uint8_t ucStaticallyAllocated; /**< Set to pdTRUE if the memory used by the queue was statically allocated to ensure no attempt is made to free the memory. */
+        uint8_t ucStaticallyAllocated; /**< 若队列所用内存为静态分配，则置为 pdTRUE，以确保不会尝试释放该内存。 */
     #endif
 
     #if ( configUSE_QUEUE_SETS == 1 )
@@ -153,77 +147,71 @@ typedef struct QueueDefinition /* The old naming convention is used to prevent b
     #endif
 } xQUEUE;
 
-/* The old xQUEUE name is maintained above then typedefed to the new Queue_t
- * name below to enable the use of older kernel aware debuggers. */
+/*
+ * 保留旧的 xQUEUE 名称，并在下方用 typedef 关联到新名称 Queue_t，以便兼容旧版内核感知调试器。
+ */
 typedef xQUEUE Queue_t;
 
 /*-----------------------------------------------------------*/
 
 /*
- * The queue registry is just a means for kernel aware debuggers to locate
- * queue structures.  It has no other purpose so is an optional component.
+ * 队列注册表只是供内核感知调试器定位队列结构的一种手段，没有其他用途，因此是可选组件。
  */
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
 
-/* The type stored within the queue registry array.  This allows a name
- * to be assigned to each queue making kernel aware debugging a little
- * more user friendly. */
+/*
+ * 存储在队列注册表数组中的类型。它允许为每个队列指定名称，使内核感知调试更加友好。
+ */
     typedef struct QUEUE_REGISTRY_ITEM
     {
         const char * pcQueueName;
         QueueHandle_t xHandle;
     } xQueueRegistryItem;
 
-/* The old xQueueRegistryItem name is maintained above then typedefed to the
- * new xQueueRegistryItem name below to enable the use of older kernel aware
- * debuggers. */
+/*
+ * 保留旧的 xQueueRegistryItem 名称，并在下方用 typedef 关联到新名称 QueueRegistryItem_t，以便兼容旧版内核感知调试器。
+ */
     typedef xQueueRegistryItem QueueRegistryItem_t;
 
-/* The queue registry is simply an array of QueueRegistryItem_t structures.
- * The pcQueueName member of a structure being NULL is indicative of the
- * array position being vacant. */
+/*
+ * 队列注册表只是由 QueueRegistryItem_t 结构体组成的数组。结构体的 pcQueueName 成员为 NULL 表示该数组位置空闲。
+ */
 
-/* MISRA Ref 8.4.2 [Declaration shall be visible] */
-/* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-84 */
-/* coverity[misra_c_2012_rule_8_4_violation] */
+/* MISRA 参考 8.4.2 [声明应可见] */
+/* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-84 */
+/* coverity[misra_c_2012_rule_8_4_violation]（Coverity 抑制标记） */
     PRIVILEGED_DATA QueueRegistryItem_t xQueueRegistry[ configQUEUE_REGISTRY_SIZE ];
 
-#endif /* configQUEUE_REGISTRY_SIZE */
+#endif /* configQUEUE_REGISTRY_SIZE 配置项 */
 
 /*
- * Unlocks a queue locked by a call to prvLockQueue.  Locking a queue does not
- * prevent an ISR from adding or removing items to the queue, but does prevent
- * an ISR from removing tasks from the queue event lists.  If an ISR finds a
- * queue is locked it will instead increment the appropriate queue lock count
- * to indicate that a task may require unblocking.  When the queue in unlocked
- * these lock counts are inspected, and the appropriate action taken.
+ * 解锁由 prvLockQueue 调用锁定的队列。锁定队列不会阻止 ISR 向队列添加或移除消息项，但会阻止 ISR 从队列事件链表中移除任务。若 ISR 发现队列已锁定，则改为递增相应的队列锁定计数，以表示可能有任务需要解除阻塞。队列解锁时会检查这些锁定计数，并采取相应操作。
  */
 static void prvUnlockQueue( Queue_t * const pxQueue ) PRIVILEGED_FUNCTION;
 
 /*
- * Uses a critical section to determine if there is any data in a queue.
+ * 使用临界区判断队列中是否有数据。
  *
- * @return pdTRUE if the queue contains no items, otherwise pdFALSE.
+ * @return 若队列不包含任何消息项则返回 pdTRUE，否则返回 pdFALSE。
  */
 static BaseType_t prvIsQueueEmpty( const Queue_t * pxQueue ) PRIVILEGED_FUNCTION;
 
 /*
- * Uses a critical section to determine if there is any space in a queue.
+ * 使用临界区判断队列中是否有空闲空间。
  *
- * @return pdTRUE if there is no space, otherwise pdFALSE;
+ * @return 若没有空闲空间则返回 pdTRUE，否则返回 pdFALSE；
  */
 static BaseType_t prvIsQueueFull( const Queue_t * pxQueue ) PRIVILEGED_FUNCTION;
 
 /*
- * Copies an item into the queue, either at the front of the queue or the
- * back of the queue.
+ * 将消息项复制到队列中，位置可以是队列前端或后端。
  */
 static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
                                       const void * pvItemToQueue,
                                       const BaseType_t xPosition ) PRIVILEGED_FUNCTION;
 
 /*
- * Copies an item out of a queue.
+ * 将消息项从队列中复制出来。
  */
 static void prvCopyDataFromQueue( Queue_t * const pxQueue,
                                   void * const pvBuffer ) PRIVILEGED_FUNCTION;
@@ -231,15 +219,13 @@ static void prvCopyDataFromQueue( Queue_t * const pxQueue,
 #if ( configUSE_QUEUE_SETS == 1 )
 
 /*
- * Checks to see if a queue is a member of a queue set, and if so, notifies
- * the queue set that the queue contains data.
+ * 检查队列是否为某个队列集的成员，若是，则通知该队列集此队列中已有数据。
  */
     static BaseType_t prvNotifyQueueSetContainer( const Queue_t * const pxQueue ) PRIVILEGED_FUNCTION;
 #endif
 
 /*
- * Called after a Queue_t structure has been allocated either statically or
- * dynamically to fill in the structure's members.
+ * 在静态或动态分配 Queue_t 结构体之后调用，用于填充该结构体的成员。
  */
 static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
                                    const UBaseType_t uxItemSize,
@@ -248,9 +234,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
                                    Queue_t * pxNewQueue ) PRIVILEGED_FUNCTION;
 
 /*
- * Mutexes are a special type of queue.  When a mutex is created, first the
- * queue is created, then prvInitialiseMutex() is called to configure the queue
- * as a mutex.
+ * 互斥量是一种特殊类型的队列。创建互斥量时，先创建队列，然后调用 prvInitialiseMutex() 将队列配置为互斥量。
  */
 #if ( configUSE_MUTEXES == 1 )
     static void prvInitialiseMutex( Queue_t * pxNewQueue ) PRIVILEGED_FUNCTION;
@@ -259,19 +243,14 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 #if ( configUSE_MUTEXES == 1 )
 
 /*
- * If a task waiting for a mutex causes the mutex holder to inherit a
- * priority, but the waiting task times out, then the holder should
- * disinherit the priority - but only down to the highest priority of any
- * other tasks that are waiting for the same mutex.  This function returns
- * that priority.
+ * 若等待互斥量的任务使互斥量持有者继承了优先级，但等待任务随后超时，则持有者应取消该优先级继承——但最多只降低到其他同样等待该互斥量的任务中的最高优先级。本函数返回该优先级。
  */
     static UBaseType_t prvGetHighestPriorityOfWaitToReceiveList( const Queue_t * const pxQueue ) PRIVILEGED_FUNCTION;
 #endif
 /*-----------------------------------------------------------*/
 
 /*
- * Macro to mark a queue as locked.  Locking a queue prevents an ISR from
- * accessing the queue event lists.
+ * 用于将队列标记为已锁定的宏。锁定队列可阻止 ISR 访问队列事件链表。
  */
 #define prvLockQueue( pxQueue )                            \
     taskENTER_CRITICAL();                                  \
@@ -288,9 +267,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
     taskEXIT_CRITICAL()
 
 /*
- * Macro to increment cTxLock member of the queue data structure. It is
- * capped at the number of tasks in the system as we cannot unblock more
- * tasks than the number of tasks in the system.
+ * 用于递增队列数据结构中 cTxLock 成员的宏。该值以系统中的任务数为上限，因为解除阻塞的任务数不可能超过系统中的任务数。
  */
 #define prvIncrementQueueTxLock( pxQueue, cTxLock )                           \
     do {                                                                      \
@@ -303,9 +280,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
     } while( 0 )
 
 /*
- * Macro to increment cRxLock member of the queue data structure. It is
- * capped at the number of tasks in the system as we cannot unblock more
- * tasks than the number of tasks in the system.
+ * 用于递增队列数据结构中 cRxLock 成员的宏。该值以系统中的任务数为上限，因为解除阻塞的任务数不可能超过系统中的任务数。
  */
 #define prvIncrementQueueRxLock( pxQueue, cRxLock )                           \
     do {                                                                      \
@@ -330,7 +305,7 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
 
     if( ( pxQueue != NULL ) &&
         ( pxQueue->uxLength >= 1U ) &&
-        /* Check for multiplication overflow. */
+        /* 检查乘法是否溢出。 */
         ( ( SIZE_MAX / pxQueue->uxLength ) >= pxQueue->uxItemSize ) )
     {
         taskENTER_CRITICAL();
@@ -344,11 +319,9 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
 
             if( xNewQueue == pdFALSE )
             {
-                /* If there are tasks blocked waiting to read from the queue, then
-                 * the tasks will remain blocked as after this function exits the queue
-                 * will still be empty.  If there are tasks blocked waiting to write to
-                 * the queue, then one should be unblocked as after this function exits
-                 * it will be possible to write to it. */
+                /*
+                 * 如果有任务因等待从队列读取而阻塞，这些任务将保持阻塞，因为本函数退出后队列仍为空。如果有任务因等待向队列写入而阻塞，则应解除其中一个任务的阻塞，因为本函数退出后就可以向队列写入。
+                 */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
@@ -367,7 +340,7 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
             }
             else
             {
-                /* Ensure the event queues start in the correct state. */
+                /* 确保事件队列以正确的状态初始化。 */
                 vListInitialise( &( pxQueue->xTasksWaitingToSend ) );
                 vListInitialise( &( pxQueue->xTasksWaitingToReceive ) );
             }
@@ -381,8 +354,9 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
 
     configASSERT( xReturn != pdFAIL );
 
-    /* A value is returned for calling semantic consistency with previous
-     * versions. */
+    /*
+     * 返回值仅为了与之前版本的调用语义保持一致。
+     */
     traceRETURN_xQueueGenericReset( xReturn );
 
     return xReturn;
@@ -401,47 +375,49 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
 
         traceENTER_xQueueGenericCreateStatic( uxQueueLength, uxItemSize, pucQueueStorage, pxStaticQueue, ucQueueType );
 
-        /* The StaticQueue_t structure and the queue storage area must be
-         * supplied. */
+        /*
+         * 必须提供 StaticQueue_t 结构体和队列存储区。
+         */
         configASSERT( pxStaticQueue );
 
         if( ( uxQueueLength > ( UBaseType_t ) 0 ) &&
             ( pxStaticQueue != NULL ) &&
 
-            /* A queue storage area should be provided if the item size is not 0, and
-             * should not be provided if the item size is 0. */
+            /*
+             * 当消息项大小不为 0 时应提供队列存储区，当消息项大小为 0 时不应提供。
+             */
             ( !( ( pucQueueStorage != NULL ) && ( uxItemSize == 0U ) ) ) &&
             ( !( ( pucQueueStorage == NULL ) && ( uxItemSize != 0U ) ) ) )
         {
             #if ( configASSERT_DEFINED == 1 )
             {
-                /* Sanity check that the size of the structure used to declare a
-                 * variable of type StaticQueue_t or StaticSemaphore_t equals the size of
-                 * the real queue and semaphore structures. */
+                /*
+                 * 检查用于声明 StaticQueue_t 或 StaticSemaphore_t 类型变量的结构体大小是否等于真实队列和信号量结构体的大小。
+                 */
                 volatile size_t xSize = sizeof( StaticQueue_t );
 
-                /* This assertion cannot be branch covered in unit tests */
-                configASSERT( xSize == sizeof( Queue_t ) ); /* LCOV_EXCL_BR_LINE */
-                ( void ) xSize;                             /* Prevent unused variable warning when configASSERT() is not defined. */
+                /* 该断言在单元测试中无法进行分支覆盖 */
+                configASSERT( xSize == sizeof( Queue_t ) ); /* LCOV_EXCL_BR_LINE 分支覆盖排除标记 */
+                ( void ) xSize;                             /* 在未定义 configASSERT() 时防止出现未使用变量警告。 */
             }
-            #endif /* configASSERT_DEFINED */
+            #endif /* configASSERT_DEFINED 配置项 */
 
-            /* The address of a statically allocated queue was passed in, use it.
-             * The address of a statically allocated storage area was also passed in
-             * but is already set. */
-            /* MISRA Ref 11.3.1 [Misaligned access] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
-            /* coverity[misra_c_2012_rule_11_3_violation] */
+            /*
+             * 传入了静态分配队列的地址，直接使用它。同时传入了静态分配存储区的地址，但该地址已经设置完毕。
+             */
+            /* MISRA 参考 11.3.1 [非对齐访问] */
+            /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
+            /* coverity[misra_c_2012_rule_11_3_violation]（Coverity 抑制标记） */
             pxNewQueue = ( Queue_t * ) pxStaticQueue;
 
             #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
             {
-                /* Queues can be allocated either statically or dynamically, so
-                 * note this queue was allocated statically in case the queue is
-                 * later deleted. */
+                /*
+                 * 队列既可以静态分配也可以动态分配，因此记录此队列是静态分配的，以备之后删除该队列时使用。
+                 */
                 pxNewQueue->ucStaticallyAllocated = pdTRUE;
             }
-            #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+            #endif /* configSUPPORT_DYNAMIC_ALLOCATION 配置项 */
 
             prvInitialiseNewQueue( uxQueueLength, uxItemSize, pucQueueStorage, ucQueueType, pxNewQueue );
         }
@@ -456,7 +432,7 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
         return pxNewQueue;
     }
 
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
@@ -475,7 +451,7 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
 
         #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
         {
-            /* Check if the queue was statically allocated. */
+            /* 检查该队列是否为静态分配。 */
             if( pxQueue->ucStaticallyAllocated == ( uint8_t ) pdTRUE )
             {
                 if( ppucQueueStorage != NULL )
@@ -483,9 +459,9 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
                     *ppucQueueStorage = ( uint8_t * ) pxQueue->pcHead;
                 }
 
-                /* MISRA Ref 11.3.1 [Misaligned access] */
-                /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
-                /* coverity[misra_c_2012_rule_11_3_violation] */
+                /* MISRA 参考 11.3.1 [非对齐访问] */
+                /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-113 */
+                /* coverity[misra_c_2012_rule_11_3_violation]（Coverity 抑制标记） */
                 *ppxStaticQueue = ( StaticQueue_t * ) pxQueue;
                 xReturn = pdTRUE;
             }
@@ -494,9 +470,9 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
                 xReturn = pdFALSE;
             }
         }
-        #else /* configSUPPORT_DYNAMIC_ALLOCATION */
+        #else /* configSUPPORT_DYNAMIC_ALLOCATION 配置项 */
         {
-            /* Queue must have been statically allocated. */
+            /* 该队列必定是静态分配的。 */
             if( ppucQueueStorage != NULL )
             {
                 *ppucQueueStorage = ( uint8_t * ) pxQueue->pcHead;
@@ -505,14 +481,14 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
             *ppxStaticQueue = ( StaticQueue_t * ) pxQueue;
             xReturn = pdTRUE;
         }
-        #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+        #endif /* configSUPPORT_DYNAMIC_ALLOCATION 配置项 */
 
         traceRETURN_xQueueGenericGetStaticBuffers( xReturn );
 
         return xReturn;
     }
 
-#endif /* configSUPPORT_STATIC_ALLOCATION */
+#endif /* configSUPPORT_STATIC_ALLOCATION 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
@@ -528,39 +504,40 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
         traceENTER_xQueueGenericCreate( uxQueueLength, uxItemSize, ucQueueType );
 
         if( ( uxQueueLength > ( UBaseType_t ) 0 ) &&
-            /* Check for multiplication overflow. */
+            /* 检查乘法是否溢出。 */
             ( ( SIZE_MAX / uxQueueLength ) >= uxItemSize ) &&
-            /* Check for addition overflow. */
-            /* MISRA Ref 14.3.1 [Configuration dependent invariant] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-143. */
-            /* coverity[misra_c_2012_rule_14_3_violation] */
+            /* 检查加法是否溢出。 */
+            /* MISRA 参考 14.3.1 [依赖配置的不变量] */
+            /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-143。 */
+            /* coverity[misra_c_2012_rule_14_3_violation]（Coverity 抑制标记） */
             ( ( SIZE_MAX - sizeof( Queue_t ) ) >= ( size_t ) ( ( size_t ) uxQueueLength * ( size_t ) uxItemSize ) ) )
         {
-            /* Allocate enough space to hold the maximum number of items that
-             * can be in the queue at any time.  It is valid for uxItemSize to be
-             * zero in the case the queue is used as a semaphore. */
+            /*
+             * 分配足够的空间以容纳队列任意时刻可能存在的最大消息项数。当队列用作信号量时，uxItemSize 可以为 0。
+             */
             xQueueSizeInBytes = ( size_t ) ( ( size_t ) uxQueueLength * ( size_t ) uxItemSize );
 
-            /* MISRA Ref 11.5.1 [Malloc memory assignment] */
-            /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
-            /* coverity[misra_c_2012_rule_11_5_violation] */
+            /* MISRA 参考 11.5.1 [malloc 内存赋值] */
+            /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-115 */
+            /* coverity[misra_c_2012_rule_11_5_violation]（Coverity 抑制标记） */
             pxNewQueue = ( Queue_t * ) pvPortMalloc( sizeof( Queue_t ) + xQueueSizeInBytes );
 
             if( pxNewQueue != NULL )
             {
-                /* Jump past the queue structure to find the location of the queue
-                 * storage area. */
+                /*
+                 * 跳过队列结构体，定位到队列存储区的位置。
+                 */
                 pucQueueStorage = ( uint8_t * ) pxNewQueue;
                 pucQueueStorage += sizeof( Queue_t );
 
                 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
                 {
-                    /* Queues can be created either statically or dynamically, so
-                     * note this task was created dynamically in case it is later
-                     * deleted. */
+                    /*
+                     * 队列既可以静态创建也可以动态创建，因此记录此队列是动态创建的，以备之后删除时使用。
+                     */
                     pxNewQueue->ucStaticallyAllocated = pdFALSE;
                 }
-                #endif /* configSUPPORT_STATIC_ALLOCATION */
+                #endif /* configSUPPORT_STATIC_ALLOCATION 配置项 */
 
                 prvInitialiseNewQueue( uxQueueLength, uxItemSize, pucQueueStorage, ucQueueType, pxNewQueue );
             }
@@ -581,7 +558,7 @@ BaseType_t xQueueGenericReset( QueueHandle_t xQueue,
         return pxNewQueue;
     }
 
-#endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+#endif /* configSUPPORT_DYNAMIC_ALLOCATION 配置项 */
 /*-----------------------------------------------------------*/
 
 static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
@@ -590,26 +567,27 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
                                    const uint8_t ucQueueType,
                                    Queue_t * pxNewQueue )
 {
-    /* Remove compiler warnings about unused parameters should
-     * configUSE_TRACE_FACILITY not be set to 1. */
+    /*
+     * 在未将 configUSE_TRACE_FACILITY 设为 1 时，消除未使用参数引起的编译器警告。
+     */
     ( void ) ucQueueType;
 
     if( uxItemSize == ( UBaseType_t ) 0 )
     {
-        /* No RAM was allocated for the queue storage area, but PC head cannot
-         * be set to NULL because NULL is used as a key to say the queue is used as
-         * a mutex.  Therefore just set pcHead to point to the queue as a benign
-         * value that is known to be within the memory map. */
+        /*
+         * 队列存储区未分配 RAM，但 pcHead 不能置为 NULL，因为 NULL 被用作表示队列为互斥量的标志。因此将 pcHead 指向队列自身，作为一个已知位于内存映射范围内的合法值。
+         */
         pxNewQueue->pcHead = ( int8_t * ) pxNewQueue;
     }
     else
     {
-        /* Set the head to the start of the queue storage area. */
+        /* 将头部指针设置为队列存储区的起始位置。 */
         pxNewQueue->pcHead = ( int8_t * ) pucQueueStorage;
     }
 
-    /* Initialise the queue members as described where the queue type is
-     * defined. */
+    /*
+     * 按队列类型定义处的说明初始化队列成员。
+     */
     pxNewQueue->uxLength = uxQueueLength;
     pxNewQueue->uxItemSize = uxItemSize;
     ( void ) xQueueGenericReset( pxNewQueue, pdTRUE );
@@ -618,13 +596,13 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
     {
         pxNewQueue->ucQueueType = ucQueueType;
     }
-    #endif /* configUSE_TRACE_FACILITY */
+    #endif /* configUSE_TRACE_FACILITY 配置项 */
 
     #if ( configUSE_QUEUE_SETS == 1 )
     {
         pxNewQueue->pxQueueSetContainer = NULL;
     }
-    #endif /* configUSE_QUEUE_SETS */
+    #endif /* configUSE_QUEUE_SETS 配置项 */
 
     traceQUEUE_CREATE( pxNewQueue );
 }
@@ -636,19 +614,18 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
     {
         if( pxNewQueue != NULL )
         {
-            /* The queue create function will set all the queue structure members
-            * correctly for a generic queue, but this function is creating a
-            * mutex.  Overwrite those members that need to be set differently -
-            * in particular the information required for priority inheritance. */
+            /*
+             * 队列创建函数会为通用队列正确设置队列结构体的所有成员，但本函数创建的是互斥量。这里覆盖那些需要以不同方式设置的成员——尤其是实现优先级继承所需的信息。
+             */
             pxNewQueue->u.xSemaphore.xMutexHolder = NULL;
             pxNewQueue->uxQueueType = queueQUEUE_IS_MUTEX;
 
-            /* In case this is a recursive mutex. */
+            /* 以应对递归互斥量的情况。 */
             pxNewQueue->u.xSemaphore.uxRecursiveCallCount = 0;
 
             traceCREATE_MUTEX( pxNewQueue );
 
-            /* Start with the semaphore in the expected state. */
+            /* 以信号量的预期状态作为初始状态。 */
             ( void ) xQueueGenericSend( pxNewQueue, NULL, ( TickType_t ) 0U, queueSEND_TO_BACK );
         }
         else
@@ -657,7 +634,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         }
     }
 
-#endif /* configUSE_MUTEXES */
+#endif /* configUSE_MUTEXES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
@@ -677,7 +654,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return xNewQueue;
     }
 
-#endif /* configUSE_MUTEXES */
+#endif /* configUSE_MUTEXES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
@@ -690,8 +667,9 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 
         traceENTER_xQueueCreateMutexStatic( ucQueueType, pxStaticQueue );
 
-        /* Prevent compiler warnings about unused parameters if
-         * configUSE_TRACE_FACILITY does not equal 1. */
+        /*
+         * 当 configUSE_TRACE_FACILITY 不等于 1 时，防止出现未使用参数的编译器警告。
+         */
         ( void ) ucQueueType;
 
         xNewQueue = xQueueGenericCreateStatic( uxMutexLength, uxMutexSize, NULL, pxStaticQueue, ucQueueType );
@@ -702,7 +680,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return xNewQueue;
     }
 
-#endif /* configUSE_MUTEXES */
+#endif /* configUSE_MUTEXES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
@@ -716,11 +694,9 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 
         configASSERT( xSemaphore );
 
-        /* This function is called by xSemaphoreGetMutexHolder(), and should not
-         * be called directly.  Note:  This is a good way of determining if the
-         * calling task is the mutex holder, but not a good way of determining the
-         * identity of the mutex holder, as the holder may change between the
-         * following critical section exiting and the function returning. */
+        /*
+         * 本函数由 xSemaphoreGetMutexHolder() 调用，不应直接调用。注意：用它可以很好地判断调用任务是否为互斥量持有者，但不适合用来确定互斥量持有者的身份，因为在随后的临界区退出与函数返回之间，持有者可能发生变化。
+         */
         taskENTER_CRITICAL();
         {
             if( pxSemaphore->uxQueueType == queueQUEUE_IS_MUTEX )
@@ -739,7 +715,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return pxReturn;
     }
 
-#endif /* if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
+#endif /* 对应 if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
@@ -752,9 +728,9 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 
         configASSERT( xSemaphore );
 
-        /* Mutexes cannot be used in interrupt service routines, so the mutex
-         * holder should not change in an ISR, and therefore a critical section is
-         * not required here. */
+        /*
+         * 互斥量不能在中断服务程序中使用，因此互斥量持有者在 ISR 中不会变化，此处不需要临界区。
+         */
         if( ( ( Queue_t * ) xSemaphore )->uxQueueType == queueQUEUE_IS_MUTEX )
         {
             pxReturn = ( ( Queue_t * ) xSemaphore )->u.xSemaphore.xMutexHolder;
@@ -769,7 +745,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return pxReturn;
     }
 
-#endif /* if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
+#endif /* 对应 if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_RECURSIVE_MUTEXES == 1 )
@@ -783,28 +759,24 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 
         configASSERT( pxMutex );
 
-        /* If this is the task that holds the mutex then xMutexHolder will not
-         * change outside of this task.  If this task does not hold the mutex then
-         * pxMutexHolder can never coincidentally equal the tasks handle, and as
-         * this is the only condition we are interested in it does not matter if
-         * pxMutexHolder is accessed simultaneously by another task.  Therefore no
-         * mutual exclusion is required to test the pxMutexHolder variable. */
+        /*
+         * 如果当前任务持有该互斥量，则 xMutexHolder 不会在本任务之外发生变化。如果当前任务未持有该互斥量，则 pxMutexHolder 不可能恰好等于本任务的句柄；而这是唯一需要判断的条件，因此即使另一个任务同时访问 pxMutexHolder 也没有关系。所以测试 pxMutexHolder 变量不需要互斥保护。
+         */
         if( pxMutex->u.xSemaphore.xMutexHolder == xTaskGetCurrentTaskHandle() )
         {
             traceGIVE_MUTEX_RECURSIVE( pxMutex );
 
-            /* uxRecursiveCallCount cannot be zero if xMutexHolder is equal to
-             * the task handle, therefore no underflow check is required.  Also,
-             * uxRecursiveCallCount is only modified by the mutex holder, and as
-             * there can only be one, no mutual exclusion is required to modify the
-             * uxRecursiveCallCount member. */
+            /*
+             * 如果 xMutexHolder 等于任务句柄，则 uxRecursiveCallCount 不可能为 0，因此无需做下溢检查。此外，uxRecursiveCallCount 只由互斥量持有者修改，而持有者只能有一个，因此修改该成员不需要互斥保护。
+             */
             ( pxMutex->u.xSemaphore.uxRecursiveCallCount )--;
 
-            /* Has the recursive call count unwound to 0? */
+            /* 递归调用计数是否已递减到 0？ */
             if( pxMutex->u.xSemaphore.uxRecursiveCallCount == ( UBaseType_t ) 0 )
             {
-                /* Return the mutex.  This will automatically unblock any other
-                 * task that might be waiting to access the mutex. */
+                /*
+                 * 归还互斥量。这会自动解除任何其他等待访问该互斥量的任务的阻塞。
+                 */
                 ( void ) xQueueGenericSend( pxMutex, NULL, queueMUTEX_GIVE_BLOCK_TIME, queueSEND_TO_BACK );
             }
             else
@@ -816,8 +788,9 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         }
         else
         {
-            /* The mutex cannot be given because the calling task is not the
-             * holder. */
+            /*
+             * 调用任务不是持有者，因此不能归还该互斥量。
+             */
             xReturn = pdFAIL;
 
             traceGIVE_MUTEX_RECURSIVE_FAILED( pxMutex );
@@ -828,7 +801,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return xReturn;
     }
 
-#endif /* configUSE_RECURSIVE_MUTEXES */
+#endif /* configUSE_RECURSIVE_MUTEXES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_RECURSIVE_MUTEXES == 1 )
@@ -843,8 +816,9 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
 
         configASSERT( pxMutex );
 
-        /* Comments regarding mutual exclusion as per those within
-         * xQueueGiveMutexRecursive(). */
+        /*
+         * 关于互斥保护的说明，与 xQueueGiveMutexRecursive() 中的注释相同。
+         */
 
         traceTAKE_MUTEX_RECURSIVE( pxMutex );
 
@@ -852,7 +826,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         {
             ( pxMutex->u.xSemaphore.uxRecursiveCallCount )++;
 
-            /* Check if an overflow occurred. */
+            /* 检查是否发生溢出。 */
             configASSERT( pxMutex->u.xSemaphore.uxRecursiveCallCount );
 
             xReturn = pdPASS;
@@ -861,14 +835,14 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         {
             xReturn = xQueueSemaphoreTake( pxMutex, xTicksToWait );
 
-            /* pdPASS will only be returned if the mutex was successfully
-             * obtained.  The calling task may have entered the Blocked state
-             * before reaching here. */
+            /*
+             * 只有在成功获得互斥量时才会返回 pdPASS。调用任务在到达此处之前可能已进入阻塞状态。
+             */
             if( xReturn != pdFAIL )
             {
                 ( pxMutex->u.xSemaphore.uxRecursiveCallCount )++;
 
-                /* Check if an overflow occurred. */
+                /* 检查是否发生溢出。 */
                 configASSERT( pxMutex->u.xSemaphore.uxRecursiveCallCount );
             }
             else
@@ -882,7 +856,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return xReturn;
     }
 
-#endif /* configUSE_RECURSIVE_MUTEXES */
+#endif /* configUSE_RECURSIVE_MUTEXES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
@@ -922,7 +896,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return xHandle;
     }
 
-#endif /* ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+#endif /* 对应 ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
@@ -961,7 +935,7 @@ static void prvInitialiseNewQueue( const UBaseType_t uxQueueLength,
         return xHandle;
     }
 
-#endif /* ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+#endif /* 对应 ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
@@ -988,10 +962,9 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
     {
         taskENTER_CRITICAL();
         {
-            /* Is there room on the queue now?  The running task must be the
-             * highest priority task wanting to access the queue.  If the head item
-             * in the queue is to be overwritten then it does not matter if the
-             * queue is full. */
+            /*
+             * 此时队列中是否有空闲空间？正在运行的任务必定是希望访问该队列的最高优先级任务。如果要覆盖队列头部的消息项，则队列是否已满无关紧要。
+             */
             if( ( pxQueue->uxMessagesWaiting < pxQueue->uxLength ) || ( xCopyPosition == queueOVERWRITE ) )
             {
                 traceQUEUE_SEND( pxQueue );
@@ -1006,16 +979,16 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                     {
                         if( ( xCopyPosition == queueOVERWRITE ) && ( uxPreviousMessagesWaiting != ( UBaseType_t ) 0 ) )
                         {
-                            /* Do not notify the queue set as an existing item
-                             * was overwritten in the queue so the number of items
-                             * in the queue has not changed. */
+                            /*
+                             * 不要通知队列集，因为队列中的现有消息项被覆盖，队列中的消息项数量没有变化。
+                             */
                             mtCOVERAGE_TEST_MARKER();
                         }
                         else if( prvNotifyQueueSetContainer( pxQueue ) != pdFALSE )
                         {
-                            /* The queue is a member of a queue set, and posting
-                             * to the queue set caused a higher priority task to
-                             * unblock. A context switch is required. */
+                            /*
+                             * 该队列是某个队列集的成员，向队列集发送消息导致更高优先级的任务解除阻塞，需要进行上下文切换。
+                             */
                             queueYIELD_IF_USING_PREEMPTION();
                         }
                         else
@@ -1025,16 +998,16 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                     }
                     else
                     {
-                        /* If there was a task waiting for data to arrive on the
-                         * queue then unblock it now. */
+                        /*
+                         * 如果有任务在等待该队列中的数据到达，则立即解除其阻塞。
+                         */
                         if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                         {
                             if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                             {
-                                /* The unblocked task has a priority higher than
-                                 * our own so yield immediately.  Yes it is ok to
-                                 * do this from within the critical section - the
-                                 * kernel takes care of that. */
+                                /*
+                                 * 被解除阻塞的任务优先级高于当前任务，因此立即让出 CPU。在临界区内执行此操作没有问题——内核会处理相关事宜。
+                                 */
                                 queueYIELD_IF_USING_PREEMPTION();
                             }
                             else
@@ -1044,10 +1017,9 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                         }
                         else if( xYieldRequired != pdFALSE )
                         {
-                            /* This path is a special case that will only get
-                             * executed if the task was holding multiple mutexes
-                             * and the mutexes were given back in an order that is
-                             * different to that in which they were taken. */
+                            /*
+                             * 此路径是一种特殊情况，仅当任务持有多个互斥量，且归还互斥量的顺序与获取顺序不同时才会执行。
+                             */
                             queueYIELD_IF_USING_PREEMPTION();
                         }
                         else
@@ -1056,20 +1028,20 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                         }
                     }
                 }
-                #else /* configUSE_QUEUE_SETS */
+                #else /* configUSE_QUEUE_SETS 配置项 */
                 {
                     xYieldRequired = prvCopyDataToQueue( pxQueue, pvItemToQueue, xCopyPosition );
 
-                    /* If there was a task waiting for data to arrive on the
-                     * queue then unblock it now. */
+                    /*
+                     * 如果有任务在等待该队列中的数据到达，则立即解除其阻塞。
+                     */
                     if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                     {
                         if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                         {
-                            /* The unblocked task has a priority higher than
-                             * our own so yield immediately.  Yes it is ok to do
-                             * this from within the critical section - the kernel
-                             * takes care of that. */
+                            /*
+                             * 被解除阻塞的任务优先级高于当前任务，因此立即让出 CPU。在临界区内执行此操作没有问题——内核会处理相关事宜。
+                             */
                             queueYIELD_IF_USING_PREEMPTION();
                         }
                         else
@@ -1079,10 +1051,9 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                     }
                     else if( xYieldRequired != pdFALSE )
                     {
-                        /* This path is a special case that will only get
-                         * executed if the task was holding multiple mutexes and
-                         * the mutexes were given back in an order that is
-                         * different to that in which they were taken. */
+                        /*
+                         * 此路径是一种特殊情况，仅当任务持有多个互斥量，且归还互斥量的顺序与获取顺序不同时才会执行。
+                         */
                         queueYIELD_IF_USING_PREEMPTION();
                     }
                     else
@@ -1090,7 +1061,7 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                         mtCOVERAGE_TEST_MARKER();
                     }
                 }
-                #endif /* configUSE_QUEUE_SETS */
+                #endif /* configUSE_QUEUE_SETS 配置项 */
 
                 taskEXIT_CRITICAL();
 
@@ -1102,12 +1073,14 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
             {
                 if( xTicksToWait == ( TickType_t ) 0 )
                 {
-                    /* The queue was full and no block time is specified (or
-                     * the block time has expired) so leave now. */
+                    /*
+                     * 队列已满且未指定阻塞时间（或阻塞时间已到期），因此立即退出。
+                     */
                     taskEXIT_CRITICAL();
 
-                    /* Return to the original privilege level before exiting
-                     * the function. */
+                    /*
+                     * 在退出函数之前恢复到原来的特权级别。
+                     */
                     traceQUEUE_SEND_FAILED( pxQueue );
                     traceRETURN_xQueueGenericSend( errQUEUE_FULL );
 
@@ -1115,27 +1088,29 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                 }
                 else if( xEntryTimeSet == pdFALSE )
                 {
-                    /* The queue was full and a block time was specified so
-                     * configure the timeout structure. */
+                    /*
+                     * 队列已满且指定了阻塞时间，因此配置超时结构体。
+                     */
                     vTaskInternalSetTimeOutState( &xTimeOut );
                     xEntryTimeSet = pdTRUE;
                 }
                 else
                 {
-                    /* Entry time was already set. */
+                    /* 进入时间已经设置。 */
                     mtCOVERAGE_TEST_MARKER();
                 }
             }
         }
         taskEXIT_CRITICAL();
 
-        /* Interrupts and other tasks can send to and receive from the queue
-         * now the critical section has been exited. */
+        /*
+         * 临界区已退出，现在中断和其他任务可以向队列发送数据或从队列接收数据。
+         */
 
         vTaskSuspendAll();
         prvLockQueue( pxQueue );
 
-        /* Update the timeout state to see if it has expired yet. */
+        /* 更新超时状态，检查是否已经超时。 */
         if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
         {
             if( prvIsQueueFull( pxQueue ) != pdFALSE )
@@ -1143,18 +1118,14 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
                 traceBLOCKING_ON_QUEUE_SEND( pxQueue );
                 vTaskPlaceOnEventList( &( pxQueue->xTasksWaitingToSend ), xTicksToWait );
 
-                /* Unlocking the queue means queue events can effect the
-                 * event list. It is possible that interrupts occurring now
-                 * remove this task from the event list again - but as the
-                 * scheduler is suspended the task will go onto the pending
-                 * ready list instead of the actual ready list. */
+                /*
+                 * 解锁队列意味着队列事件可以影响事件链表。此时发生的中断可能会再次把本任务从事件链表中移除——但由于调度器仍处于挂起状态，任务会进入挂起就绪链表，而不是实际的就绪链表。
+                 */
                 prvUnlockQueue( pxQueue );
 
-                /* Resuming the scheduler will move tasks from the pending
-                 * ready list into the ready list - so it is feasible that this
-                 * task is already in the ready list before it yields - in which
-                 * case the yield will not cause a context switch unless there
-                 * is also a higher priority task in the pending ready list. */
+                /*
+                 * 恢复调度器会把任务从挂起就绪链表移入就绪链表——因此本任务在让出 CPU 之前就可能已经位于就绪链表中，此时除非挂起就绪链表中还有更高优先级的任务，否则让出 CPU 不会引起上下文切换。
+                 */
                 if( xTaskResumeAll() == pdFALSE )
                 {
                     taskYIELD_WITHIN_API();
@@ -1162,14 +1133,14 @@ BaseType_t xQueueGenericSend( QueueHandle_t xQueue,
             }
             else
             {
-                /* Try again. */
+                /* 重试。 */
                 prvUnlockQueue( pxQueue );
                 ( void ) xTaskResumeAll();
             }
         }
         else
         {
-            /* The timeout has expired. */
+            /* 超时已到期。 */
             prvUnlockQueue( pxQueue );
             ( void ) xTaskResumeAll();
 
@@ -1196,30 +1167,17 @@ BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
     configASSERT( ( pxQueue != NULL ) && !( ( pvItemToQueue == NULL ) && ( pxQueue->uxItemSize != ( UBaseType_t ) 0U ) ) );
     configASSERT( ( pxQueue != NULL ) && !( ( xCopyPosition == queueOVERWRITE ) && ( pxQueue->uxLength != 1 ) ) );
 
-    /* RTOS ports that support interrupt nesting have the concept of a maximum
-     * system call (or maximum API call) interrupt priority.  Interrupts that are
-     * above the maximum system call priority are kept permanently enabled, even
-     * when the RTOS kernel is in a critical section, but cannot make any calls to
-     * FreeRTOS API functions.  If configASSERT() is defined in FreeRTOSConfig.h
-     * then portASSERT_IF_INTERRUPT_PRIORITY_INVALID() will result in an assertion
-     * failure if a FreeRTOS API function is called from an interrupt that has been
-     * assigned a priority above the configured maximum system call priority.
-     * Only FreeRTOS functions that end in FromISR can be called from interrupts
-     * that have been assigned a priority at or (logically) below the maximum
-     * system call interrupt priority.  FreeRTOS maintains a separate interrupt
-     * safe API to ensure interrupt entry is as fast and as simple as possible.
-     * More information (albeit Cortex-M specific) is provided on the following
-     * link: https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
+    /*
+     * 支持中断嵌套的 RTOS 移植层具有最大系统调用（或最大 API 调用）中断优先级的概念。高于最大系统调用优先级的中断始终保持使能，即使 RTOS 内核处于临界区也是如此，但这些中断不能调用任何 FreeRTOS API 函数。如果在 FreeRTOSConfig.h 中定义了 configASSERT()，那么从优先级高于所配置最大系统调用优先级的中断中调用 FreeRTOS API 函数时，portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 将触发断言失败。只有以 FromISR 结尾的 FreeRTOS 函数才能从优先级等于（逻辑上）或低于最大系统调用中断优先级的中断中调用。FreeRTOS 提供独立的、中断安全的 API，以确保中断入口尽可能快速和简单。更多信息（尽管主要针对 Cortex-M）参见以下链接：https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+     */
     portASSERT_IF_INTERRUPT_PRIORITY_INVALID();
 
-    /* Similar to xQueueGenericSend, except without blocking if there is no room
-     * in the queue.  Also don't directly wake a task that was blocked on a queue
-     * read, instead return a flag to say whether a context switch is required or
-     * not (i.e. has a task with a higher priority than us been woken by this
-     * post). */
-    /* MISRA Ref 4.7.1 [Return value shall be checked] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
-    /* coverity[misra_c_2012_directive_4_7_violation] */
+    /*
+     * 与 xQueueGenericSend 类似，但队列没有空闲空间时不阻塞。同时不直接唤醒因等待队列读取而阻塞的任务，而是返回一个标志，表示是否需要上下文切换（即本次发送是否唤醒了优先级高于当前任务的任务）。
+     */
+    /* MISRA 参考 4.7.1 [应检查返回值] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
+    /* coverity[misra_c_2012_directive_4_7_violation]（Coverity 抑制标记） */
     uxSavedInterruptStatus = ( UBaseType_t ) taskENTER_CRITICAL_FROM_ISR();
     {
         if( ( pxQueue->uxMessagesWaiting < pxQueue->uxLength ) || ( xCopyPosition == queueOVERWRITE ) )
@@ -1229,15 +1187,14 @@ BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
 
             traceQUEUE_SEND_FROM_ISR( pxQueue );
 
-            /* Semaphores use xQueueGiveFromISR(), so pxQueue will not be a
-             *  semaphore or mutex.  That means prvCopyDataToQueue() cannot result
-             *  in a task disinheriting a priority and prvCopyDataToQueue() can be
-             *  called here even though the disinherit function does not check if
-             *  the scheduler is suspended before accessing the ready lists. */
+            /*
+             * 信号量使用 xQueueGiveFromISR()，因此 pxQueue 不会是信号量或互斥量。这意味着 prvCopyDataToQueue() 不会导致任务取消优先级继承，所以即使取消继承函数在访问就绪链表前不检查调度器是否挂起，也可以在此处调用 prvCopyDataToQueue()。
+             */
             ( void ) prvCopyDataToQueue( pxQueue, pvItemToQueue, xCopyPosition );
 
-            /* The event list is not altered if the queue is locked.  This will
-             * be done when the queue is unlocked later. */
+            /*
+             * 队列锁定时不会修改事件链表，具体修改将在之后解锁队列时完成。
+             */
             if( cTxLock == queueUNLOCKED )
             {
                 #if ( configUSE_QUEUE_SETS == 1 )
@@ -1246,16 +1203,16 @@ BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
                     {
                         if( ( xCopyPosition == queueOVERWRITE ) && ( uxPreviousMessagesWaiting != ( UBaseType_t ) 0 ) )
                         {
-                            /* Do not notify the queue set as an existing item
-                             * was overwritten in the queue so the number of items
-                             * in the queue has not changed. */
+                            /*
+                             * 不要通知队列集，因为队列中的现有消息项被覆盖，队列中的消息项数量没有变化。
+                             */
                             mtCOVERAGE_TEST_MARKER();
                         }
                         else if( prvNotifyQueueSetContainer( pxQueue ) != pdFALSE )
                         {
-                            /* The queue is a member of a queue set, and posting
-                             * to the queue set caused a higher priority task to
-                             * unblock.  A context switch is required. */
+                            /*
+                             * 该队列是某个队列集的成员，向队列集发送消息导致更高优先级的任务解除阻塞，需要进行上下文切换。
+                             */
                             if( pxHigherPriorityTaskWoken != NULL )
                             {
                                 *pxHigherPriorityTaskWoken = pdTRUE;
@@ -1276,8 +1233,9 @@ BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
                         {
                             if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                             {
-                                /* The task waiting has a higher priority so
-                                 *  record that a context switch is required. */
+                                /*
+                                 * 等待的任务优先级更高，因此记录需要进行上下文切换。
+                                 */
                                 if( pxHigherPriorityTaskWoken != NULL )
                                 {
                                     *pxHigherPriorityTaskWoken = pdTRUE;
@@ -1298,14 +1256,15 @@ BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
                         }
                     }
                 }
-                #else /* configUSE_QUEUE_SETS */
+                #else /* configUSE_QUEUE_SETS 配置项 */
                 {
                     if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                     {
                         if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                         {
-                            /* The task waiting has a higher priority so record that a
-                             * context switch is required. */
+                            /*
+                             * 等待的任务优先级更高，因此记录需要进行上下文切换。
+                             */
                             if( pxHigherPriorityTaskWoken != NULL )
                             {
                                 *pxHigherPriorityTaskWoken = pdTRUE;
@@ -1325,15 +1284,16 @@ BaseType_t xQueueGenericSendFromISR( QueueHandle_t xQueue,
                         mtCOVERAGE_TEST_MARKER();
                     }
 
-                    /* Not used in this path. */
+                    /* 此路径中未使用。 */
                     ( void ) uxPreviousMessagesWaiting;
                 }
-                #endif /* configUSE_QUEUE_SETS */
+                #endif /* configUSE_QUEUE_SETS 配置项 */
             }
             else
             {
-                /* Increment the lock count so the task that unlocks the queue
-                 * knows that data was posted while it was locked. */
+                /*
+                 * 递增锁定计数，使解锁队列的任务知道在队列锁定期间有数据被发送。
+                 */
                 prvIncrementQueueTxLock( pxQueue, cTxLock );
             }
 
@@ -1362,63 +1322,49 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
 
     traceENTER_xQueueGiveFromISR( xQueue, pxHigherPriorityTaskWoken );
 
-    /* Similar to xQueueGenericSendFromISR() but used with semaphores where the
-     * item size is 0.  Don't directly wake a task that was blocked on a queue
-     * read, instead return a flag to say whether a context switch is required or
-     * not (i.e. has a task with a higher priority than us been woken by this
-     * post). */
+    /*
+     * 与 xQueueGenericSendFromISR() 类似，但用于消息项大小为 0 的信号量。不直接唤醒因等待队列读取而阻塞的任务，而是返回一个标志，表示是否需要上下文切换（即本次发送是否唤醒了优先级高于当前任务的任务）。
+     */
 
-    /* xQueueGenericSendFromISR() should be used instead of xQueueGiveFromISR()
-     * if the item size is not 0. */
+    /*
+     * 如果消息项大小不为 0，应使用 xQueueGenericSendFromISR() 而不是 xQueueGiveFromISR()。
+     */
     configASSERT( ( pxQueue != NULL ) && ( pxQueue->uxItemSize == 0 ) );
 
-    /* Normally a mutex would not be given from an interrupt, especially if
-     * there is a mutex holder, as priority inheritance makes no sense for an
-     * interrupt, only tasks. */
+    /*
+     * 通常不会在中断中归还互斥量，尤其是有互斥量持有者时，因为优先级继承只对任务有意义，对中断没有任何意义。
+     */
     configASSERT( ( pxQueue != NULL ) && !( ( pxQueue->uxQueueType == queueQUEUE_IS_MUTEX ) && ( pxQueue->u.xSemaphore.xMutexHolder != NULL ) ) );
 
-    /* RTOS ports that support interrupt nesting have the concept of a maximum
-     * system call (or maximum API call) interrupt priority.  Interrupts that are
-     * above the maximum system call priority are kept permanently enabled, even
-     * when the RTOS kernel is in a critical section, but cannot make any calls to
-     * FreeRTOS API functions.  If configASSERT() is defined in FreeRTOSConfig.h
-     * then portASSERT_IF_INTERRUPT_PRIORITY_INVALID() will result in an assertion
-     * failure if a FreeRTOS API function is called from an interrupt that has been
-     * assigned a priority above the configured maximum system call priority.
-     * Only FreeRTOS functions that end in FromISR can be called from interrupts
-     * that have been assigned a priority at or (logically) below the maximum
-     * system call interrupt priority.  FreeRTOS maintains a separate interrupt
-     * safe API to ensure interrupt entry is as fast and as simple as possible.
-     * More information (albeit Cortex-M specific) is provided on the following
-     * link: https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
+    /*
+     * 支持中断嵌套的 RTOS 移植层具有最大系统调用（或最大 API 调用）中断优先级的概念。高于最大系统调用优先级的中断始终保持使能，即使 RTOS 内核处于临界区也是如此，但这些中断不能调用任何 FreeRTOS API 函数。如果在 FreeRTOSConfig.h 中定义了 configASSERT()，那么从优先级高于所配置最大系统调用优先级的中断中调用 FreeRTOS API 函数时，portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 将触发断言失败。只有以 FromISR 结尾的 FreeRTOS 函数才能从优先级等于（逻辑上）或低于最大系统调用中断优先级的中断中调用。FreeRTOS 提供独立的、中断安全的 API，以确保中断入口尽可能快速和简单。更多信息（尽管主要针对 Cortex-M）参见以下链接：https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+     */
     portASSERT_IF_INTERRUPT_PRIORITY_INVALID();
 
-    /* MISRA Ref 4.7.1 [Return value shall be checked] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
-    /* coverity[misra_c_2012_directive_4_7_violation] */
+    /* MISRA 参考 4.7.1 [应检查返回值] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
+    /* coverity[misra_c_2012_directive_4_7_violation]（Coverity 抑制标记） */
     uxSavedInterruptStatus = ( UBaseType_t ) taskENTER_CRITICAL_FROM_ISR();
     {
         const UBaseType_t uxMessagesWaiting = pxQueue->uxMessagesWaiting;
 
-        /* When the queue is used to implement a semaphore no data is ever
-         * moved through the queue but it is still valid to see if the queue 'has
-         * space'. */
+        /*
+         * 当队列用于实现信号量时，实际上不会有数据通过队列传递，但检查队列是否仍有空闲空间依然是有效的。
+         */
         if( uxMessagesWaiting < pxQueue->uxLength )
         {
             const int8_t cTxLock = pxQueue->cTxLock;
 
             traceQUEUE_SEND_FROM_ISR( pxQueue );
 
-            /* A task can only have an inherited priority if it is a mutex
-             * holder - and if there is a mutex holder then the mutex cannot be
-             * given from an ISR.  As this is the ISR version of the function it
-             * can be assumed there is no mutex holder and no need to determine if
-             * priority disinheritance is needed.  Simply increase the count of
-             * messages (semaphores) available. */
+            /*
+             * 任务只有在作为互斥量持有者时才可能具有继承的优先级——而如果存在互斥量持有者，就不能从 ISR 中归还该互斥量。由于这是该函数的中断版本，可以假定不存在互斥量持有者，也无需判断是否需要取消优先级继承。只需增加可用消息（信号量）的计数即可。
+             */
             pxQueue->uxMessagesWaiting = ( UBaseType_t ) ( uxMessagesWaiting + ( UBaseType_t ) 1 );
 
-            /* The event list is not altered if the queue is locked.  This will
-             * be done when the queue is unlocked later. */
+            /*
+             * 队列锁定时不会修改事件链表，具体修改将在之后解锁队列时完成。
+             */
             if( cTxLock == queueUNLOCKED )
             {
                 #if ( configUSE_QUEUE_SETS == 1 )
@@ -1427,9 +1373,9 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
                     {
                         if( prvNotifyQueueSetContainer( pxQueue ) != pdFALSE )
                         {
-                            /* The semaphore is a member of a queue set, and
-                             * posting to the queue set caused a higher priority
-                             * task to unblock.  A context switch is required. */
+                            /*
+                             * 该信号量是某个队列集的成员，向队列集发送消息导致更高优先级的任务解除阻塞，需要进行上下文切换。
+                             */
                             if( pxHigherPriorityTaskWoken != NULL )
                             {
                                 *pxHigherPriorityTaskWoken = pdTRUE;
@@ -1450,8 +1396,9 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
                         {
                             if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                             {
-                                /* The task waiting has a higher priority so
-                                 *  record that a context switch is required. */
+                                /*
+                                 * 等待的任务优先级更高，因此记录需要进行上下文切换。
+                                 */
                                 if( pxHigherPriorityTaskWoken != NULL )
                                 {
                                     *pxHigherPriorityTaskWoken = pdTRUE;
@@ -1472,14 +1419,15 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
                         }
                     }
                 }
-                #else /* configUSE_QUEUE_SETS */
+                #else /* configUSE_QUEUE_SETS 配置项 */
                 {
                     if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                     {
                         if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                         {
-                            /* The task waiting has a higher priority so record that a
-                             * context switch is required. */
+                            /*
+                             * 等待的任务优先级更高，因此记录需要进行上下文切换。
+                             */
                             if( pxHigherPriorityTaskWoken != NULL )
                             {
                                 *pxHigherPriorityTaskWoken = pdTRUE;
@@ -1499,12 +1447,13 @@ BaseType_t xQueueGiveFromISR( QueueHandle_t xQueue,
                         mtCOVERAGE_TEST_MARKER();
                     }
                 }
-                #endif /* configUSE_QUEUE_SETS */
+                #endif /* configUSE_QUEUE_SETS 配置项 */
             }
             else
             {
-                /* Increment the lock count so the task that unlocks the queue
-                 * knows that data was posted while it was locked. */
+                /*
+                 * 递增锁定计数，使解锁队列的任务知道在队列锁定期间有数据被发送。
+                 */
                 prvIncrementQueueTxLock( pxQueue, cTxLock );
             }
 
@@ -1534,14 +1483,15 @@ BaseType_t xQueueReceive( QueueHandle_t xQueue,
 
     traceENTER_xQueueReceive( xQueue, pvBuffer, xTicksToWait );
 
-    /* Check the pointer is not NULL. */
+    /* 检查指针不为 NULL。 */
     configASSERT( ( pxQueue ) );
 
-    /* The buffer into which data is received can only be NULL if the data size
-     * is zero (so no data is copied into the buffer). */
+    /*
+     * 接收数据的缓冲区只有在数据大小为 0（即不向缓冲区复制任何数据）时才能为 NULL。
+     */
     configASSERT( !( ( ( pvBuffer ) == NULL ) && ( ( pxQueue )->uxItemSize != ( UBaseType_t ) 0U ) ) );
 
-    /* Cannot block if the scheduler is suspended. */
+    /* 调度器挂起时不能阻塞。 */
     #if ( ( INCLUDE_xTaskGetSchedulerState == 1 ) || ( configUSE_TIMERS == 1 ) )
     {
         configASSERT( !( ( xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED ) && ( xTicksToWait != 0 ) ) );
@@ -1554,18 +1504,19 @@ BaseType_t xQueueReceive( QueueHandle_t xQueue,
         {
             const UBaseType_t uxMessagesWaiting = pxQueue->uxMessagesWaiting;
 
-            /* Is there data in the queue now?  To be running the calling task
-             * must be the highest priority task wanting to access the queue. */
+            /*
+             * 此时队列中是否有数据？正在运行的任务必定是希望访问该队列的最高优先级任务。
+             */
             if( uxMessagesWaiting > ( UBaseType_t ) 0 )
             {
-                /* Data available, remove one item. */
+                /* 有数据可用，移除一个消息项。 */
                 prvCopyDataFromQueue( pxQueue, pvBuffer );
                 traceQUEUE_RECEIVE( pxQueue );
                 pxQueue->uxMessagesWaiting = ( UBaseType_t ) ( uxMessagesWaiting - ( UBaseType_t ) 1 );
 
-                /* There is now space in the queue, were any tasks waiting to
-                 * post to the queue?  If so, unblock the highest priority waiting
-                 * task. */
+                /*
+                 * 队列现在有空闲空间，是否有任务在等待向队列发送消息？如果有，则解除优先级最高的等待任务的阻塞。
+                 */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
@@ -1592,8 +1543,9 @@ BaseType_t xQueueReceive( QueueHandle_t xQueue,
             {
                 if( xTicksToWait == ( TickType_t ) 0 )
                 {
-                    /* The queue was empty and no block time is specified (or
-                     * the block time has expired) so leave now. */
+                    /*
+                     * 队列为空且未指定阻塞时间（或阻塞时间已到期），因此立即退出。
+                     */
                     taskEXIT_CRITICAL();
 
                     traceQUEUE_RECEIVE_FAILED( pxQueue );
@@ -1603,31 +1555,34 @@ BaseType_t xQueueReceive( QueueHandle_t xQueue,
                 }
                 else if( xEntryTimeSet == pdFALSE )
                 {
-                    /* The queue was empty and a block time was specified so
-                     * configure the timeout structure. */
+                    /*
+                     * 队列为空且指定了阻塞时间，因此配置超时结构体。
+                     */
                     vTaskInternalSetTimeOutState( &xTimeOut );
                     xEntryTimeSet = pdTRUE;
                 }
                 else
                 {
-                    /* Entry time was already set. */
+                    /* 进入时间已经设置。 */
                     mtCOVERAGE_TEST_MARKER();
                 }
             }
         }
         taskEXIT_CRITICAL();
 
-        /* Interrupts and other tasks can send to and receive from the queue
-         * now the critical section has been exited. */
+        /*
+         * 临界区已退出，现在中断和其他任务可以向队列发送数据或从队列接收数据。
+         */
 
         vTaskSuspendAll();
         prvLockQueue( pxQueue );
 
-        /* Update the timeout state to see if it has expired yet. */
+        /* 更新超时状态，检查是否已经超时。 */
         if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
         {
-            /* The timeout has not expired.  If the queue is still empty place
-             * the task on the list of tasks waiting to receive from the queue. */
+            /*
+             * 超时尚未到期。如果队列仍为空，则将任务放入等待从队列接收消息的任务链表。
+             */
             if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
             {
                 traceBLOCKING_ON_QUEUE_RECEIVE( pxQueue );
@@ -1645,16 +1600,18 @@ BaseType_t xQueueReceive( QueueHandle_t xQueue,
             }
             else
             {
-                /* The queue contains data again.  Loop back to try and read the
-                 * data. */
+                /*
+                 * 队列中又有数据了。返回循环开头，尝试读取数据。
+                 */
                 prvUnlockQueue( pxQueue );
                 ( void ) xTaskResumeAll();
             }
         }
         else
         {
-            /* Timed out.  If there is no data in the queue exit, otherwise loop
-             * back and attempt to read the data. */
+            /*
+             * 已超时。如果队列中没有数据则退出，否则返回循环开头尝试读取数据。
+             */
             prvUnlockQueue( pxQueue );
             ( void ) xTaskResumeAll();
 
@@ -1687,14 +1644,15 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
 
     traceENTER_xQueueSemaphoreTake( xQueue, xTicksToWait );
 
-    /* Check the queue pointer is not NULL. */
+    /* 检查队列指针不为 NULL。 */
     configASSERT( ( pxQueue ) );
 
-    /* Check this really is a semaphore, in which case the item size will be
-     * 0. */
+    /*
+     * 检查这确实是信号量，此时消息项大小应为 0。
+     */
     configASSERT( pxQueue->uxItemSize == 0 );
 
-    /* Cannot block if the scheduler is suspended. */
+    /* 调度器挂起时不能阻塞。 */
     #if ( ( INCLUDE_xTaskGetSchedulerState == 1 ) || ( configUSE_TIMERS == 1 ) )
     {
         configASSERT( !( ( xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED ) && ( xTicksToWait != 0 ) ) );
@@ -1705,26 +1663,30 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
     {
         taskENTER_CRITICAL();
         {
-            /* Semaphores are queues with an item size of 0, and where the
-             * number of messages in the queue is the semaphore's count value. */
+            /*
+             * 信号量是消息项大小为 0 的队列，队列中的消息数量就是信号量的计数值。
+             */
             const UBaseType_t uxSemaphoreCount = pxQueue->uxMessagesWaiting;
 
-            /* Is there data in the queue now?  To be running the calling task
-             * must be the highest priority task wanting to access the queue. */
+            /*
+             * 此时队列中是否有数据？正在运行的任务必定是希望访问该队列的最高优先级任务。
+             */
             if( uxSemaphoreCount > ( UBaseType_t ) 0 )
             {
                 traceQUEUE_RECEIVE( pxQueue );
 
-                /* Semaphores are queues with a data size of zero and where the
-                 * messages waiting is the semaphore's count.  Reduce the count. */
+                /*
+                 * 信号量是数据大小为 0 的队列，等待的消息数量就是信号量的计数。这里减少该计数。
+                 */
                 pxQueue->uxMessagesWaiting = ( UBaseType_t ) ( uxSemaphoreCount - ( UBaseType_t ) 1 );
 
                 #if ( configUSE_MUTEXES == 1 )
                 {
                     if( pxQueue->uxQueueType == queueQUEUE_IS_MUTEX )
                     {
-                        /* Record the information required to implement
-                         * priority inheritance should it become necessary. */
+                        /*
+                         * 记录实现优先级继承所需的信息，以备需要时使用。
+                         */
                         pxQueue->u.xSemaphore.xMutexHolder = pvTaskIncrementMutexHeldCount();
                     }
                     else
@@ -1732,10 +1694,11 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
                         mtCOVERAGE_TEST_MARKER();
                     }
                 }
-                #endif /* configUSE_MUTEXES */
+                #endif /* configUSE_MUTEXES 配置项 */
 
-                /* Check to see if other tasks are blocked waiting to give the
-                 * semaphore, and if so, unblock the highest priority such task. */
+                /*
+                 * 检查是否有其他任务因等待归还该信号量而阻塞，如果有，则解除其中优先级最高的任务的阻塞。
+                 */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
@@ -1762,8 +1725,9 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
             {
                 if( xTicksToWait == ( TickType_t ) 0 )
                 {
-                    /* The semaphore count was 0 and no block time is specified
-                     * (or the block time has expired) so exit now. */
+                    /*
+                     * 信号量计数为 0 且未指定阻塞时间（或阻塞时间已到期），因此立即退出。
+                     */
                     taskEXIT_CRITICAL();
 
                     traceQUEUE_RECEIVE_FAILED( pxQueue );
@@ -1773,33 +1737,34 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
                 }
                 else if( xEntryTimeSet == pdFALSE )
                 {
-                    /* The semaphore count was 0 and a block time was specified
-                     * so configure the timeout structure ready to block. */
+                    /*
+                     * 信号量计数为 0 且指定了阻塞时间，因此配置超时结构体，准备进入阻塞状态。
+                     */
                     vTaskInternalSetTimeOutState( &xTimeOut );
                     xEntryTimeSet = pdTRUE;
                 }
                 else
                 {
-                    /* Entry time was already set. */
+                    /* 进入时间已经设置。 */
                     mtCOVERAGE_TEST_MARKER();
                 }
             }
         }
         taskEXIT_CRITICAL();
 
-        /* Interrupts and other tasks can give to and take from the semaphore
-         * now the critical section has been exited. */
+        /*
+         * 临界区已退出，现在中断和其他任务可以归还或获取该信号量。
+         */
 
         vTaskSuspendAll();
         prvLockQueue( pxQueue );
 
-        /* Update the timeout state to see if it has expired yet. */
+        /* 更新超时状态，检查是否已经超时。 */
         if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
         {
-            /* A block time is specified and not expired.  If the semaphore
-             * count is 0 then enter the Blocked state to wait for a semaphore to
-             * become available.  As semaphores are implemented with queues the
-             * queue being empty is equivalent to the semaphore count being 0. */
+            /*
+             * 已指定阻塞时间且尚未到期。如果信号量计数为 0，则进入阻塞状态，等待信号量可用。由于信号量是用队列实现的，队列为空等价于信号量计数为 0。
+             */
             if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
             {
                 traceBLOCKING_ON_QUEUE_RECEIVE( pxQueue );
@@ -1819,7 +1784,7 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
                         mtCOVERAGE_TEST_MARKER();
                     }
                 }
-                #endif /* if ( configUSE_MUTEXES == 1 ) */
+                #endif /* 对应 if ( configUSE_MUTEXES == 1 ) */
 
                 vTaskPlaceOnEventList( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait );
                 prvUnlockQueue( pxQueue );
@@ -1835,55 +1800,50 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
             }
             else
             {
-                /* There was no timeout and the semaphore count was not 0, so
-                 * attempt to take the semaphore again. */
+                /*
+                 * 没有超时且信号量计数不为 0，因此尝试再次获取信号量。
+                 */
                 prvUnlockQueue( pxQueue );
                 ( void ) xTaskResumeAll();
             }
         }
         else
         {
-            /* Timed out. */
+            /* 已超时。 */
             prvUnlockQueue( pxQueue );
             ( void ) xTaskResumeAll();
 
-            /* If the semaphore count is 0 exit now as the timeout has
-             * expired.  Otherwise return to attempt to take the semaphore that is
-             * known to be available.  As semaphores are implemented by queues the
-             * queue being empty is equivalent to the semaphore count being 0. */
+            /*
+             * 如果信号量计数为 0，则因超时已到期而立即退出。否则返回循环开头，尝试获取已知可用的信号量。由于信号量是用队列实现的，队列为空等价于信号量计数为 0。
+             */
             if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
             {
                 #if ( configUSE_MUTEXES == 1 )
                 {
-                    /* xInheritanceOccurred could only have be set if
-                     * pxQueue->uxQueueType == queueQUEUE_IS_MUTEX so no need to
-                     * test the mutex type again to check it is actually a mutex. */
+                    /*
+                     * 只有在 pxQueue->uxQueueType == queueQUEUE_IS_MUTEX 时 xInheritanceOccurred 才可能被置位，因此无需再次测试队列类型来确认它确实是互斥量。
+                     */
                     if( xInheritanceOccurred != pdFALSE )
                     {
                         taskENTER_CRITICAL();
                         {
                             UBaseType_t uxHighestWaitingPriority;
 
-                            /* This task blocking on the mutex caused another
-                             * task to inherit this task's priority.  Now this task
-                             * has timed out the priority should be disinherited
-                             * again, but only as low as the next highest priority
-                             * task that is waiting for the same mutex. */
+                            /*
+                             * 本任务因等待该互斥量而阻塞，导致另一个任务继承了本任务的优先级。现在本任务已超时，应再次取消该优先级继承，但最多只降低到同样等待该互斥量的下一个最高优先级任务的优先级。
+                             */
                             uxHighestWaitingPriority = prvGetHighestPriorityOfWaitToReceiveList( pxQueue );
 
-                            /* vTaskPriorityDisinheritAfterTimeout uses the uxHighestWaitingPriority
-                             * parameter to index pxReadyTasksLists when adding the task holding
-                             * mutex to the ready list for its new priority. Coverity thinks that
-                             * it can result in out-of-bounds access which is not true because
-                             * uxHighestWaitingPriority, as returned by prvGetHighestPriorityOfWaitToReceiveList,
-                             * is capped at ( configMAX_PRIORITIES - 1 ). */
-                            /* coverity[overrun] */
+                            /*
+                             * vTaskPriorityDisinheritAfterTimeout 使用 uxHighestWaitingPriority 参数作为 pxReadyTasksLists 的索引，把互斥量持有者按其新优先级加入就绪链表。Coverity 认为这可能导致越界访问，但事实并非如此，因为 prvGetHighestPriorityOfWaitToReceiveList 返回的 uxHighestWaitingPriority 上限为 ( configMAX_PRIORITIES - 1 )。
+                             */
+                            /* coverity[overrun]（Coverity 抑制标记） */
                             vTaskPriorityDisinheritAfterTimeout( pxQueue->u.xSemaphore.xMutexHolder, uxHighestWaitingPriority );
                         }
                         taskEXIT_CRITICAL();
                     }
                 }
-                #endif /* configUSE_MUTEXES */
+                #endif /* configUSE_MUTEXES 配置项 */
 
                 traceQUEUE_RECEIVE_FAILED( pxQueue );
                 traceRETURN_xQueueSemaphoreTake( errQUEUE_EMPTY );
@@ -1910,11 +1870,12 @@ BaseType_t xQueuePeek( QueueHandle_t xQueue,
 
     traceENTER_xQueuePeek( xQueue, pvBuffer, xTicksToWait );
 
-    /* The buffer into which data is received can only be NULL if the data size
-     * is zero (so no data is copied into the buffer. */
+    /*
+     * 接收数据的缓冲区只有在数据大小为 0（即不向缓冲区复制任何数据）时才能为 NULL。
+     */
     configASSERT( ( pxQueue != NULL ) && !( ( ( pvBuffer ) == NULL ) && ( ( pxQueue )->uxItemSize != ( UBaseType_t ) 0U ) ) );
 
-    /* Cannot block if the scheduler is suspended. */
+    /* 调度器挂起时不能阻塞。 */
     #if ( ( INCLUDE_xTaskGetSchedulerState == 1 ) || ( configUSE_TIMERS == 1 ) )
     {
         configASSERT( !( ( xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED ) && ( xTicksToWait != 0 ) ) );
@@ -1927,28 +1888,30 @@ BaseType_t xQueuePeek( QueueHandle_t xQueue,
         {
             const UBaseType_t uxMessagesWaiting = pxQueue->uxMessagesWaiting;
 
-            /* Is there data in the queue now?  To be running the calling task
-             * must be the highest priority task wanting to access the queue. */
+            /*
+             * 此时队列中是否有数据？正在运行的任务必定是希望访问该队列的最高优先级任务。
+             */
             if( uxMessagesWaiting > ( UBaseType_t ) 0 )
             {
-                /* Remember the read position so it can be reset after the data
-                 * is read from the queue as this function is only peeking the
-                 * data, not removing it. */
+                /*
+                 * 记住读取位置，以便从队列读出数据后可以复位，因为本函数只是窥视（peek）数据，并不移除数据。
+                 */
                 pcOriginalReadPosition = pxQueue->u.xQueue.pcReadFrom;
 
                 prvCopyDataFromQueue( pxQueue, pvBuffer );
                 traceQUEUE_PEEK( pxQueue );
 
-                /* The data is not being removed, so reset the read pointer. */
+                /* 数据不会被移除，因此复位读取指针。 */
                 pxQueue->u.xQueue.pcReadFrom = pcOriginalReadPosition;
 
-                /* The data is being left in the queue, so see if there are
-                 * any other tasks waiting for the data. */
+                /*
+                 * 数据仍留在队列中，因此检查是否还有其他任务在等待该数据。
+                 */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                     {
-                        /* The task waiting has a higher priority than this task. */
+                        /* 等待的任务优先级高于本任务。 */
                         queueYIELD_IF_USING_PREEMPTION();
                     }
                     else
@@ -1971,8 +1934,9 @@ BaseType_t xQueuePeek( QueueHandle_t xQueue,
             {
                 if( xTicksToWait == ( TickType_t ) 0 )
                 {
-                    /* The queue was empty and no block time is specified (or
-                     * the block time has expired) so leave now. */
+                    /*
+                     * 队列为空且未指定阻塞时间（或阻塞时间已到期），因此立即退出。
+                     */
                     taskEXIT_CRITICAL();
 
                     traceQUEUE_PEEK_FAILED( pxQueue );
@@ -1982,32 +1946,34 @@ BaseType_t xQueuePeek( QueueHandle_t xQueue,
                 }
                 else if( xEntryTimeSet == pdFALSE )
                 {
-                    /* The queue was empty and a block time was specified so
-                     * configure the timeout structure ready to enter the blocked
-                     * state. */
+                    /*
+                     * 队列为空且指定了阻塞时间，因此配置超时结构体，准备进入阻塞状态。
+                     */
                     vTaskInternalSetTimeOutState( &xTimeOut );
                     xEntryTimeSet = pdTRUE;
                 }
                 else
                 {
-                    /* Entry time was already set. */
+                    /* 进入时间已经设置。 */
                     mtCOVERAGE_TEST_MARKER();
                 }
             }
         }
         taskEXIT_CRITICAL();
 
-        /* Interrupts and other tasks can send to and receive from the queue
-         * now that the critical section has been exited. */
+        /*
+         * 临界区已退出，现在中断和其他任务可以向队列发送数据或从队列接收数据。
+         */
 
         vTaskSuspendAll();
         prvLockQueue( pxQueue );
 
-        /* Update the timeout state to see if it has expired yet. */
+        /* 更新超时状态，检查是否已经超时。 */
         if( xTaskCheckForTimeOut( &xTimeOut, &xTicksToWait ) == pdFALSE )
         {
-            /* Timeout has not expired yet, check to see if there is data in the
-            * queue now, and if not enter the Blocked state to wait for data. */
+            /*
+             * 超时尚未到期，检查此时队列中是否有数据；如果没有，则进入阻塞状态等待数据。
+             */
             if( prvIsQueueEmpty( pxQueue ) != pdFALSE )
             {
                 traceBLOCKING_ON_QUEUE_PEEK( pxQueue );
@@ -2025,16 +1991,18 @@ BaseType_t xQueuePeek( QueueHandle_t xQueue,
             }
             else
             {
-                /* There is data in the queue now, so don't enter the blocked
-                 * state, instead return to try and obtain the data. */
+                /*
+                 * 此时队列中有数据，因此不要进入阻塞状态，而是返回循环开头尝试获取数据。
+                 */
                 prvUnlockQueue( pxQueue );
                 ( void ) xTaskResumeAll();
             }
         }
         else
         {
-            /* The timeout has expired.  If there is still no data in the queue
-             * exit, otherwise go back and try to read the data again. */
+            /*
+             * 超时已到期。如果队列中仍无数据则退出，否则返回循环开头再次尝试读取数据。
+             */
             prvUnlockQueue( pxQueue );
             ( void ) xTaskResumeAll();
 
@@ -2067,30 +2035,19 @@ BaseType_t xQueueReceiveFromISR( QueueHandle_t xQueue,
     configASSERT( pxQueue );
     configASSERT( !( ( pvBuffer == NULL ) && ( pxQueue->uxItemSize != ( UBaseType_t ) 0U ) ) );
 
-    /* RTOS ports that support interrupt nesting have the concept of a maximum
-     * system call (or maximum API call) interrupt priority.  Interrupts that are
-     * above the maximum system call priority are kept permanently enabled, even
-     * when the RTOS kernel is in a critical section, but cannot make any calls to
-     * FreeRTOS API functions.  If configASSERT() is defined in FreeRTOSConfig.h
-     * then portASSERT_IF_INTERRUPT_PRIORITY_INVALID() will result in an assertion
-     * failure if a FreeRTOS API function is called from an interrupt that has been
-     * assigned a priority above the configured maximum system call priority.
-     * Only FreeRTOS functions that end in FromISR can be called from interrupts
-     * that have been assigned a priority at or (logically) below the maximum
-     * system call interrupt priority.  FreeRTOS maintains a separate interrupt
-     * safe API to ensure interrupt entry is as fast and as simple as possible.
-     * More information (albeit Cortex-M specific) is provided on the following
-     * link: https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
+    /*
+     * 支持中断嵌套的 RTOS 移植层具有最大系统调用（或最大 API 调用）中断优先级的概念。高于最大系统调用优先级的中断始终保持使能，即使 RTOS 内核处于临界区也是如此，但这些中断不能调用任何 FreeRTOS API 函数。如果在 FreeRTOSConfig.h 中定义了 configASSERT()，那么从优先级高于所配置最大系统调用优先级的中断中调用 FreeRTOS API 函数时，portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 将触发断言失败。只有以 FromISR 结尾的 FreeRTOS 函数才能从优先级等于（逻辑上）或低于最大系统调用中断优先级的中断中调用。FreeRTOS 提供独立的、中断安全的 API，以确保中断入口尽可能快速和简单。更多信息（尽管主要针对 Cortex-M）参见以下链接：https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+     */
     portASSERT_IF_INTERRUPT_PRIORITY_INVALID();
 
-    /* MISRA Ref 4.7.1 [Return value shall be checked] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
-    /* coverity[misra_c_2012_directive_4_7_violation] */
+    /* MISRA 参考 4.7.1 [应检查返回值] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
+    /* coverity[misra_c_2012_directive_4_7_violation]（Coverity 抑制标记） */
     uxSavedInterruptStatus = ( UBaseType_t ) taskENTER_CRITICAL_FROM_ISR();
     {
         const UBaseType_t uxMessagesWaiting = pxQueue->uxMessagesWaiting;
 
-        /* Cannot block in an ISR, so check there is data available. */
+        /* ISR 中不能阻塞，因此检查是否有数据可用。 */
         if( uxMessagesWaiting > ( UBaseType_t ) 0 )
         {
             const int8_t cRxLock = pxQueue->cRxLock;
@@ -2100,18 +2057,18 @@ BaseType_t xQueueReceiveFromISR( QueueHandle_t xQueue,
             prvCopyDataFromQueue( pxQueue, pvBuffer );
             pxQueue->uxMessagesWaiting = ( UBaseType_t ) ( uxMessagesWaiting - ( UBaseType_t ) 1 );
 
-            /* If the queue is locked the event list will not be modified.
-             * Instead update the lock count so the task that unlocks the queue
-             * will know that an ISR has removed data while the queue was
-             * locked. */
+            /*
+             * 如果队列已锁定，则不会修改事件链表。此时改为更新锁定计数，以便解锁队列的任务知道在队列锁定期间有 ISR 移除了数据。
+             */
             if( cRxLock == queueUNLOCKED )
             {
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
                     {
-                        /* The task waiting has a higher priority than us so
-                         * force a context switch. */
+                        /*
+                         * 等待的任务优先级高于当前任务，因此强制进行上下文切换。
+                         */
                         if( pxHigherPriorityTaskWoken != NULL )
                         {
                             *pxHigherPriorityTaskWoken = pdTRUE;
@@ -2133,8 +2090,9 @@ BaseType_t xQueueReceiveFromISR( QueueHandle_t xQueue,
             }
             else
             {
-                /* Increment the lock count so the task that unlocks the queue
-                 * knows that data was removed while it was locked. */
+                /*
+                 * 递增锁定计数，使解锁队列的任务知道在队列锁定期间有数据被移除。
+                 */
                 prvIncrementQueueRxLock( pxQueue, cRxLock );
             }
 
@@ -2165,36 +2123,26 @@ BaseType_t xQueuePeekFromISR( QueueHandle_t xQueue,
     traceENTER_xQueuePeekFromISR( xQueue, pvBuffer );
 
     configASSERT( ( pxQueue != NULL ) && !( ( pvBuffer == NULL ) && ( pxQueue->uxItemSize != ( UBaseType_t ) 0U ) ) );
-    configASSERT( ( pxQueue != NULL ) && ( pxQueue->uxItemSize != 0 ) ); /* Can't peek a semaphore. */
+    configASSERT( ( pxQueue != NULL ) && ( pxQueue->uxItemSize != 0 ) ); /* 不能对信号量执行窥视（peek）操作。 */
 
-    /* RTOS ports that support interrupt nesting have the concept of a maximum
-     * system call (or maximum API call) interrupt priority.  Interrupts that are
-     * above the maximum system call priority are kept permanently enabled, even
-     * when the RTOS kernel is in a critical section, but cannot make any calls to
-     * FreeRTOS API functions.  If configASSERT() is defined in FreeRTOSConfig.h
-     * then portASSERT_IF_INTERRUPT_PRIORITY_INVALID() will result in an assertion
-     * failure if a FreeRTOS API function is called from an interrupt that has been
-     * assigned a priority above the configured maximum system call priority.
-     * Only FreeRTOS functions that end in FromISR can be called from interrupts
-     * that have been assigned a priority at or (logically) below the maximum
-     * system call interrupt priority.  FreeRTOS maintains a separate interrupt
-     * safe API to ensure interrupt entry is as fast and as simple as possible.
-     * More information (albeit Cortex-M specific) is provided on the following
-     * link: https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
+    /*
+     * 支持中断嵌套的 RTOS 移植层具有最大系统调用（或最大 API 调用）中断优先级的概念。高于最大系统调用优先级的中断始终保持使能，即使 RTOS 内核处于临界区也是如此，但这些中断不能调用任何 FreeRTOS API 函数。如果在 FreeRTOSConfig.h 中定义了 configASSERT()，那么从优先级高于所配置最大系统调用优先级的中断中调用 FreeRTOS API 函数时，portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 将触发断言失败。只有以 FromISR 结尾的 FreeRTOS 函数才能从优先级等于（逻辑上）或低于最大系统调用中断优先级的中断中调用。FreeRTOS 提供独立的、中断安全的 API，以确保中断入口尽可能快速和简单。更多信息（尽管主要针对 Cortex-M）参见以下链接：https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+     */
     portASSERT_IF_INTERRUPT_PRIORITY_INVALID();
 
-    /* MISRA Ref 4.7.1 [Return value shall be checked] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
-    /* coverity[misra_c_2012_directive_4_7_violation] */
+    /* MISRA 参考 4.7.1 [应检查返回值] */
+    /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#dir-47 */
+    /* coverity[misra_c_2012_directive_4_7_violation]（Coverity 抑制标记） */
     uxSavedInterruptStatus = ( UBaseType_t ) taskENTER_CRITICAL_FROM_ISR();
     {
-        /* Cannot block in an ISR, so check there is data available. */
+        /* ISR 中不能阻塞，因此检查是否有数据可用。 */
         if( pxQueue->uxMessagesWaiting > ( UBaseType_t ) 0 )
         {
             traceQUEUE_PEEK_FROM_ISR( pxQueue );
 
-            /* Remember the read position so it can be reset as nothing is
-             * actually being removed from the queue. */
+            /*
+             * 记住读取位置以便复位，因为实际上没有从队列中移除任何数据。
+             */
             pcOriginalReadPosition = pxQueue->u.xQueue.pcReadFrom;
             prvCopyDataFromQueue( pxQueue, pvBuffer );
             pxQueue->u.xQueue.pcReadFrom = pcOriginalReadPosition;
@@ -2291,14 +2239,16 @@ void vQueueDelete( QueueHandle_t xQueue )
 
     #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 0 ) )
     {
-        /* The queue can only have been allocated dynamically - free it
-         * again. */
+        /*
+         * 该队列只可能是动态分配的——将其释放。
+         */
         vPortFree( pxQueue );
     }
     #elif ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
     {
-        /* The queue could have been allocated statically or dynamically, so
-         * check before attempting to free the memory. */
+        /*
+         * 该队列可能是静态或动态分配的，因此在尝试释放内存之前先进行检查。
+         */
         if( pxQueue->ucStaticallyAllocated == ( uint8_t ) pdFALSE )
         {
             vPortFree( pxQueue );
@@ -2308,13 +2258,14 @@ void vQueueDelete( QueueHandle_t xQueue )
             mtCOVERAGE_TEST_MARKER();
         }
     }
-    #else /* if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 0 ) ) */
+    #else /* 对应 if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 0 ) ) */
     {
-        /* The queue must have been statically allocated, so is not going to be
-         * deleted.  Avoid compiler warnings about the unused parameter. */
+        /*
+         * 该队列必定是静态分配的，因此不会被删除。这里避免未使用参数引起的编译器警告。
+         */
         ( void ) pxQueue;
     }
-    #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+    #endif /* configSUPPORT_DYNAMIC_ALLOCATION 配置项 */
 
     traceRETURN_vQueueDelete();
 }
@@ -2331,7 +2282,7 @@ void vQueueDelete( QueueHandle_t xQueue )
         return ( ( Queue_t * ) xQueue )->uxQueueNumber;
     }
 
-#endif /* configUSE_TRACE_FACILITY */
+#endif /* configUSE_TRACE_FACILITY 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_TRACE_FACILITY == 1 )
@@ -2346,7 +2297,7 @@ void vQueueDelete( QueueHandle_t xQueue )
         traceRETURN_vQueueSetQueueNumber();
     }
 
-#endif /* configUSE_TRACE_FACILITY */
+#endif /* configUSE_TRACE_FACILITY 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_TRACE_FACILITY == 1 )
@@ -2360,10 +2311,10 @@ void vQueueDelete( QueueHandle_t xQueue )
         return ( ( Queue_t * ) xQueue )->ucQueueType;
     }
 
-#endif /* configUSE_TRACE_FACILITY */
+#endif /* configUSE_TRACE_FACILITY 配置项 */
 /*-----------------------------------------------------------*/
 
-UBaseType_t uxQueueGetQueueItemSize( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+UBaseType_t uxQueueGetQueueItemSize( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION 特权函数标记 */
 {
     traceENTER_uxQueueGetQueueItemSize( xQueue );
 
@@ -2373,7 +2324,7 @@ UBaseType_t uxQueueGetQueueItemSize( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTI
 }
 /*-----------------------------------------------------------*/
 
-UBaseType_t uxQueueGetQueueLength( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+UBaseType_t uxQueueGetQueueLength( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION 特权函数标记 */
 {
     traceENTER_uxQueueGetQueueLength( xQueue );
 
@@ -2389,12 +2340,9 @@ UBaseType_t uxQueueGetQueueLength( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION
     {
         UBaseType_t uxHighestPriorityOfWaitingTasks;
 
-        /* If a task waiting for a mutex causes the mutex holder to inherit a
-         * priority, but the waiting task times out, then the holder should
-         * disinherit the priority - but only down to the highest priority of any
-         * other tasks that are waiting for the same mutex.  For this purpose,
-         * return the priority of the highest priority task that is waiting for the
-         * mutex. */
+        /*
+         * 若等待互斥量的任务使互斥量持有者继承了优先级，但等待任务随后超时，则持有者应取消该优先级继承——但最多只降低到其他同样等待该互斥量的任务中的最高优先级。为此，返回正在等待该互斥量的最高优先级任务的优先级。
+         */
         if( listCURRENT_LIST_LENGTH( &( pxQueue->xTasksWaitingToReceive ) ) > 0U )
         {
             uxHighestPriorityOfWaitingTasks = ( UBaseType_t ) ( ( UBaseType_t ) configMAX_PRIORITIES - ( UBaseType_t ) listGET_ITEM_VALUE_OF_HEAD_ENTRY( &( pxQueue->xTasksWaitingToReceive ) ) );
@@ -2407,7 +2355,7 @@ UBaseType_t uxQueueGetQueueLength( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION
         return uxHighestPriorityOfWaitingTasks;
     }
 
-#endif /* configUSE_MUTEXES */
+#endif /* configUSE_MUTEXES 配置项 */
 /*-----------------------------------------------------------*/
 
 static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
@@ -2417,7 +2365,7 @@ static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
     BaseType_t xReturn = pdFALSE;
     UBaseType_t uxMessagesWaiting;
 
-    /* This function is called from a critical section. */
+    /* 本函数在临界区内调用。 */
 
     uxMessagesWaiting = pxQueue->uxMessagesWaiting;
 
@@ -2427,7 +2375,7 @@ static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
         {
             if( pxQueue->uxQueueType == queueQUEUE_IS_MUTEX )
             {
-                /* The mutex is no longer being held. */
+                /* 该互斥量不再被持有。 */
                 xReturn = xTaskPriorityDisinherit( pxQueue->u.xSemaphore.xMutexHolder );
                 pxQueue->u.xSemaphore.xMutexHolder = NULL;
             }
@@ -2436,7 +2384,7 @@ static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
                 mtCOVERAGE_TEST_MARKER();
             }
         }
-        #endif /* configUSE_MUTEXES */
+        #endif /* configUSE_MUTEXES 配置项 */
     }
     else if( xPosition == queueSEND_TO_BACK )
     {
@@ -2470,10 +2418,9 @@ static BaseType_t prvCopyDataToQueue( Queue_t * const pxQueue,
         {
             if( uxMessagesWaiting > ( UBaseType_t ) 0 )
             {
-                /* An item is not being added but overwritten, so subtract
-                 * one from the recorded number of items in the queue so when
-                 * one is added again below the number of recorded items remains
-                 * correct. */
+                /*
+                 * 这里不是添加消息项而是覆盖，因此从记录的队列消息项数量中减一，以便下面再次加一时记录的消息项数量仍然正确。
+                 */
                 --uxMessagesWaiting;
             }
             else
@@ -2516,30 +2463,30 @@ static void prvCopyDataFromQueue( Queue_t * const pxQueue,
 
 static void prvUnlockQueue( Queue_t * const pxQueue )
 {
-    /* THIS FUNCTION MUST BE CALLED WITH THE SCHEDULER SUSPENDED. */
+    /* 本函数必须在调度器挂起状态下调用。 */
 
-    /* The lock counts contains the number of extra data items placed or
-     * removed from the queue while the queue was locked.  When a queue is
-     * locked items can be added or removed, but the event lists cannot be
-     * updated. */
+    /*
+     * 锁定计数包含队列被锁定期间额外放入或移除的数据项数量。队列锁定时可以添加或移除消息项，但不能更新事件链表。
+     */
     taskENTER_CRITICAL();
     {
         int8_t cTxLock = pxQueue->cTxLock;
 
-        /* See if data was added to the queue while it was locked. */
+        /* 检查队列锁定期间是否有数据被添加。 */
         while( cTxLock > queueLOCKED_UNMODIFIED )
         {
-            /* Data was posted while the queue was locked.  Are any tasks
-             * blocked waiting for data to become available? */
+            /*
+             * 队列锁定期间有数据被发送。是否有任务因等待数据可用而阻塞？
+             */
             #if ( configUSE_QUEUE_SETS == 1 )
             {
                 if( pxQueue->pxQueueSetContainer != NULL )
                 {
                     if( prvNotifyQueueSetContainer( pxQueue ) != pdFALSE )
                     {
-                        /* The queue is a member of a queue set, and posting to
-                         * the queue set caused a higher priority task to unblock.
-                         * A context switch is required. */
+                        /*
+                         * 该队列是某个队列集的成员，向队列集发送消息导致更高优先级的任务解除阻塞，需要进行上下文切换。
+                         */
                         vTaskMissedYield();
                     }
                     else
@@ -2549,15 +2496,16 @@ static void prvUnlockQueue( Queue_t * const pxQueue )
                 }
                 else
                 {
-                    /* Tasks that are removed from the event list will get
-                     * added to the pending ready list as the scheduler is still
-                     * suspended. */
+                    /*
+                     * 由于调度器仍处于挂起状态，从事件链表中移除的任务会被加入挂起就绪链表。
+                     */
                     if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                     {
                         if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                         {
-                            /* The task waiting has a higher priority so record that a
-                             * context switch is required. */
+                            /*
+                             * 等待的任务优先级更高，因此记录需要进行上下文切换。
+                             */
                             vTaskMissedYield();
                         }
                         else
@@ -2571,16 +2519,18 @@ static void prvUnlockQueue( Queue_t * const pxQueue )
                     }
                 }
             }
-            #else /* configUSE_QUEUE_SETS */
+            #else /* configUSE_QUEUE_SETS 配置项 */
             {
-                /* Tasks that are removed from the event list will get added to
-                 * the pending ready list as the scheduler is still suspended. */
+                /*
+                 * 由于调度器仍处于挂起状态，从事件链表中移除的任务会被加入挂起就绪链表。
+                 */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                     {
-                        /* The task waiting has a higher priority so record that
-                         * a context switch is required. */
+                        /*
+                         * 等待的任务优先级更高，因此记录需要进行上下文切换。
+                         */
                         vTaskMissedYield();
                     }
                     else
@@ -2593,7 +2543,7 @@ static void prvUnlockQueue( Queue_t * const pxQueue )
                     break;
                 }
             }
-            #endif /* configUSE_QUEUE_SETS */
+            #endif /* configUSE_QUEUE_SETS 配置项 */
 
             --cTxLock;
         }
@@ -2602,7 +2552,7 @@ static void prvUnlockQueue( Queue_t * const pxQueue )
     }
     taskEXIT_CRITICAL();
 
-    /* Do the same for the Rx lock. */
+    /* 对 Rx 锁定计数执行相同操作。 */
     taskENTER_CRITICAL();
     {
         int8_t cRxLock = pxQueue->cRxLock;
@@ -2735,19 +2685,21 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         traceENTER_xQueueCRSend( xQueue, pvItemToQueue, xTicksToWait );
 
-        /* If the queue is already full we may have to block.  A critical section
-         * is required to prevent an interrupt removing something from the queue
-         * between the check to see if the queue is full and blocking on the queue. */
+        /*
+         * 如果队列已满，可能需要阻塞。这里的临界区用于防止中断在检查队列是否已满与在队列上阻塞之间从队列中移除数据。
+         */
         portDISABLE_INTERRUPTS();
         {
             if( prvIsQueueFull( pxQueue ) != pdFALSE )
             {
-                /* The queue is full - do we want to block or just leave without
-                 * posting? */
+                /*
+                 * 队列已满——是需要阻塞，还是直接放弃发送并退出？
+                 */
                 if( xTicksToWait > ( TickType_t ) 0 )
                 {
-                    /* As this is called from a coroutine we cannot block directly, but
-                     * return indicating that we need to block. */
+                    /*
+                     * 由于本函数由协程调用，不能直接阻塞，而是返回一个表示需要阻塞的值。
+                     */
                     vCoRoutineAddToDelayedList( xTicksToWait, &( pxQueue->xTasksWaitingToSend ) );
                     portENABLE_INTERRUPTS();
                     return errQUEUE_BLOCKED;
@@ -2765,21 +2717,21 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         {
             if( pxQueue->uxMessagesWaiting < pxQueue->uxLength )
             {
-                /* There is room in the queue, copy the data into the queue. */
+                /* 队列中有空闲空间，将数据复制到队列中。 */
                 prvCopyDataToQueue( pxQueue, pvItemToQueue, queueSEND_TO_BACK );
                 xReturn = pdPASS;
 
-                /* Were any co-routines waiting for data to become available? */
+                /* 是否有协程在等待数据可用？ */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
                 {
-                    /* In this instance the co-routine could be placed directly
-                     * into the ready list as we are within a critical section.
-                     * Instead the same pending ready list mechanism is used as if
-                     * the event were caused from within an interrupt. */
+                    /*
+                     * 在这种情况下，由于处于临界区内，可以直接把协程放入就绪链表。但这里采用了与中断事件相同的挂起就绪链表机制。
+                     */
                     if( xCoRoutineRemoveFromEventList( &( pxQueue->xTasksWaitingToReceive ) ) != pdFALSE )
                     {
-                        /* The co-routine waiting has a higher priority so record
-                         * that a yield might be appropriate. */
+                        /*
+                         * 等待的协程优先级更高，因此记录可能需要让出 CPU。
+                         */
                         xReturn = errQUEUE_YIELD;
                     }
                     else
@@ -2804,7 +2756,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_CO_ROUTINES */
+#endif /* configUSE_CO_ROUTINES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_CO_ROUTINES == 1 )
@@ -2818,19 +2770,21 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         traceENTER_xQueueCRReceive( xQueue, pvBuffer, xTicksToWait );
 
-        /* If the queue is already empty we may have to block.  A critical section
-         * is required to prevent an interrupt adding something to the queue
-         * between the check to see if the queue is empty and blocking on the queue. */
+        /*
+         * 如果队列已空，可能需要阻塞。这里的临界区用于防止中断在检查队列是否为空与在队列上阻塞之间向队列添加数据。
+         */
         portDISABLE_INTERRUPTS();
         {
             if( pxQueue->uxMessagesWaiting == ( UBaseType_t ) 0 )
             {
-                /* There are no messages in the queue, do we want to block or just
-                 * leave with nothing? */
+                /*
+                 * 队列中没有消息，是需要阻塞，还是直接空手退出？
+                 */
                 if( xTicksToWait > ( TickType_t ) 0 )
                 {
-                    /* As this is a co-routine we cannot block directly, but return
-                     * indicating that we need to block. */
+                    /*
+                     * 由于本函数由协程调用，不能直接阻塞，而是返回一个表示需要阻塞的值。
+                     */
                     vCoRoutineAddToDelayedList( xTicksToWait, &( pxQueue->xTasksWaitingToReceive ) );
                     portENABLE_INTERRUPTS();
                     return errQUEUE_BLOCKED;
@@ -2852,7 +2806,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         {
             if( pxQueue->uxMessagesWaiting > ( UBaseType_t ) 0 )
             {
-                /* Data is available from the queue. */
+                /* 队列中有数据可用。 */
                 pxQueue->u.xQueue.pcReadFrom += pxQueue->uxItemSize;
 
                 if( pxQueue->u.xQueue.pcReadFrom >= pxQueue->u.xQueue.pcTail )
@@ -2869,13 +2823,12 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
                 xReturn = pdPASS;
 
-                /* Were any co-routines waiting for space to become available? */
+                /* 是否有协程在等待空间可用？ */
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToSend ) ) == pdFALSE )
                 {
-                    /* In this instance the co-routine could be placed directly
-                     * into the ready list as we are within a critical section.
-                     * Instead the same pending ready list mechanism is used as if
-                     * the event were caused from within an interrupt. */
+                    /*
+                     * 在这种情况下，由于处于临界区内，可以直接把协程放入就绪链表。但这里采用了与中断事件相同的挂起就绪链表机制。
+                     */
                     if( xCoRoutineRemoveFromEventList( &( pxQueue->xTasksWaitingToSend ) ) != pdFALSE )
                     {
                         xReturn = errQUEUE_YIELD;
@@ -2902,7 +2855,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_CO_ROUTINES */
+#endif /* configUSE_CO_ROUTINES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_CO_ROUTINES == 1 )
@@ -2915,14 +2868,16 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         traceENTER_xQueueCRSendFromISR( xQueue, pvItemToQueue, xCoRoutinePreviouslyWoken );
 
-        /* Cannot block within an ISR so if there is no space on the queue then
-         * exit without doing anything. */
+        /*
+         * ISR 中不能阻塞，因此如果队列没有空闲空间，就直接退出而不做任何操作。
+         */
         if( pxQueue->uxMessagesWaiting < pxQueue->uxLength )
         {
             prvCopyDataToQueue( pxQueue, pvItemToQueue, queueSEND_TO_BACK );
 
-            /* We only want to wake one co-routine per ISR, so check that a
-             * co-routine has not already been woken. */
+            /*
+             * 每次 ISR 只希望唤醒一个协程，因此检查是否已经有协程被唤醒。
+             */
             if( xCoRoutinePreviouslyWoken == pdFALSE )
             {
                 if( listLIST_IS_EMPTY( &( pxQueue->xTasksWaitingToReceive ) ) == pdFALSE )
@@ -2956,7 +2911,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xCoRoutinePreviouslyWoken;
     }
 
-#endif /* configUSE_CO_ROUTINES */
+#endif /* configUSE_CO_ROUTINES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_CO_ROUTINES == 1 )
@@ -2970,11 +2925,12 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         traceENTER_xQueueCRReceiveFromISR( xQueue, pvBuffer, pxCoRoutineWoken );
 
-        /* We cannot block from an ISR, so check there is data available. If
-         * not then just leave without doing anything. */
+        /*
+         * ISR 中不能阻塞，因此检查是否有数据可用。如果没有，就直接退出而不做任何操作。
+         */
         if( pxQueue->uxMessagesWaiting > ( UBaseType_t ) 0 )
         {
-            /* Copy the data from the queue. */
+            /* 从队列中复制数据。 */
             pxQueue->u.xQueue.pcReadFrom += pxQueue->uxItemSize;
 
             if( pxQueue->u.xQueue.pcReadFrom >= pxQueue->u.xQueue.pcTail )
@@ -3024,7 +2980,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_CO_ROUTINES */
+#endif /* configUSE_CO_ROUTINES 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
@@ -3041,17 +2997,18 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         if( pcQueueName != NULL )
         {
-            /* See if there is an empty space in the registry.  A NULL name denotes
-             * a free slot. */
+            /*
+             * 检查注册表中是否有空闲位置。名称为 NULL 表示该位置空闲。
+             */
             for( ux = ( UBaseType_t ) 0U; ux < ( UBaseType_t ) configQUEUE_REGISTRY_SIZE; ux++ )
             {
-                /* Replace an existing entry if the queue is already in the registry. */
+                /* 如果该队列已在注册表中，则替换现有条目。 */
                 if( xQueue == xQueueRegistry[ ux ].xHandle )
                 {
                     pxEntryToWrite = &( xQueueRegistry[ ux ] );
                     break;
                 }
-                /* Otherwise, store in the next empty location */
+                /* 否则，存储到下一个空闲位置 */
                 else if( ( pxEntryToWrite == NULL ) && ( xQueueRegistry[ ux ].pcQueueName == NULL ) )
                 {
                     pxEntryToWrite = &( xQueueRegistry[ ux ] );
@@ -3065,7 +3022,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         if( pxEntryToWrite != NULL )
         {
-            /* Store the information on this queue. */
+            /* 存储该队列的信息。 */
             pxEntryToWrite->pcQueueName = pcQueueName;
             pxEntryToWrite->xHandle = xQueue;
 
@@ -3075,7 +3032,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         traceRETURN_vQueueAddToRegistry();
     }
 
-#endif /* configQUEUE_REGISTRY_SIZE */
+#endif /* configQUEUE_REGISTRY_SIZE 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
@@ -3089,8 +3046,9 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         configASSERT( xQueue );
 
-        /* Note there is nothing here to protect against another task adding or
-         * removing entries from the registry while it is being searched. */
+        /*
+         * 注意：这里没有任何保护措施来防止在搜索注册表期间其他任务添加或移除条目。
+         */
 
         for( ux = ( UBaseType_t ) 0U; ux < ( UBaseType_t ) configQUEUE_REGISTRY_SIZE; ux++ )
         {
@@ -3110,7 +3068,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return pcReturn;
     }
 
-#endif /* configQUEUE_REGISTRY_SIZE */
+#endif /* configQUEUE_REGISTRY_SIZE 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configQUEUE_REGISTRY_SIZE > 0 )
@@ -3123,18 +3081,19 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         configASSERT( xQueue );
 
-        /* See if the handle of the queue being unregistered in actually in the
-         * registry. */
+        /*
+         * 检查正在注销的队列句柄是否确实在注册表中。
+         */
         for( ux = ( UBaseType_t ) 0U; ux < ( UBaseType_t ) configQUEUE_REGISTRY_SIZE; ux++ )
         {
             if( xQueueRegistry[ ux ].xHandle == xQueue )
             {
-                /* Set the name to NULL to show that this slot if free again. */
+                /* 将名称置为 NULL，表示该位置再次空闲。 */
                 xQueueRegistry[ ux ].pcQueueName = NULL;
 
-                /* Set the handle to NULL to ensure the same queue handle cannot
-                 * appear in the registry twice if it is added, removed, then
-                 * added again. */
+                /*
+                 * 将句柄置为 NULL，以确保同一队列句柄在添加、移除、再次添加后不会在注册表中出现两次。
+                 */
                 xQueueRegistry[ ux ].xHandle = ( QueueHandle_t ) 0;
                 break;
             }
@@ -3147,7 +3106,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         traceRETURN_vQueueUnregisterQueue();
     }
 
-#endif /* configQUEUE_REGISTRY_SIZE */
+#endif /* configQUEUE_REGISTRY_SIZE 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_TIMERS == 1 )
@@ -3160,25 +3119,18 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         traceENTER_vQueueWaitForMessageRestricted( xQueue, xTicksToWait, xWaitIndefinitely );
 
-        /* This function should not be called by application code hence the
-         * 'Restricted' in its name.  It is not part of the public API.  It is
-         * designed for use by kernel code, and has special calling requirements.
-         * It can result in vListInsert() being called on a list that can only
-         * possibly ever have one item in it, so the list will be fast, but even
-         * so it should be called with the scheduler locked and not from a critical
-         * section. */
+        /*
+         * 本函数不应由应用代码调用，因此名称中带有“Restricted”（受限）。它不属于公共 API，专供内核代码使用，并且有特殊的调用要求。它可能导致对某个最多只可能包含一个节点的链表调用 vListInsert()，因此该链表操作很快；但即便如此，也应在调度器锁定（而不是临界区）状态下调用。
+         */
 
-        /* Only do anything if there are no messages in the queue.  This function
-         *  will not actually cause the task to block, just place it on a blocked
-         *  list.  It will not block until the scheduler is unlocked - at which
-         *  time a yield will be performed.  If an item is added to the queue while
-         *  the queue is locked, and the calling task blocks on the queue, then the
-         *  calling task will be immediately unblocked when the queue is unlocked. */
+        /*
+         * 仅当队列中没有消息时才执行操作。本函数不会真正使任务阻塞，只是将其放入阻塞链表。在调度器解锁之前任务不会阻塞——解锁时将执行一次让出 CPU 操作。如果在队列锁定期间有消息项加入队列，而调用任务又在队列上阻塞，那么队列解锁时调用任务会立即解除阻塞。
+         */
         prvLockQueue( pxQueue );
 
         if( pxQueue->uxMessagesWaiting == ( UBaseType_t ) 0U )
         {
-            /* There is nothing in the queue, block for the specified period. */
+            /* 队列中没有任何消息，按指定时长阻塞。 */
             vTaskPlaceOnEventListRestricted( &( pxQueue->xTasksWaitingToReceive ), xTicksToWait, xWaitIndefinitely );
         }
         else
@@ -3191,7 +3143,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         traceRETURN_vQueueWaitForMessageRestricted();
     }
 
-#endif /* configUSE_TIMERS */
+#endif /* configUSE_TIMERS 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
@@ -3209,7 +3161,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return pxQueue;
     }
 
-#endif /* #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+#endif /* 对应 #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
@@ -3229,7 +3181,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return pxQueue;
     }
 
-#endif /* #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+#endif /* 对应 #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_QUEUE_SETS == 1 )
@@ -3245,22 +3197,21 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         {
             if( ( ( Queue_t * ) xQueueSet )->uxItemSize != ( UBaseType_t ) sizeof( Queue_t * ) )
             {
-                /* The object passed as the queue set is not a queue set. A queue
-                 * set always has an item size of sizeof( Queue_t * ). Reject any
-                 * other object to prevent a type confusion in which
-                 * prvNotifyQueueSetContainer() would later copy uxItemSize bytes
-                 * from a single pointer on the stack. */
+                /*
+                 * 作为队列集传入的对象不是队列集。队列集的消息项大小始终为 sizeof( Queue_t * )。拒绝任何其他对象，以防止类型混淆，避免 prvNotifyQueueSetContainer() 之后从栈上的单个指针复制 uxItemSize 个字节。
+                 */
                 xReturn = pdFAIL;
             }
             else if( ( ( Queue_t * ) xQueueOrSemaphore )->pxQueueSetContainer != NULL )
             {
-                /* Cannot add a queue/semaphore to more than one queue set. */
+                /* 不能将队列/信号量添加到多个队列集。 */
                 xReturn = pdFAIL;
             }
             else if( ( ( Queue_t * ) xQueueOrSemaphore )->uxMessagesWaiting != ( UBaseType_t ) 0 )
             {
-                /* Cannot add a queue/semaphore to a queue set if there are already
-                 * items in the queue/semaphore. */
+                /*
+                 * 如果队列/信号量中已有消息项，则不能将其添加到队列集。
+                 */
                 xReturn = pdFAIL;
             }
             else
@@ -3276,7 +3227,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_QUEUE_SETS */
+#endif /* configUSE_QUEUE_SETS 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_QUEUE_SETS == 1 )
@@ -3291,21 +3242,21 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
 
         if( pxQueueOrSemaphore->pxQueueSetContainer != xQueueSet )
         {
-            /* The queue was not a member of the set. */
+            /* 该队列不是该队列集的成员。 */
             xReturn = pdFAIL;
         }
         else if( pxQueueOrSemaphore->uxMessagesWaiting != ( UBaseType_t ) 0 )
         {
-            /* It is dangerous to remove a queue from a set when the queue is
-             * not empty because the queue set will still hold pending events for
-             * the queue. */
+            /*
+             * 当队列非空时将其从队列集中移除是危险的，因为队列集仍会保留该队列的挂起事件。
+             */
             xReturn = pdFAIL;
         }
         else
         {
             taskENTER_CRITICAL();
             {
-                /* The queue is no longer contained in the set. */
+                /* 该队列不再包含在队列集中。 */
                 pxQueueOrSemaphore->pxQueueSetContainer = NULL;
             }
             taskEXIT_CRITICAL();
@@ -3317,7 +3268,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_QUEUE_SETS */
+#endif /* configUSE_QUEUE_SETS 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_QUEUE_SETS == 1 )
@@ -3336,7 +3287,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_QUEUE_SETS */
+#endif /* configUSE_QUEUE_SETS 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_QUEUE_SETS == 1 )
@@ -3354,7 +3305,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_QUEUE_SETS */
+#endif /* configUSE_QUEUE_SETS 配置项 */
 /*-----------------------------------------------------------*/
 
 #if ( configUSE_QUEUE_SETS == 1 )
@@ -3364,23 +3315,23 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         Queue_t * pxQueueSetContainer = pxQueue->pxQueueSetContainer;
         BaseType_t xReturn = pdFALSE;
 
-        /* This function must be called form a critical section. */
+        /* 本函数必须在临界区内调用。 */
 
-        /* The following line is not reachable in unit tests because every call
-         * to prvNotifyQueueSetContainer is preceded by a check that
-         * pxQueueSetContainer != NULL */
-        configASSERT( pxQueueSetContainer ); /* LCOV_EXCL_BR_LINE */
+        /*
+         * 下面这行在单元测试中不可达，因为每次调用 prvNotifyQueueSetContainer 之前都会检查 pxQueueSetContainer != NULL
+         */
+        configASSERT( pxQueueSetContainer ); /* LCOV_EXCL_BR_LINE 分支覆盖排除标记 */
         configASSERT( pxQueueSetContainer->uxMessagesWaiting < pxQueueSetContainer->uxLength );
 
-        /* pxQueue->pxQueueSetContainer is verified to be non-null by caller. */
-        /* coverity[dereference] */
+        /* 调用者已确保 pxQueue->pxQueueSetContainer 非空。 */
+        /* coverity[dereference]（Coverity 抑制标记） */
         if( pxQueueSetContainer->uxMessagesWaiting < pxQueueSetContainer->uxLength )
         {
             const int8_t cTxLock = pxQueueSetContainer->cTxLock;
 
             traceQUEUE_SET_SEND( pxQueueSetContainer );
 
-            /* The data copied is the handle of the queue that contains data. */
+            /* 复制的是包含数据的队列句柄。 */
             xReturn = prvCopyDataToQueue( pxQueueSetContainer, &pxQueue, queueSEND_TO_BACK );
 
             if( cTxLock == queueUNLOCKED )
@@ -3389,7 +3340,7 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
                 {
                     if( xTaskRemoveFromEventList( &( pxQueueSetContainer->xTasksWaitingToReceive ) ) != pdFALSE )
                     {
-                        /* The task waiting has a higher priority. */
+                        /* 等待的任务优先级更高。 */
                         xReturn = pdTRUE;
                     }
                     else
@@ -3415,4 +3366,4 @@ BaseType_t xQueueIsQueueFullFromISR( const QueueHandle_t xQueue )
         return xReturn;
     }
 
-#endif /* configUSE_QUEUE_SETS */
+#endif /* configUSE_QUEUE_SETS 配置项 */
