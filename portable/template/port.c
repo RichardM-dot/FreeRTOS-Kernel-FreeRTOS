@@ -28,9 +28,9 @@ StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
 
 void vPortYield( void )
 {
-    /* Save the current Context */
+    /* 保存当前上下文 */
 
-    /* Switch to the highest priority task that is ready to run. */
+    /* 切换到已就绪的最高优先级任务。 */
     #if ( configNUMBER_OF_CORES == 1 )
     {
         vTaskSwitchContext();
@@ -41,20 +41,22 @@ void vPortYield( void )
     }
     #endif
 
-    /* Start executing the task we have just switched to. */
+    /* 开始执行刚刚切换到的任务。 */
 }
 
 static void prvTickISR( void )
 {
-    /* Interrupts must have been enabled for the ISR to fire, so we have to
-     * save the context with interrupts enabled. */
+    /*
+     * 必须已使能中断，ISR 才能触发，因此需要在中断使能状态下
+     * 保存上下文。
+     */
 
     #if ( configNUMBER_OF_CORES == 1 )
     {
-        /* Maintain the tick count. */
+        /* 维护时钟节拍计数。 */
         if( xTaskIncrementTick() != pdFALSE )
         {
-            /* Switch to the highest priority task that is ready to run. */
+            /* 切换到已就绪的最高优先级任务。 */
             vTaskSwitchContext();
         }
     }
@@ -62,21 +64,22 @@ static void prvTickISR( void )
     {
         UBaseType_t ulPreviousMask;
 
-        /* Tasks or ISRs running on other cores may still in critical section in
-         * multiple cores environment. Incrementing tick needs to performed in
-         * critical section. */
+        /*
+         * 在多核环境中，运行在其他核上的任务或 ISR 可能仍处于
+         * 临界区。递增节拍计数必须在临界区中执行。
+         */
         ulPreviousMask = taskENTER_CRITICAL_FROM_ISR();
 
-        /* Maintain the tick count. */
+        /* 维护时钟节拍计数。 */
         if( xTaskIncrementTick() != pdFALSE )
         {
-            /* Switch to the highest priority task that is ready to run. */
+            /* 切换到已就绪的最高优先级任务。 */
             vTaskSwitchContext( portGET_CORE_ID() );
         }
 
         taskEXIT_CRITICAL_FROM_ISR( ulPreviousMask );
     }
-    #endif /* if ( configNUMBER_OF_CORES == 1 ) */
+    #endif /* 条件块结束：if ( configNUMBER_OF_CORES == 1 ) */
 
-    /* start executing the new task */
+    /* 开始执行新任务 */
 }

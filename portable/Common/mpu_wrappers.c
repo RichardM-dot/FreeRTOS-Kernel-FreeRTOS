@@ -27,16 +27,16 @@
  */
 
 /*
- * Implementation of the wrapper functions used to raise the processor privilege
- * before calling a standard FreeRTOS API function.
+ * 用于在调用标准 FreeRTOS API 函数之前提升处理器特权级的包装函数实现。
  */
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers.  That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 将所有 API 函数
+ * 重定义为使用 MPU 包装器。只有在应用程序文件中包含 task.h 时才应这样做。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/* Scheduler includes. */
+/* 调度器头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -60,7 +60,7 @@
                                     const configSTACK_DEPTH_TYPE uxStackDepth,
                                     void * pvParameters,
                                     UBaseType_t uxPriority,
-                                    TaskHandle_t * pxCreatedTask ) /* FREERTOS_SYSTEM_CALL */
+                                    TaskHandle_t * pxCreatedTask ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -85,7 +85,7 @@
 
             return xReturn;
         }
-    #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+    #endif /* 配置项 configSUPPORT_DYNAMIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
@@ -95,7 +95,7 @@
                                             void * const pvParameters,
                                             UBaseType_t uxPriority,
                                             StackType_t * const puxStackBuffer,
-                                            StaticTask_t * const pxTaskBuffer ) /* FREERTOS_SYSTEM_CALL */
+                                            StaticTask_t * const pxTaskBuffer ) /* FREERTOS 系统调用 */
         {
             TaskHandle_t xReturn;
 
@@ -120,11 +120,11 @@
 
             return xReturn;
         }
-    #endif /* configSUPPORT_STATIC_ALLOCATION */
+    #endif /* 配置项 configSUPPORT_STATIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskDelete == 1 )
-        void MPU_vTaskDelete( TaskHandle_t pxTaskToDelete ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vTaskDelete( TaskHandle_t pxTaskToDelete ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -142,12 +142,12 @@
                 vTaskDelete( pxTaskToDelete );
             }
         }
-    #endif /* if ( INCLUDE_vTaskDelete == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskDelete == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskDelayUntil == 1 )
         BaseType_t MPU_xTaskDelayUntil( TickType_t * const pxPreviousWakeTime,
-                                        TickType_t xTimeIncrement ) /* FREERTOS_SYSTEM_CALL */
+                                        TickType_t xTimeIncrement ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -169,11 +169,11 @@
 
             return xReturn;
         }
-    #endif /* if ( INCLUDE_xTaskDelayUntil == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskDelayUntil == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskAbortDelay == 1 )
-        BaseType_t MPU_xTaskAbortDelay( TaskHandle_t xTask ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xTaskAbortDelay( TaskHandle_t xTask ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -195,11 +195,11 @@
 
             return xReturn;
         }
-    #endif /* if ( INCLUDE_xTaskAbortDelay == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskAbortDelay == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskDelay == 1 )
-        void MPU_vTaskDelay( TickType_t xTicksToDelay ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vTaskDelay( TickType_t xTicksToDelay ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -217,11 +217,11 @@
                 vTaskDelay( xTicksToDelay );
             }
         }
-    #endif /* if ( INCLUDE_vTaskDelay == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskDelay == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_uxTaskPriorityGet == 1 )
-        UBaseType_t MPU_uxTaskPriorityGet( const TaskHandle_t pxTask ) /* FREERTOS_SYSTEM_CALL */
+        UBaseType_t MPU_uxTaskPriorityGet( const TaskHandle_t pxTask ) /* FREERTOS 系统调用 */
         {
             UBaseType_t uxReturn;
 
@@ -243,12 +243,12 @@
 
             return uxReturn;
         }
-    #endif /* if ( INCLUDE_uxTaskPriorityGet == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_uxTaskPriorityGet == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskPrioritySet == 1 )
         void MPU_vTaskPrioritySet( TaskHandle_t pxTask,
-                                   UBaseType_t uxNewPriority ) /* FREERTOS_SYSTEM_CALL */
+                                   UBaseType_t uxNewPriority ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -266,11 +266,11 @@
                 vTaskPrioritySet( pxTask, uxNewPriority );
             }
         }
-    #endif /* if ( INCLUDE_vTaskPrioritySet == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskPrioritySet == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_eTaskGetState == 1 )
-        eTaskState MPU_eTaskGetState( TaskHandle_t pxTask ) /* FREERTOS_SYSTEM_CALL */
+        eTaskState MPU_eTaskGetState( TaskHandle_t pxTask ) /* FREERTOS 系统调用 */
         {
             eTaskState eReturn;
 
@@ -292,14 +292,14 @@
 
             return eReturn;
         }
-    #endif /* if ( INCLUDE_eTaskGetState == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_eTaskGetState == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TRACE_FACILITY == 1 )
         void MPU_vTaskGetInfo( TaskHandle_t xTask,
                                TaskStatus_t * pxTaskStatus,
                                BaseType_t xGetFreeStackSpace,
-                               eTaskState eState ) /* FREERTOS_SYSTEM_CALL */
+                               eTaskState eState ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -317,11 +317,11 @@
                 vTaskGetInfo( xTask, pxTaskStatus, xGetFreeStackSpace, eState );
             }
         }
-    #endif /* if ( configUSE_TRACE_FACILITY == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TRACE_FACILITY == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskGetIdleTaskHandle == 1 )
-        TaskHandle_t MPU_xTaskGetIdleTaskHandle( void ) /* FREERTOS_SYSTEM_CALL */
+        TaskHandle_t MPU_xTaskGetIdleTaskHandle( void ) /* FREERTOS 系统调用 */
         {
             TaskHandle_t xReturn;
 
@@ -342,11 +342,11 @@
 
             return xReturn;
         }
-    #endif /* if ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskSuspend == 1 )
-        void MPU_vTaskSuspend( TaskHandle_t pxTaskToSuspend ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vTaskSuspend( TaskHandle_t pxTaskToSuspend ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -364,11 +364,11 @@
                 vTaskSuspend( pxTaskToSuspend );
             }
         }
-    #endif /* if ( INCLUDE_vTaskSuspend == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskSuspend == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskSuspend == 1 )
-        void MPU_vTaskResume( TaskHandle_t pxTaskToResume ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vTaskResume( TaskHandle_t pxTaskToResume ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -386,10 +386,10 @@
                 vTaskResume( pxTaskToResume );
             }
         }
-    #endif /* if ( INCLUDE_vTaskSuspend == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskSuspend == 1 ) */
 /*-----------------------------------------------------------*/
 
-    void MPU_vTaskSuspendAll( void ) /* FREERTOS_SYSTEM_CALL */
+    void MPU_vTaskSuspendAll( void ) /* FREERTOS 系统调用 */
     {
         if( portIS_PRIVILEGED() == pdFALSE )
         {
@@ -409,7 +409,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    BaseType_t MPU_xTaskResumeAll( void ) /* FREERTOS_SYSTEM_CALL */
+    BaseType_t MPU_xTaskResumeAll( void ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -433,7 +433,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    TickType_t MPU_xTaskGetTickCount( void ) /* FREERTOS_SYSTEM_CALL */
+    TickType_t MPU_xTaskGetTickCount( void ) /* FREERTOS 系统调用 */
     {
         TickType_t xReturn;
 
@@ -457,7 +457,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    UBaseType_t MPU_uxTaskGetNumberOfTasks( void ) /* FREERTOS_SYSTEM_CALL */
+    UBaseType_t MPU_uxTaskGetNumberOfTasks( void ) /* FREERTOS 系统调用 */
     {
         UBaseType_t uxReturn;
 
@@ -482,7 +482,7 @@
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskGetHandle == 1 )
-        TaskHandle_t MPU_xTaskGetHandle( const char * pcNameToQuery ) /* FREERTOS_SYSTEM_CALL */
+        TaskHandle_t MPU_xTaskGetHandle( const char * pcNameToQuery ) /* FREERTOS 系统调用 */
         {
             TaskHandle_t xReturn;
 
@@ -504,12 +504,12 @@
 
             return xReturn;
         }
-    #endif /* if ( INCLUDE_xTaskGetHandle == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskGetHandle == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
         void MPU_vTaskListTasks( char * pcWriteBuffer,
-                                 size_t uxBufferLength ) /* FREERTOS_SYSTEM_CALL */
+                                 size_t uxBufferLength ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -527,12 +527,12 @@
                 vTaskListTasks( pcWriteBuffer, uxBufferLength );
             }
         }
-    #endif /* if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
         void MPU_vTaskGetRunTimeStatistics( char * pcWriteBuffer,
-                                            size_t uxBufferLength ) /* FREERTOS_SYSTEM_CALL */
+                                            size_t uxBufferLength ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -550,11 +550,11 @@
                 vTaskGetRunTimeStatistics( pcWriteBuffer, uxBufferLength );
             }
         }
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS > 0 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
-        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimePercent( void ) /* FREERTOS_SYSTEM_CALL */
+        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimePercent( void ) /* FREERTOS 系统调用 */
         {
             configRUN_TIME_COUNTER_TYPE xReturn;
 
@@ -576,11 +576,11 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
-        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimeCounter( void ) /* FREERTOS_SYSTEM_CALL */
+        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimeCounter( void ) /* FREERTOS 系统调用 */
         {
             configRUN_TIME_COUNTER_TYPE xReturn;
 
@@ -602,12 +602,12 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
         void MPU_vTaskSetApplicationTaskTag( TaskHandle_t xTask,
-                                             TaskHookFunction_t pxTagValue ) /* FREERTOS_SYSTEM_CALL */
+                                             TaskHookFunction_t pxTagValue ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -625,11 +625,11 @@
                 vTaskSetApplicationTaskTag( xTask, pxTagValue );
             }
         }
-    #endif /* if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
-        TaskHookFunction_t MPU_xTaskGetApplicationTaskTag( TaskHandle_t xTask ) /* FREERTOS_SYSTEM_CALL */
+        TaskHookFunction_t MPU_xTaskGetApplicationTaskTag( TaskHandle_t xTask ) /* FREERTOS 系统调用 */
         {
             TaskHookFunction_t xReturn;
 
@@ -651,13 +651,13 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 )
         void MPU_vTaskSetThreadLocalStoragePointer( TaskHandle_t xTaskToSet,
                                                     BaseType_t xIndex,
-                                                    void * pvValue ) /* FREERTOS_SYSTEM_CALL */
+                                                    void * pvValue ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -675,12 +675,12 @@
                 vTaskSetThreadLocalStoragePointer( xTaskToSet, xIndex, pvValue );
             }
         }
-    #endif /* if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
+    #endif /* 条件块结束：if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 )
         void * MPU_pvTaskGetThreadLocalStoragePointer( TaskHandle_t xTaskToQuery,
-                                                       BaseType_t xIndex ) /* FREERTOS_SYSTEM_CALL */
+                                                       BaseType_t xIndex ) /* FREERTOS 系统调用 */
         {
             void * pvReturn;
 
@@ -702,12 +702,12 @@
 
             return pvReturn;
         }
-    #endif /* if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
+    #endif /* 条件块结束：if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
         BaseType_t MPU_xTaskCallApplicationTaskHook( TaskHandle_t xTask,
-                                                     void * pvParameter ) /* FREERTOS_SYSTEM_CALL */
+                                                     void * pvParameter ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -729,13 +729,13 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TRACE_FACILITY == 1 )
         UBaseType_t MPU_uxTaskGetSystemState( TaskStatus_t * pxTaskStatusArray,
                                               UBaseType_t uxArraySize,
-                                              configRUN_TIME_COUNTER_TYPE * pulTotalRunTime ) /* FREERTOS_SYSTEM_CALL */
+                                              configRUN_TIME_COUNTER_TYPE * pulTotalRunTime ) /* FREERTOS 系统调用 */
         {
             UBaseType_t uxReturn;
 
@@ -757,10 +757,10 @@
 
             return uxReturn;
         }
-    #endif /* if ( configUSE_TRACE_FACILITY == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TRACE_FACILITY == 1 ) */
 /*-----------------------------------------------------------*/
 
-    BaseType_t MPU_xTaskCatchUpTicks( TickType_t xTicksToCatchUp ) /* FREERTOS_SYSTEM_CALL */
+    BaseType_t MPU_xTaskCatchUpTicks( TickType_t xTicksToCatchUp ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -785,7 +785,7 @@
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
-        UBaseType_t MPU_uxTaskGetStackHighWaterMark( TaskHandle_t xTask ) /* FREERTOS_SYSTEM_CALL */
+        UBaseType_t MPU_uxTaskGetStackHighWaterMark( TaskHandle_t xTask ) /* FREERTOS 系统调用 */
         {
             UBaseType_t uxReturn;
 
@@ -807,11 +807,11 @@
 
             return uxReturn;
         }
-    #endif /* if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 )
-        configSTACK_DEPTH_TYPE MPU_uxTaskGetStackHighWaterMark2( TaskHandle_t xTask ) /* FREERTOS_SYSTEM_CALL */
+        configSTACK_DEPTH_TYPE MPU_uxTaskGetStackHighWaterMark2( TaskHandle_t xTask ) /* FREERTOS 系统调用 */
         {
             configSTACK_DEPTH_TYPE uxReturn;
 
@@ -833,11 +833,11 @@
 
             return uxReturn;
         }
-    #endif /* if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_RECURSIVE_MUTEXES == 1 ) )
-        TaskHandle_t MPU_xTaskGetCurrentTaskHandle( void ) /* FREERTOS_SYSTEM_CALL */
+        TaskHandle_t MPU_xTaskGetCurrentTaskHandle( void ) /* FREERTOS 系统调用 */
         {
             TaskHandle_t xReturn;
 
@@ -858,11 +858,11 @@
 
             return xReturn;
         }
-    #endif /* if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_RECURSIVE_MUTEXES == 1 ) ) */
+    #endif /* 条件块结束：if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_RECURSIVE_MUTEXES == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskGetSchedulerState == 1 )
-        BaseType_t MPU_xTaskGetSchedulerState( void ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xTaskGetSchedulerState( void ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -884,10 +884,10 @@
 
             return xReturn;
         }
-    #endif /* if ( INCLUDE_xTaskGetSchedulerState == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskGetSchedulerState == 1 ) */
 /*-----------------------------------------------------------*/
 
-    void MPU_vTaskSetTimeOutState( TimeOut_t * const pxTimeOut ) /* FREERTOS_SYSTEM_CALL */
+    void MPU_vTaskSetTimeOutState( TimeOut_t * const pxTimeOut ) /* FREERTOS 系统调用 */
     {
         if( portIS_PRIVILEGED() == pdFALSE )
         {
@@ -908,7 +908,7 @@
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xTaskCheckForTimeOut( TimeOut_t * const pxTimeOut,
-                                         TickType_t * const pxTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                         TickType_t * const pxTicksToWait ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -937,7 +937,7 @@
                                            UBaseType_t uxIndexToNotify,
                                            uint32_t ulValue,
                                            eNotifyAction eAction,
-                                           uint32_t * pulPreviousNotificationValue ) /* FREERTOS_SYSTEM_CALL */
+                                           uint32_t * pulPreviousNotificationValue ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -959,7 +959,7 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
@@ -967,7 +967,7 @@
                                                uint32_t ulBitsToClearOnEntry,
                                                uint32_t ulBitsToClearOnExit,
                                                uint32_t * pulNotificationValue,
-                                               TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                               TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -989,13 +989,13 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
         uint32_t MPU_ulTaskGenericNotifyTake( UBaseType_t uxIndexToWaitOn,
                                               BaseType_t xClearCountOnExit,
-                                              TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                              TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             uint32_t ulReturn;
 
@@ -1017,12 +1017,12 @@
 
             return ulReturn;
         }
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
         BaseType_t MPU_xTaskGenericNotifyStateClear( TaskHandle_t xTask,
-                                                     UBaseType_t uxIndexToClear ) /* FREERTOS_SYSTEM_CALL */
+                                                     UBaseType_t uxIndexToClear ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1044,13 +1044,13 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
         uint32_t MPU_ulTaskGenericNotifyValueClear( TaskHandle_t xTask,
                                                     UBaseType_t uxIndexToClear,
-                                                    uint32_t ulBitsToClear ) /* FREERTOS_SYSTEM_CALL */
+                                                    uint32_t ulBitsToClear ) /* FREERTOS 系统调用 */
         {
             uint32_t ulReturn;
 
@@ -1072,13 +1072,13 @@
 
             return ulReturn;
         }
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
         QueueHandle_t MPU_xQueueGenericCreate( UBaseType_t uxQueueLength,
                                                UBaseType_t uxItemSize,
-                                               uint8_t ucQueueType ) /* FREERTOS_SYSTEM_CALL */
+                                               uint8_t ucQueueType ) /* FREERTOS 系统调用 */
         {
             QueueHandle_t xReturn;
 
@@ -1100,7 +1100,7 @@
 
             return xReturn;
         }
-    #endif /* if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
@@ -1108,7 +1108,7 @@
                                                      const UBaseType_t uxItemSize,
                                                      uint8_t * pucQueueStorage,
                                                      StaticQueue_t * pxStaticQueue,
-                                                     const uint8_t ucQueueType ) /* FREERTOS_SYSTEM_CALL */
+                                                     const uint8_t ucQueueType ) /* FREERTOS 系统调用 */
         {
             QueueHandle_t xReturn;
 
@@ -1130,11 +1130,11 @@
 
             return xReturn;
         }
-    #endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueueGenericReset( QueueHandle_t pxQueue,
-                                       BaseType_t xNewQueue ) /* FREERTOS_SYSTEM_CALL */
+                                       BaseType_t xNewQueue ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -1161,7 +1161,7 @@
     BaseType_t MPU_xQueueGenericSend( QueueHandle_t xQueue,
                                       const void * const pvItemToQueue,
                                       TickType_t xTicksToWait,
-                                      BaseType_t xCopyPosition ) /* FREERTOS_SYSTEM_CALL */
+                                      BaseType_t xCopyPosition ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -1185,7 +1185,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    UBaseType_t MPU_uxQueueMessagesWaiting( const QueueHandle_t pxQueue ) /* FREERTOS_SYSTEM_CALL */
+    UBaseType_t MPU_uxQueueMessagesWaiting( const QueueHandle_t pxQueue ) /* FREERTOS 系统调用 */
     {
         UBaseType_t uxReturn;
 
@@ -1209,7 +1209,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    UBaseType_t MPU_uxQueueSpacesAvailable( const QueueHandle_t xQueue ) /* FREERTOS_SYSTEM_CALL */
+    UBaseType_t MPU_uxQueueSpacesAvailable( const QueueHandle_t xQueue ) /* FREERTOS 系统调用 */
     {
         UBaseType_t uxReturn;
 
@@ -1235,7 +1235,7 @@
 
     BaseType_t MPU_xQueueReceive( QueueHandle_t pxQueue,
                                   void * const pvBuffer,
-                                  TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                  TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -1261,7 +1261,7 @@
 
     BaseType_t MPU_xQueuePeek( QueueHandle_t xQueue,
                                void * const pvBuffer,
-                               TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                               TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -1286,7 +1286,7 @@
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueueSemaphoreTake( QueueHandle_t xQueue,
-                                        TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                        TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
     {
         BaseType_t xReturn;
 
@@ -1311,7 +1311,7 @@
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
-        TaskHandle_t MPU_xQueueGetMutexHolder( QueueHandle_t xSemaphore ) /* FREERTOS_SYSTEM_CALL */
+        TaskHandle_t MPU_xQueueGetMutexHolder( QueueHandle_t xSemaphore ) /* FREERTOS 系统调用 */
         {
             void * xReturn;
 
@@ -1333,11 +1333,11 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
-        QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType ) /* FREERTOS_SYSTEM_CALL */
+        QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType ) /* FREERTOS 系统调用 */
         {
             QueueHandle_t xReturn;
 
@@ -1359,12 +1359,12 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
         QueueHandle_t MPU_xQueueCreateMutexStatic( const uint8_t ucQueueType,
-                                                   StaticQueue_t * pxStaticQueue ) /* FREERTOS_SYSTEM_CALL */
+                                                   StaticQueue_t * pxStaticQueue ) /* FREERTOS 系统调用 */
         {
             QueueHandle_t xReturn;
 
@@ -1386,12 +1386,12 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
         QueueHandle_t MPU_xQueueCreateCountingSemaphore( UBaseType_t uxCountValue,
-                                                         UBaseType_t uxInitialCount ) /* FREERTOS_SYSTEM_CALL */
+                                                         UBaseType_t uxInitialCount ) /* FREERTOS 系统调用 */
         {
             QueueHandle_t xReturn;
 
@@ -1413,14 +1413,14 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
 
         QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( const UBaseType_t uxMaxCount,
                                                                const UBaseType_t uxInitialCount,
-                                                               StaticQueue_t * pxStaticQueue ) /* FREERTOS_SYSTEM_CALL */
+                                                               StaticQueue_t * pxStaticQueue ) /* FREERTOS 系统调用 */
         {
             QueueHandle_t xReturn;
 
@@ -1442,12 +1442,12 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_RECURSIVE_MUTEXES == 1 )
         BaseType_t MPU_xQueueTakeMutexRecursive( QueueHandle_t xMutex,
-                                                 TickType_t xBlockTime ) /* FREERTOS_SYSTEM_CALL */
+                                                 TickType_t xBlockTime ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1469,11 +1469,11 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_RECURSIVE_MUTEXES == 1 )
-        BaseType_t MPU_xQueueGiveMutexRecursive( QueueHandle_t xMutex ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xQueueGiveMutexRecursive( QueueHandle_t xMutex ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1495,11 +1495,11 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
-        QueueSetHandle_t MPU_xQueueCreateSet( UBaseType_t uxEventQueueLength ) /* FREERTOS_SYSTEM_CALL */
+        QueueSetHandle_t MPU_xQueueCreateSet( UBaseType_t uxEventQueueLength ) /* FREERTOS 系统调用 */
         {
             QueueSetHandle_t xReturn;
 
@@ -1521,13 +1521,13 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
         QueueSetHandle_t MPU_xQueueCreateSetStatic( const UBaseType_t uxEventQueueLength,
                                                     uint8_t * pucQueueStorage,
-                                                    StaticQueue_t * pxStaticQueue ) /* FREERTOS_SYSTEM_CALL */
+                                                    StaticQueue_t * pxStaticQueue ) /* FREERTOS 系统调用 */
         {
             QueueSetHandle_t xReturn;
 
@@ -1549,12 +1549,12 @@
 
             return xReturn;
         }
-    #endif /* if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
         QueueSetMemberHandle_t MPU_xQueueSelectFromSet( QueueSetHandle_t xQueueSet,
-                                                        TickType_t xBlockTimeTicks ) /* FREERTOS_SYSTEM_CALL */
+                                                        TickType_t xBlockTimeTicks ) /* FREERTOS 系统调用 */
         {
             QueueSetMemberHandle_t xReturn;
 
@@ -1576,12 +1576,12 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
         BaseType_t MPU_xQueueAddToSet( QueueSetMemberHandle_t xQueueOrSemaphore,
-                                       QueueSetHandle_t xQueueSet ) /* FREERTOS_SYSTEM_CALL */
+                                       QueueSetHandle_t xQueueSet ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1603,12 +1603,12 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
         BaseType_t MPU_xQueueRemoveFromSet( QueueSetMemberHandle_t xQueueOrSemaphore,
-                                            QueueSetHandle_t xQueueSet ) /* FREERTOS_SYSTEM_CALL */
+                                            QueueSetHandle_t xQueueSet ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1630,12 +1630,12 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if configQUEUE_REGISTRY_SIZE > 0
         void MPU_vQueueAddToRegistry( QueueHandle_t xQueue,
-                                      const char * pcName ) /* FREERTOS_SYSTEM_CALL */
+                                      const char * pcName ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -1653,11 +1653,11 @@
                 vQueueAddToRegistry( xQueue, pcName );
             }
         }
-    #endif /* if configQUEUE_REGISTRY_SIZE > 0 */
+    #endif /* 条件块结束：if configQUEUE_REGISTRY_SIZE > 0 */
 /*-----------------------------------------------------------*/
 
     #if configQUEUE_REGISTRY_SIZE > 0
-        void MPU_vQueueUnregisterQueue( QueueHandle_t xQueue ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vQueueUnregisterQueue( QueueHandle_t xQueue ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -1675,11 +1675,11 @@
                 vQueueUnregisterQueue( xQueue );
             }
         }
-    #endif /* if configQUEUE_REGISTRY_SIZE > 0 */
+    #endif /* 条件块结束：if configQUEUE_REGISTRY_SIZE > 0 */
 /*-----------------------------------------------------------*/
 
     #if configQUEUE_REGISTRY_SIZE > 0
-        const char * MPU_pcQueueGetName( QueueHandle_t xQueue ) /* FREERTOS_SYSTEM_CALL */
+        const char * MPU_pcQueueGetName( QueueHandle_t xQueue ) /* FREERTOS 系统调用 */
         {
             const char * pcReturn;
 
@@ -1701,10 +1701,10 @@
 
             return pcReturn;
         }
-    #endif /* if configQUEUE_REGISTRY_SIZE > 0 */
+    #endif /* 条件块结束：if configQUEUE_REGISTRY_SIZE > 0 */
 /*-----------------------------------------------------------*/
 
-    void MPU_vQueueDelete( QueueHandle_t xQueue ) /* FREERTOS_SYSTEM_CALL */
+    void MPU_vQueueDelete( QueueHandle_t xQueue ) /* FREERTOS 系统调用 */
     {
         if( portIS_PRIVILEGED() == pdFALSE )
         {
@@ -1725,7 +1725,7 @@
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
-        void * MPU_pvTimerGetTimerID( const TimerHandle_t xTimer ) /* FREERTOS_SYSTEM_CALL */
+        void * MPU_pvTimerGetTimerID( const TimerHandle_t xTimer ) /* FREERTOS 系统调用 */
         {
             void * pvReturn;
 
@@ -1747,12 +1747,12 @@
 
             return pvReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
         void MPU_vTimerSetTimerID( TimerHandle_t xTimer,
-                                   void * pvNewID ) /* FREERTOS_SYSTEM_CALL */
+                                   void * pvNewID ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -1770,11 +1770,11 @@
                 vTimerSetTimerID( xTimer, pvNewID );
             }
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
-        BaseType_t MPU_xTimerIsTimerActive( TimerHandle_t xTimer ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xTimerIsTimerActive( TimerHandle_t xTimer ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1796,11 +1796,11 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
-        TaskHandle_t MPU_xTimerGetTimerDaemonTaskHandle( void ) /* FREERTOS_SYSTEM_CALL */
+        TaskHandle_t MPU_xTimerGetTimerDaemonTaskHandle( void ) /* FREERTOS 系统调用 */
         {
             TaskHandle_t xReturn;
 
@@ -1822,12 +1822,12 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
         void MPU_vTimerSetReloadMode( TimerHandle_t xTimer,
-                                      const BaseType_t xAutoReload ) /* FREERTOS_SYSTEM_CALL */
+                                      const BaseType_t xAutoReload ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -1845,7 +1845,7 @@
                 vTimerSetReloadMode( xTimer, xAutoReload );
             }
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
@@ -1871,11 +1871,11 @@
 
             return uxReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
-        const char * MPU_pcTimerGetName( TimerHandle_t xTimer ) /* FREERTOS_SYSTEM_CALL */
+        const char * MPU_pcTimerGetName( TimerHandle_t xTimer ) /* FREERTOS 系统调用 */
         {
             const char * pcReturn;
 
@@ -1897,11 +1897,11 @@
 
             return pcReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
-        TickType_t MPU_xTimerGetPeriod( TimerHandle_t xTimer ) /* FREERTOS_SYSTEM_CALL */
+        TickType_t MPU_xTimerGetPeriod( TimerHandle_t xTimer ) /* FREERTOS 系统调用 */
         {
             TickType_t xReturn;
 
@@ -1923,11 +1923,11 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
-        TickType_t MPU_xTimerGetExpiryTime( TimerHandle_t xTimer ) /* FREERTOS_SYSTEM_CALL */
+        TickType_t MPU_xTimerGetExpiryTime( TimerHandle_t xTimer ) /* FREERTOS 系统调用 */
         {
             TickType_t xReturn;
 
@@ -1949,7 +1949,7 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
@@ -1957,7 +1957,7 @@
                                                      const BaseType_t xCommandID,
                                                      const TickType_t xOptionalValue,
                                                      BaseType_t * const pxHigherPriorityTaskWoken,
-                                                     const TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                                     const TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -1979,11 +1979,11 @@
 
             return xReturn;
         }
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) )
-        EventGroupHandle_t MPU_xEventGroupCreate( void ) /* FREERTOS_SYSTEM_CALL */
+        EventGroupHandle_t MPU_xEventGroupCreate( void ) /* FREERTOS 系统调用 */
         {
             EventGroupHandle_t xReturn;
 
@@ -2005,11 +2005,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) )
-        EventGroupHandle_t MPU_xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer ) /* FREERTOS_SYSTEM_CALL */
+        EventGroupHandle_t MPU_xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer ) /* FREERTOS 系统调用 */
         {
             EventGroupHandle_t xReturn;
 
@@ -2031,7 +2031,7 @@
 
             return xReturn;
         }
-    #endif /* #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
@@ -2039,7 +2039,7 @@
                                              const EventBits_t uxBitsToWaitFor,
                                              const BaseType_t xClearOnExit,
                                              const BaseType_t xWaitForAllBits,
-                                             TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                             TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             EventBits_t xReturn;
 
@@ -2061,12 +2061,12 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
         EventBits_t MPU_xEventGroupClearBits( EventGroupHandle_t xEventGroup,
-                                              const EventBits_t uxBitsToClear ) /* FREERTOS_SYSTEM_CALL */
+                                              const EventBits_t uxBitsToClear ) /* FREERTOS 系统调用 */
         {
             EventBits_t xReturn;
 
@@ -2088,12 +2088,12 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
         EventBits_t MPU_xEventGroupSetBits( EventGroupHandle_t xEventGroup,
-                                            const EventBits_t uxBitsToSet ) /* FREERTOS_SYSTEM_CALL */
+                                            const EventBits_t uxBitsToSet ) /* FREERTOS 系统调用 */
         {
             EventBits_t xReturn;
 
@@ -2115,14 +2115,14 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
         EventBits_t MPU_xEventGroupSync( EventGroupHandle_t xEventGroup,
                                          const EventBits_t uxBitsToSet,
                                          const EventBits_t uxBitsToWaitFor,
-                                         TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                         TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             EventBits_t xReturn;
 
@@ -2144,11 +2144,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
-        void MPU_vEventGroupDelete( EventGroupHandle_t xEventGroup ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vEventGroupDelete( EventGroupHandle_t xEventGroup ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -2166,14 +2166,14 @@
                 vEventGroupDelete( xEventGroup );
             }
         }
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
         size_t MPU_xStreamBufferSend( StreamBufferHandle_t xStreamBuffer,
                                       const void * pvTxData,
                                       size_t xDataLengthBytes,
-                                      TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                      TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             size_t xReturn;
 
@@ -2195,11 +2195,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        size_t MPU_xStreamBufferNextMessageLengthBytes( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        size_t MPU_xStreamBufferNextMessageLengthBytes( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             size_t xReturn;
 
@@ -2221,14 +2221,14 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
         size_t MPU_xStreamBufferReceive( StreamBufferHandle_t xStreamBuffer,
                                          void * pvRxData,
                                          size_t xBufferLengthBytes,
-                                         TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                         TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             size_t xReturn;
 
@@ -2250,11 +2250,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        void MPU_vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        void MPU_vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             if( portIS_PRIVILEGED() == pdFALSE )
             {
@@ -2272,11 +2272,11 @@
                 vStreamBufferDelete( xStreamBuffer );
             }
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        BaseType_t MPU_xStreamBufferIsFull( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xStreamBufferIsFull( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -2298,11 +2298,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        BaseType_t MPU_xStreamBufferIsEmpty( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xStreamBufferIsEmpty( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -2324,11 +2324,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        BaseType_t MPU_xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        BaseType_t MPU_xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -2350,11 +2350,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        size_t MPU_xStreamBufferSpacesAvailable( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        size_t MPU_xStreamBufferSpacesAvailable( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             size_t xReturn;
 
@@ -2375,11 +2375,11 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
-        size_t MPU_xStreamBufferBytesAvailable( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS_SYSTEM_CALL */
+        size_t MPU_xStreamBufferBytesAvailable( StreamBufferHandle_t xStreamBuffer ) /* FREERTOS 系统调用 */
         {
             size_t xReturn;
 
@@ -2401,12 +2401,12 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
         BaseType_t MPU_xStreamBufferSetTriggerLevel( StreamBufferHandle_t xStreamBuffer,
-                                                     size_t xTriggerLevel ) /* FREERTOS_SYSTEM_CALL */
+                                                     size_t xTriggerLevel ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn;
 
@@ -2428,7 +2428,7 @@
 
             return xReturn;
         }
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) )
@@ -2436,13 +2436,12 @@
                                                              size_t xTriggerLevelBytes,
                                                              BaseType_t xStreamBufferType,
                                                              StreamBufferCallbackFunction_t pxSendCompletedCallback,
-                                                             StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* FREERTOS_SYSTEM_CALL */
+                                                             StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* FREERTOS 系统调用 */
         {
             StreamBufferHandle_t xReturn;
 
             /**
-             * Stream buffer application level callback functionality is disabled for MPU
-             * enabled ports.
+             * 流缓冲的应用程序级回调功能在启用 MPU 的移植层中被禁用。
              */
             configASSERT( ( pxSendCompletedCallback == NULL ) &&
                           ( pxReceiveCompletedCallback == NULL ) );
@@ -2482,7 +2481,7 @@
 
             return xReturn;
         }
-    #endif /* #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) )
@@ -2492,13 +2491,12 @@
                                                                    uint8_t * const pucStreamBufferStorageArea,
                                                                    StaticStreamBuffer_t * const pxStaticStreamBuffer,
                                                                    StreamBufferCallbackFunction_t pxSendCompletedCallback,
-                                                                   StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* FREERTOS_SYSTEM_CALL */
+                                                                   StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* FREERTOS 系统调用 */
         {
             StreamBufferHandle_t xReturn;
 
             /**
-             * Stream buffer application level callback functionality is disabled for MPU
-             * enabled ports.
+             * 流缓冲的应用程序级回调功能在启用 MPU 的移植层中被禁用。
              */
             configASSERT( ( pxSendCompletedCallback == NULL ) &&
                           ( pxReceiveCompletedCallback == NULL ) );
@@ -2542,14 +2540,15 @@
 
             return xReturn;
         }
-    #endif /* #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
 
-/* Functions that the application writer wants to execute in privileged mode
- * can be defined in application_defined_privileged_functions.h.  The functions
- * must take the same format as those above whereby the privilege state on exit
- * equals the privilege state on entry.  For example:
+/*
+ * 应用程序编写者希望在特权模式下执行的函数可定义在
+ * application_defined_privileged_functions.h 中。这些函数
+ * 必须采用与上述函数相同的格式，即退出时的特权状态
+ * 与进入时的特权状态相同。例如：
  *
  * void MPU_FunctionName( [parameters ] ) FREERTOS_SYSTEM_CALL;
  * void MPU_FunctionName( [parameters ] )
@@ -2577,5 +2576,5 @@
     #endif
 /*-----------------------------------------------------------*/
 
-#endif /* #if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 1 ) ) */
+#endif /* 条件块结束：#if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 1 ) ) */
 /*-----------------------------------------------------------*/

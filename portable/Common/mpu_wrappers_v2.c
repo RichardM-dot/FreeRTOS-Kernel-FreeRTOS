@@ -27,16 +27,16 @@
  */
 
 /*
- * Implementation of the wrapper functions used to raise the processor privilege
- * before calling a standard FreeRTOS API function.
+ * 用于在调用标准 FreeRTOS API 函数之前提升处理器特权级的包装函数实现。
  */
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers.  That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 将所有 API 函数
+ * 重定义为使用 MPU 包装器。只有在应用程序文件中包含 task.h 时才应这样做。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
-/* Scheduler includes. */
+/* 调度器头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -56,21 +56,21 @@
     #endif
 
 /**
- * @brief Offset added to the index before returning to the user.
+ * @brief 在返回给用户之前添加到索引上的偏移量。
  *
- * If the actual handle is stored at index i, ( i + INDEX_OFFSET )
- * is returned to the user.
+ * 如果实际句柄存储在索引 i 处，则返回给用户的是
+ * ( i + INDEX_OFFSET )。
  */
     #define INDEX_OFFSET    1
 
 /**
- * @brief Opaque type for a kernel object.
+ * @brief 内核对象的不透明类型。
  */
     struct OpaqueObject;
     typedef struct OpaqueObject * OpaqueObjectHandle_t;
 
 /**
- * @brief Defines kernel object in the kernel object pool.
+ * @brief 定义内核对象池中的内核对象。
  */
     typedef struct KernelObject
     {
@@ -80,7 +80,7 @@
     } KernelObject_t;
 
 /**
- * @brief Kernel object types.
+ * @brief 内核对象类型。
  */
     #define KERNEL_OBJECT_TYPE_INVALID          ( 0UL )
     #define KERNEL_OBJECT_TYPE_QUEUE            ( 1UL )
@@ -90,78 +90,78 @@
     #define KERNEL_OBJECT_TYPE_TIMER            ( 5UL )
 
 /**
- * @brief Checks whether an external index is valid or not.
+ * @brief 检查外部索引是否有效。
  */
     #define IS_EXTERNAL_INDEX_VALID( lIndex )   \
     ( ( ( ( lIndex ) >= INDEX_OFFSET ) &&       \
         ( ( lIndex ) < ( configPROTECTED_KERNEL_OBJECT_POOL_SIZE + INDEX_OFFSET ) ) ) ? pdTRUE : pdFALSE )
 
 /**
- * @brief Checks whether an internal index is valid or not.
+ * @brief 检查内部索引是否有效。
  */
     #define IS_INTERNAL_INDEX_VALID( lIndex )   \
     ( ( ( ( lIndex ) >= 0 ) &&                  \
         ( ( lIndex ) < ( configPROTECTED_KERNEL_OBJECT_POOL_SIZE ) ) ) ? pdTRUE : pdFALSE )
 
 /**
- * @brief Converts an internal index into external.
+ * @brief 将内部索引转换为外部索引。
  */
     #define CONVERT_TO_EXTERNAL_INDEX( lIndex )    ( ( lIndex ) + INDEX_OFFSET )
 
 /**
- * @brief Converts an external index into internal.
+ * @brief 将外部索引转换为内部索引。
  */
     #define CONVERT_TO_INTERNAL_INDEX( lIndex )    ( ( lIndex ) - INDEX_OFFSET )
 
 /**
- * @brief Max value that fits in a uint32_t type.
+ * @brief uint32_t 类型能容纳的最大值。
  */
     #define mpuUINT32_MAX    ( ~( ( uint32_t ) 0 ) )
 
 /**
- * @brief Check if multiplying a and b will result in overflow.
+ * @brief 检查 a 与 b 相乘是否会溢出。
  */
     #define mpuMULTIPLY_UINT32_WILL_OVERFLOW( a, b )    ( ( ( a ) > 0 ) && ( ( b ) > ( mpuUINT32_MAX / ( a ) ) ) )
 
 /**
- * @brief Get the index of a free slot in the kernel object pool.
+ * @brief 获取内核对象池中空闲槽位的索引。
  *
- * If a free slot is found, this function marks the slot as
- * "not free".
+ * 如果找到空闲槽位，该函数会将该槽位标记为
+ * “非空闲”。
  *
- * @return Index of a free slot is returned, if a free slot is
- *         found. Otherwise -1 is returned.
+ * @return 如果找到空闲槽位，则返回其索引；
+ *         否则返回 -1。
  */
     static int32_t MPU_GetFreeIndexInKernelObjectPool( void ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Set the given index as free in the kernel object pool.
+ * @brief 将给定索引标记为内核对象池中的空闲槽位。
  *
- * @param lIndex The index to set as free.
+ * @param lIndex 要设置为空闲的索引。
  */
     static void MPU_SetIndexFreeInKernelObjectPool( int32_t lIndex ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Get the index at which a given kernel object is stored.
+ * @brief 获取给定内核对象所存储的索引。
  *
- * @param xHandle The given kernel object handle.
- * @param ulKernelObjectType The kernel object type.
+ * @param xHandle 给定的内核对象句柄。
+ * @param ulKernelObjectType 内核对象类型。
  *
- * @return Index at which the kernel object is stored if it is a valid
- *         handle, -1 otherwise.
+ * @return 如果句柄有效，则返回内核对象存储的索引；
+ *         否则返回 -1。
  */
     static int32_t MPU_GetIndexForHandle( OpaqueObjectHandle_t xHandle,
                                           uint32_t ulKernelObjectType ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Store the given kernel object handle at the given index in
- *        the kernel object pool.
+ * @brief 将给定的内核对象句柄存储到内核对象池中的
+ *        给定索引处。
  *
- * @param lIndex Index to store the given handle at.
- * @param xHandle Kernel object handle to store.
- * @param pvKernelObjectData The data associated with the kernel object.
- *        Currently, only used for timer objects to store timer callback.
- * @param ulKernelObjectType The kernel object type.
+ * @param lIndex 用于存储给定句柄的索引。
+ * @param xHandle 要存储的内核对象句柄。
+ * @param pvKernelObjectData 与内核对象关联的数据。
+ *        目前仅用于定时器对象，以存储定时器回调。
+ * @param ulKernelObjectType 内核对象类型。
  */
     static void MPU_StoreHandleAndDataAtIndex( int32_t lIndex,
                                                OpaqueObjectHandle_t xHandle,
@@ -169,13 +169,13 @@
                                                uint32_t ulKernelObjectType ) PRIVILEGED_FUNCTION;
 
 /**
- * @brief Get the kernel object handle at the given index from
- *        the kernel object pool.
+ * @brief 从内核对象池中获取给定索引处的
+ *        内核对象句柄。
  *
- * @param lIndex Index at which to get the kernel object handle.
- * @param ulKernelObjectType The kernel object type.
+ * @param lIndex 获取内核对象句柄的索引。
+ * @param ulKernelObjectType 内核对象类型。
  *
- * @return The kernel object handle at the index.
+ * @return 该索引处的内核对象句柄。
  */
     static OpaqueObjectHandle_t MPU_GetHandleAtIndex( int32_t lIndex,
                                                       uint32_t ulKernelObjectType ) PRIVILEGED_FUNCTION;
@@ -183,19 +183,19 @@
     #if ( configUSE_TIMERS == 1 )
 
 /**
- * @brief The function registered as callback for all the timers.
+ * @brief 注册为所有定时器回调的函数。
  *
- * We intercept all the timer callbacks so that we can call application
- * callbacks with opaque handle.
+ * 拦截所有定时器回调，以便使用不透明句柄
+ * 调用应用程序回调。
  *
- * @param xInternalHandle The internal timer handle.
+ * @param xInternalHandle 内部定时器句柄。
  */
         static void MPU_TimerCallback( TimerHandle_t xInternalHandle ) PRIVILEGED_FUNCTION;
 
-    #endif /* #if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_TIMERS == 1 ) */
 
 /*
- * Wrappers to keep all the casting in one place.
+ * 将所有强制转换集中在一处的包装宏。
  */
     #define MPU_StoreQueueHandleAtIndex( lIndex, xHandle )                 MPU_StoreHandleAndDataAtIndex( ( lIndex ), ( OpaqueObjectHandle_t ) ( xHandle ), NULL, KERNEL_OBJECT_TYPE_QUEUE )
     #define MPU_GetQueueHandleAtIndex( lIndex )                            ( QueueHandle_t ) MPU_GetHandleAtIndex( ( lIndex ), KERNEL_OBJECT_TYPE_QUEUE )
@@ -209,7 +209,7 @@
     #endif
 
 /*
- * Wrappers to keep all the casting in one place for Task APIs.
+ * 任务 API 将所有强制转换集中在一处的包装宏。
  */
     #define MPU_StoreTaskHandleAtIndex( lIndex, xHandle )            MPU_StoreHandleAndDataAtIndex( ( lIndex ), ( OpaqueObjectHandle_t ) ( xHandle ), NULL, KERNEL_OBJECT_TYPE_TASK )
     #define MPU_GetTaskHandleAtIndex( lIndex )                       ( TaskHandle_t ) MPU_GetHandleAtIndex( ( lIndex ), KERNEL_OBJECT_TYPE_TASK )
@@ -217,57 +217,58 @@
 
     #if ( configUSE_EVENT_GROUPS == 1 )
 /*
- * Wrappers to keep all the casting in one place for Event Group APIs.
+ * 事件组 API 将所有强制转换集中在一处的包装宏。
  */
         #define MPU_StoreEventGroupHandleAtIndex( lIndex, xHandle )      MPU_StoreHandleAndDataAtIndex( ( lIndex ), ( OpaqueObjectHandle_t ) ( xHandle ), NULL, KERNEL_OBJECT_TYPE_EVENT_GROUP )
         #define MPU_GetEventGroupHandleAtIndex( lIndex )                 ( EventGroupHandle_t ) MPU_GetHandleAtIndex( ( lIndex ), KERNEL_OBJECT_TYPE_EVENT_GROUP )
         #define MPU_GetIndexForEventGroupHandle( xHandle )               MPU_GetIndexForHandle( ( OpaqueObjectHandle_t ) ( xHandle ), KERNEL_OBJECT_TYPE_EVENT_GROUP )
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 /*
- * Wrappers to keep all the casting in one place for Stream Buffer APIs.
+ * 流缓冲 API 将所有强制转换集中在一处的包装宏。
  */
         #define MPU_StoreStreamBufferHandleAtIndex( lIndex, xHandle )    MPU_StoreHandleAndDataAtIndex( ( lIndex ), ( OpaqueObjectHandle_t ) ( xHandle), NULL, KERNEL_OBJECT_TYPE_STREAM_BUFFER )
         #define MPU_GetStreamBufferHandleAtIndex( lIndex )               ( StreamBufferHandle_t ) MPU_GetHandleAtIndex( ( lIndex ), KERNEL_OBJECT_TYPE_STREAM_BUFFER )
         #define MPU_GetIndexForStreamBufferHandle( xHandle )             MPU_GetIndexForHandle( ( OpaqueObjectHandle_t ) ( xHandle ), KERNEL_OBJECT_TYPE_STREAM_BUFFER )
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 
     #if ( configUSE_TIMERS == 1 )
 /*
- * Wrappers to keep all the casting in one place for Timer APIs.
+ * 定时器 API 将所有强制转换集中在一处的包装宏。
  */
         #define MPU_StoreTimerHandleAtIndex( lIndex, xHandle, pxApplicationCallback )    MPU_StoreHandleAndDataAtIndex( ( lIndex ), ( OpaqueObjectHandle_t ) ( xHandle ), ( void * ) ( pxApplicationCallback ), KERNEL_OBJECT_TYPE_TIMER )
         #define MPU_GetTimerHandleAtIndex( lIndex )                                      ( TimerHandle_t ) MPU_GetHandleAtIndex( ( lIndex ), KERNEL_OBJECT_TYPE_TIMER )
         #define MPU_GetIndexForTimerHandle( xHandle )                                    MPU_GetIndexForHandle( ( OpaqueObjectHandle_t ) ( xHandle ), KERNEL_OBJECT_TYPE_TIMER )
 
-    #endif /* #if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_TIMERS == 1 ) */
 
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Kernel object pool.
+ * @brief 内核对象池。
  */
     PRIVILEGED_DATA static KernelObject_t xKernelObjectPool[ configPROTECTED_KERNEL_OBJECT_POOL_SIZE ] = { 0 };
 /*-----------------------------------------------------------*/
 
-    static int32_t MPU_GetFreeIndexInKernelObjectPool( void ) /* PRIVILEGED_FUNCTION */
+    static int32_t MPU_GetFreeIndexInKernelObjectPool( void ) /* 特权函数 */
     {
         int32_t i, lFreeIndex = -1;
 
-        /* This function is called only from resource create APIs
-         * which are not supposed to be called from ISRs. Therefore,
-         * we only need to suspend the scheduler and do not require
-         * critical section. */
+        /*
+         * 该函数仅由资源创建 API 调用，这些 API 不应
+         * 在 ISR 中调用。因此只需挂起调度器，
+         * 无需进入临界区。
+         */
         vTaskSuspendAll();
         {
             for( i = 0; i < configPROTECTED_KERNEL_OBJECT_POOL_SIZE; i++ )
             {
                 if( xKernelObjectPool[ i ].xInternalObjectHandle == NULL )
                 {
-                    /* Mark this index as not free. */
+                    /* 将该索引标记为非空闲。 */
                     xKernelObjectPool[ i ].xInternalObjectHandle = ( OpaqueObjectHandle_t ) ( ~0U );
                     lFreeIndex = i;
                     break;
@@ -280,7 +281,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    static void MPU_SetIndexFreeInKernelObjectPool( int32_t lIndex ) /* PRIVILEGED_FUNCTION */
+    static void MPU_SetIndexFreeInKernelObjectPool( int32_t lIndex ) /* 特权函数 */
     {
         configASSERT( IS_INTERNAL_INDEX_VALID( lIndex ) != pdFALSE );
 
@@ -295,7 +296,7 @@
 /*-----------------------------------------------------------*/
 
     static int32_t MPU_GetIndexForHandle( OpaqueObjectHandle_t xHandle,
-                                          uint32_t ulKernelObjectType ) /* PRIVILEGED_FUNCTION */
+                                          uint32_t ulKernelObjectType ) /* 特权函数 */
     {
         int32_t i, lIndex = -1;
 
@@ -318,7 +319,7 @@
     static void MPU_StoreHandleAndDataAtIndex( int32_t lIndex,
                                                OpaqueObjectHandle_t xHandle,
                                                void * pvKernelObjectData,
-                                               uint32_t ulKernelObjectType ) /* PRIVILEGED_FUNCTION */
+                                               uint32_t ulKernelObjectType ) /* 特权函数 */
     {
         configASSERT( IS_INTERNAL_INDEX_VALID( lIndex ) != pdFALSE );
         xKernelObjectPool[ lIndex ].xInternalObjectHandle = xHandle;
@@ -328,7 +329,7 @@
 /*-----------------------------------------------------------*/
 
     static OpaqueObjectHandle_t MPU_GetHandleAtIndex( int32_t lIndex,
-                                                      uint32_t ulKernelObjectType ) /* PRIVILEGED_FUNCTION */
+                                                      uint32_t ulKernelObjectType ) /* 特权函数 */
     {
         OpaqueObjectHandle_t xObjectHandle = NULL;
 
@@ -346,7 +347,7 @@
     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
 
         void vGrantAccessToKernelObject( TaskHandle_t xExternalTaskHandle,
-                                         int32_t lExternalKernelObjectHandle ) /* PRIVILEGED_FUNCTION */
+                                         int32_t lExternalKernelObjectHandle ) /* 特权函数 */
         {
             int32_t lExternalTaskIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -375,13 +376,13 @@
             }
         }
 
-    #endif /* #if ( configENABLE_ACCESS_CONTROL_LIST == 1 ) */
+    #endif /* 条件块结束：#if ( configENABLE_ACCESS_CONTROL_LIST == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
 
         void vRevokeAccessToKernelObject( TaskHandle_t xExternalTaskHandle,
-                                          int32_t lExternalKernelObjectHandle ) /* PRIVILEGED_FUNCTION */
+                                          int32_t lExternalKernelObjectHandle ) /* 特权函数 */
         {
             int32_t lExternalTaskIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -410,18 +411,18 @@
             }
         }
 
-    #endif /* #if ( configENABLE_ACCESS_CONTROL_LIST == 1 ) */
+    #endif /* 条件块结束：#if ( configENABLE_ACCESS_CONTROL_LIST == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
-        static void MPU_TimerCallback( TimerHandle_t xInternalHandle ) /* PRIVILEGED_FUNCTION */
+        static void MPU_TimerCallback( TimerHandle_t xInternalHandle ) /* 特权函数 */
         {
             int32_t i, lIndex = -1;
             TimerHandle_t xExternalHandle = NULL;
             TimerCallbackFunction_t pxApplicationCallBack = NULL;
 
-            /* Coming from the timer task and therefore, should be valid. */
+            /* 来自定时器任务，因此应当是有效的。 */
             configASSERT( xInternalHandle != NULL );
 
             for( i = 0; i < configPROTECTED_KERNEL_OBJECT_POOL_SIZE; i++ )
@@ -441,11 +442,11 @@
             pxApplicationCallBack( xExternalHandle );
         }
 
-    #endif /* #if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
-/*            MPU wrappers for tasks APIs.                   */
+/* 任务 API 的 MPU 包装器。 */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskDelayUntil == 1 )
@@ -454,7 +455,7 @@
                                             TickType_t xTimeIncrement ) PRIVILEGED_FUNCTION;
 
         BaseType_t MPU_xTaskDelayUntilImpl( TickType_t * const pxPreviousWakeTime,
-                                            TickType_t xTimeIncrement ) /* PRIVILEGED_FUNCTION */
+                                            TickType_t xTimeIncrement ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             BaseType_t xIsPreviousWakeTimeAccessible = pdFALSE;
@@ -474,14 +475,14 @@
             return xReturn;
         }
 
-    #endif /* if ( INCLUDE_xTaskDelayUntil == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskDelayUntil == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskAbortDelay == 1 )
 
         BaseType_t MPU_xTaskAbortDelayImpl( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTaskAbortDelayImpl( TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTaskAbortDelayImpl( TaskHandle_t xTask ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             BaseType_t xCallingTaskIsAuthorizedToAccessTask = pdFALSE;
@@ -508,26 +509,26 @@
             return xReturn;
         }
 
-    #endif /* if ( INCLUDE_xTaskAbortDelay == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskAbortDelay == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskDelay == 1 )
 
         void MPU_vTaskDelayImpl( TickType_t xTicksToDelay ) PRIVILEGED_FUNCTION;
 
-        void MPU_vTaskDelayImpl( TickType_t xTicksToDelay ) /* PRIVILEGED_FUNCTION */
+        void MPU_vTaskDelayImpl( TickType_t xTicksToDelay ) /* 特权函数 */
         {
             vTaskDelay( xTicksToDelay );
         }
 
-    #endif /* if ( INCLUDE_vTaskDelay == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskDelay == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_uxTaskPriorityGet == 1 )
 
         UBaseType_t MPU_uxTaskPriorityGetImpl( const TaskHandle_t pxTask ) PRIVILEGED_FUNCTION;
 
-        UBaseType_t MPU_uxTaskPriorityGetImpl( const TaskHandle_t pxTask ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxTaskPriorityGetImpl( const TaskHandle_t pxTask ) /* 特权函数 */
         {
             UBaseType_t uxReturn = configMAX_PRIORITIES;
             BaseType_t xCallingTaskIsAuthorizedToAccessTask = pdFALSE;
@@ -561,14 +562,14 @@
             return uxReturn;
         }
 
-    #endif /* if ( INCLUDE_uxTaskPriorityGet == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_uxTaskPriorityGet == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_eTaskGetState == 1 )
 
         eTaskState MPU_eTaskGetStateImpl( TaskHandle_t pxTask ) PRIVILEGED_FUNCTION;
 
-        eTaskState MPU_eTaskGetStateImpl( TaskHandle_t pxTask ) /* PRIVILEGED_FUNCTION */
+        eTaskState MPU_eTaskGetStateImpl( TaskHandle_t pxTask ) /* 特权函数 */
         {
             eTaskState eReturn = eInvalid;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -595,7 +596,7 @@
             return eReturn;
         }
 
-    #endif /* if ( INCLUDE_eTaskGetState == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_eTaskGetState == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TRACE_FACILITY == 1 )
@@ -608,7 +609,7 @@
         void MPU_vTaskGetInfoImpl( TaskHandle_t xTask,
                                    TaskStatus_t * pxTaskStatus,
                                    BaseType_t xGetFreeStackSpace,
-                                   eTaskState eState ) /* PRIVILEGED_FUNCTION */
+                                   eTaskState eState ) /* 特权函数 */
         {
             int32_t lIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -647,14 +648,14 @@
             }
         }
 
-    #endif /* if ( configUSE_TRACE_FACILITY == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TRACE_FACILITY == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskGetIdleTaskHandle == 1 )
 
         TaskHandle_t MPU_xTaskGetIdleTaskHandleImpl( void ) PRIVILEGED_FUNCTION;
 
-        TaskHandle_t MPU_xTaskGetIdleTaskHandleImpl( void ) /* PRIVILEGED_FUNCTION */
+        TaskHandle_t MPU_xTaskGetIdleTaskHandleImpl( void ) /* 特权函数 */
         {
             TaskHandle_t xIdleTaskHandle = NULL;
 
@@ -663,14 +664,14 @@
             return xIdleTaskHandle;
         }
 
-    #endif /* if ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskSuspend == 1 )
 
         void MPU_vTaskSuspendImpl( TaskHandle_t pxTaskToSuspend ) PRIVILEGED_FUNCTION;
 
-        void MPU_vTaskSuspendImpl( TaskHandle_t pxTaskToSuspend ) /* PRIVILEGED_FUNCTION */
+        void MPU_vTaskSuspendImpl( TaskHandle_t pxTaskToSuspend ) /* 特权函数 */
         {
             int32_t lIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -682,8 +683,9 @@
             }
             else
             {
-                /* After the scheduler starts, only privileged tasks are allowed
-                 * to suspend other tasks. */
+                /*
+                 * 调度器启动后，只有特权任务才能挂起其他任务。
+                 */
                 #if ( INCLUDE_xTaskGetSchedulerState == 1 )
                     if( ( xTaskGetSchedulerState() == taskSCHEDULER_NOT_STARTED ) || ( portIS_TASK_PRIVILEGED() == pdTRUE ) )
                 #else
@@ -710,14 +712,14 @@
             }
         }
 
-    #endif /* if ( INCLUDE_vTaskSuspend == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskSuspend == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskSuspend == 1 )
 
         void MPU_vTaskResumeImpl( TaskHandle_t pxTaskToResume ) PRIVILEGED_FUNCTION;
 
-        void MPU_vTaskResumeImpl( TaskHandle_t pxTaskToResume ) /* PRIVILEGED_FUNCTION */
+        void MPU_vTaskResumeImpl( TaskHandle_t pxTaskToResume ) /* 特权函数 */
         {
             int32_t lIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -741,12 +743,12 @@
             }
         }
 
-    #endif /* if ( INCLUDE_vTaskSuspend == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskSuspend == 1 ) */
 /*-----------------------------------------------------------*/
 
     TickType_t MPU_xTaskGetTickCountImpl( void ) PRIVILEGED_FUNCTION;
 
-    TickType_t MPU_xTaskGetTickCountImpl( void ) /* PRIVILEGED_FUNCTION */
+    TickType_t MPU_xTaskGetTickCountImpl( void ) /* 特权函数 */
     {
         TickType_t xReturn;
 
@@ -758,7 +760,7 @@
 
     UBaseType_t MPU_uxTaskGetNumberOfTasksImpl( void ) PRIVILEGED_FUNCTION;
 
-    UBaseType_t MPU_uxTaskGetNumberOfTasksImpl( void ) /* PRIVILEGED_FUNCTION */
+    UBaseType_t MPU_uxTaskGetNumberOfTasksImpl( void ) /* 特权函数 */
     {
         UBaseType_t uxReturn;
 
@@ -772,7 +774,7 @@
 
         configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetRunTimeCounterImpl( const TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetRunTimeCounterImpl( const TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetRunTimeCounterImpl( const TaskHandle_t xTask ) /* 特权函数 */
         {
             configRUN_TIME_COUNTER_TYPE xReturn = 0;
             int32_t lIndex;
@@ -806,14 +808,14 @@
             return xReturn;
         }
 
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configGENERATE_RUN_TIME_STATS == 1 )
 
         configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetRunTimePercentImpl( const TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetRunTimePercentImpl( const TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetRunTimePercentImpl( const TaskHandle_t xTask ) /* 特权函数 */
         {
             configRUN_TIME_COUNTER_TYPE xReturn = 0;
             int32_t lIndex;
@@ -847,14 +849,14 @@
             return xReturn;
         }
 
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
 
         configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimePercentImpl( void ) PRIVILEGED_FUNCTION;
 
-        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimePercentImpl( void ) /* PRIVILEGED_FUNCTION */
+        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimePercentImpl( void ) /* 特权函数 */
         {
             configRUN_TIME_COUNTER_TYPE xReturn;
 
@@ -863,14 +865,14 @@
             return xReturn;
         }
 
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
 
         configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimeCounterImpl( void ) PRIVILEGED_FUNCTION;
 
-        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimeCounterImpl( void ) /* PRIVILEGED_FUNCTION */
+        configRUN_TIME_COUNTER_TYPE MPU_ulTaskGetIdleRunTimeCounterImpl( void ) /* 特权函数 */
         {
             configRUN_TIME_COUNTER_TYPE xReturn;
 
@@ -879,7 +881,7 @@
             return xReturn;
         }
 
-    #endif /* if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
@@ -888,7 +890,7 @@
                                                  TaskHookFunction_t pxTagValue ) PRIVILEGED_FUNCTION;
 
         void MPU_vTaskSetApplicationTaskTagImpl( TaskHandle_t xTask,
-                                                 TaskHookFunction_t pxTagValue ) /* PRIVILEGED_FUNCTION */
+                                                 TaskHookFunction_t pxTagValue ) /* 特权函数 */
         {
             TaskHandle_t xInternalTaskHandle = NULL;
             int32_t lIndex;
@@ -919,14 +921,14 @@
             }
         }
 
-    #endif /* if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
 
         TaskHookFunction_t MPU_xTaskGetApplicationTaskTagImpl( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-        TaskHookFunction_t MPU_xTaskGetApplicationTaskTagImpl( TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        TaskHookFunction_t MPU_xTaskGetApplicationTaskTagImpl( TaskHandle_t xTask ) /* 特权函数 */
         {
             TaskHookFunction_t xReturn = NULL;
             int32_t lIndex;
@@ -960,7 +962,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 )
@@ -971,7 +973,7 @@
 
         void MPU_vTaskSetThreadLocalStoragePointerImpl( TaskHandle_t xTaskToSet,
                                                         BaseType_t xIndex,
-                                                        void * pvValue ) /* PRIVILEGED_FUNCTION */
+                                                        void * pvValue ) /* 特权函数 */
         {
             int32_t lIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -1002,7 +1004,7 @@
             }
         }
 
-    #endif /* if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
+    #endif /* 条件块结束：if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 )
@@ -1011,7 +1013,7 @@
                                                            BaseType_t xIndex ) PRIVILEGED_FUNCTION;
 
         void * MPU_pvTaskGetThreadLocalStoragePointerImpl( TaskHandle_t xTaskToQuery,
-                                                           BaseType_t xIndex ) /* PRIVILEGED_FUNCTION */
+                                                           BaseType_t xIndex ) /* 特权函数 */
         {
             void * pvReturn = NULL;
             int32_t lIndex;
@@ -1045,7 +1047,7 @@
             return pvReturn;
         }
 
-    #endif /* if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
+    #endif /* 条件块结束：if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TRACE_FACILITY == 1 )
@@ -1056,7 +1058,7 @@
 
         UBaseType_t MPU_uxTaskGetSystemStateImpl( TaskStatus_t * pxTaskStatusArray,
                                                   UBaseType_t uxArraySize,
-                                                  configRUN_TIME_COUNTER_TYPE * pulTotalRunTime ) /* PRIVILEGED_FUNCTION */
+                                                  configRUN_TIME_COUNTER_TYPE * pulTotalRunTime ) /* 特权函数 */
         {
             UBaseType_t uxReturn = 0;
             BaseType_t xIsTaskStatusArrayWriteable = pdFALSE;
@@ -1087,14 +1089,14 @@
             return uxReturn;
         }
 
-    #endif /* if ( configUSE_TRACE_FACILITY == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TRACE_FACILITY == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
 
         UBaseType_t MPU_uxTaskGetStackHighWaterMarkImpl( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-        UBaseType_t MPU_uxTaskGetStackHighWaterMarkImpl( TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxTaskGetStackHighWaterMarkImpl( TaskHandle_t xTask ) /* 特权函数 */
         {
             UBaseType_t uxReturn = 0;
             int32_t lIndex;
@@ -1128,14 +1130,14 @@
             return uxReturn;
         }
 
-    #endif /* if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 )
 
         configSTACK_DEPTH_TYPE MPU_uxTaskGetStackHighWaterMark2Impl( TaskHandle_t xTask ) PRIVILEGED_FUNCTION;
 
-        configSTACK_DEPTH_TYPE MPU_uxTaskGetStackHighWaterMark2Impl( TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        configSTACK_DEPTH_TYPE MPU_uxTaskGetStackHighWaterMark2Impl( TaskHandle_t xTask ) /* 特权函数 */
         {
             configSTACK_DEPTH_TYPE uxReturn = 0;
             int32_t lIndex;
@@ -1169,14 +1171,14 @@
             return uxReturn;
         }
 
-    #endif /* if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_RECURSIVE_MUTEXES == 1 ) )
 
         TaskHandle_t MPU_xTaskGetCurrentTaskHandleImpl( void ) PRIVILEGED_FUNCTION;
 
-        TaskHandle_t MPU_xTaskGetCurrentTaskHandleImpl( void ) /* PRIVILEGED_FUNCTION */
+        TaskHandle_t MPU_xTaskGetCurrentTaskHandleImpl( void ) /* 特权函数 */
         {
             TaskHandle_t xInternalTaskHandle = NULL;
             TaskHandle_t xExternalTaskHandle = NULL;
@@ -1197,14 +1199,14 @@
             return xExternalTaskHandle;
         }
 
-    #endif /* if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_RECURSIVE_MUTEXES == 1 ) ) */
+    #endif /* 条件块结束：if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_RECURSIVE_MUTEXES == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskGetSchedulerState == 1 )
 
         BaseType_t MPU_xTaskGetSchedulerStateImpl( void ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTaskGetSchedulerStateImpl( void ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTaskGetSchedulerStateImpl( void ) /* 特权函数 */
         {
             BaseType_t xReturn = taskSCHEDULER_NOT_STARTED;
 
@@ -1213,12 +1215,12 @@
             return xReturn;
         }
 
-    #endif /* if ( INCLUDE_xTaskGetSchedulerState == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskGetSchedulerState == 1 ) */
 /*-----------------------------------------------------------*/
 
     void MPU_vTaskSetTimeOutStateImpl( TimeOut_t * const pxTimeOut ) PRIVILEGED_FUNCTION;
 
-    void MPU_vTaskSetTimeOutStateImpl( TimeOut_t * const pxTimeOut ) /* PRIVILEGED_FUNCTION */
+    void MPU_vTaskSetTimeOutStateImpl( TimeOut_t * const pxTimeOut ) /* 特权函数 */
     {
         BaseType_t xIsTimeOutWriteable = pdFALSE;
 
@@ -1240,7 +1242,7 @@
                                              TickType_t * const pxTicksToWait ) PRIVILEGED_FUNCTION;
 
     BaseType_t MPU_xTaskCheckForTimeOutImpl( TimeOut_t * const pxTimeOut,
-                                             TickType_t * const pxTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                             TickType_t * const pxTicksToWait ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFALSE;
         BaseType_t xIsTimeOutWriteable = pdFALSE;
@@ -1271,7 +1273,7 @@
                                            UBaseType_t uxIndexToNotify,
                                            uint32_t ulValue,
                                            eNotifyAction eAction,
-                                           uint32_t * pulPreviousNotificationValue ) /* FREERTOS_SYSTEM_CALL */
+                                           uint32_t * pulPreviousNotificationValue ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn = pdFAIL;
             xTaskGenericNotifyParams_t xParams;
@@ -1289,7 +1291,7 @@
 
         BaseType_t MPU_xTaskGenericNotifyImpl( const xTaskGenericNotifyParams_t * pxParams ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTaskGenericNotifyImpl( const xTaskGenericNotifyParams_t * pxParams ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTaskGenericNotifyImpl( const xTaskGenericNotifyParams_t * pxParams ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -1351,7 +1353,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
@@ -1378,7 +1380,7 @@
 
         BaseType_t MPU_xTaskGenericNotifyWaitImpl( const xTaskGenericNotifyWaitParams_t * pxParams ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTaskGenericNotifyWaitImpl( const xTaskGenericNotifyWaitParams_t * pxParams ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTaskGenericNotifyWaitImpl( const xTaskGenericNotifyWaitParams_t * pxParams ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             BaseType_t xIsNotificationValueWritable = pdFALSE;
@@ -1417,7 +1419,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
@@ -1428,7 +1430,7 @@
 
         uint32_t MPU_ulTaskGenericNotifyTakeImpl( UBaseType_t uxIndexToWaitOn,
                                                   BaseType_t xClearCountOnExit,
-                                                  TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                                  TickType_t xTicksToWait ) /* 特权函数 */
         {
             uint32_t ulReturn = 0;
 
@@ -1440,7 +1442,7 @@
             return ulReturn;
         }
 
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
@@ -1449,7 +1451,7 @@
                                                          UBaseType_t uxIndexToClear ) PRIVILEGED_FUNCTION;
 
         BaseType_t MPU_xTaskGenericNotifyStateClearImpl( TaskHandle_t xTask,
-                                                         UBaseType_t uxIndexToClear ) /* PRIVILEGED_FUNCTION */
+                                                         UBaseType_t uxIndexToClear ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -1486,7 +1488,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
@@ -1497,7 +1499,7 @@
 
         uint32_t MPU_ulTaskGenericNotifyValueClearImpl( TaskHandle_t xTask,
                                                         UBaseType_t uxIndexToClear,
-                                                        uint32_t ulBitsToClear ) /* PRIVILEGED_FUNCTION */
+                                                        uint32_t ulBitsToClear ) /* 特权函数 */
         {
             uint32_t ulReturn = 0;
             int32_t lIndex;
@@ -1534,12 +1536,14 @@
             return ulReturn;
         }
 
-    #endif /* if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
-/* Privileged only wrappers for Task APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 任务 API 的仅特权包装函数。需要这些包装函数，
+ * 以便应用程序在所有 API 中使用由 mpu_wrappers.c 维护的
+ * 不透明句柄。
+ */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
@@ -1549,7 +1553,7 @@
                                     const configSTACK_DEPTH_TYPE uxStackDepth,
                                     void * pvParameters,
                                     UBaseType_t uxPriority,
-                                    TaskHandle_t * pxCreatedTask ) /* PRIVILEGED_FUNCTION */
+                                    TaskHandle_t * pxCreatedTask ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -1559,7 +1563,7 @@
 
             if( lIndex != -1 )
             {
-                /* xTaskCreate() can only be used to create privileged tasks in MPU port. */
+                /* 在 MPU 移植层中，xTaskCreate() 只能用于创建特权任务。 */
                 if( ( uxPriority & portPRIVILEGE_BIT ) != 0 )
                 {
                     xReturn = xTaskCreate( pvTaskCode, pcName, uxStackDepth, pvParameters, uxPriority, &( xInternalTaskHandle ) );
@@ -1583,7 +1587,7 @@
             return xReturn;
         }
 
-    #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+    #endif /* 配置项 configSUPPORT_DYNAMIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
@@ -1594,7 +1598,7 @@
                                             void * const pvParameters,
                                             UBaseType_t uxPriority,
                                             StackType_t * const puxStackBuffer,
-                                            StaticTask_t * const pxTaskBuffer ) /* PRIVILEGED_FUNCTION */
+                                            StaticTask_t * const pxTaskBuffer ) /* 特权函数 */
         {
             TaskHandle_t xExternalTaskHandle = NULL;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -1612,7 +1616,7 @@
 
                     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
                     {
-                        /* By default, an unprivileged task has access to itself. */
+                        /* 默认情况下，非特权任务可以访问自身。 */
                         if( ( uxPriority & portPRIVILEGE_BIT ) == 0 )
                         {
                             vPortGrantAccessToKernelObject( xInternalTaskHandle, lIndex );
@@ -1631,12 +1635,12 @@
             return xExternalTaskHandle;
         }
 
-    #endif /* configSUPPORT_STATIC_ALLOCATION */
+    #endif /* 配置项 configSUPPORT_STATIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_vTaskDelete == 1 )
 
-        void MPU_vTaskDelete( TaskHandle_t pxTaskToDelete ) /* PRIVILEGED_FUNCTION */
+        void MPU_vTaskDelete( TaskHandle_t pxTaskToDelete ) /* 特权函数 */
         {
             TaskHandle_t xInternalTaskHandle = NULL;
             int32_t lIndex;
@@ -1670,14 +1674,14 @@
             }
         }
 
-    #endif /* #if ( INCLUDE_vTaskDelete == 1 ) */
+    #endif /* 条件块结束：#if ( INCLUDE_vTaskDelete == 1 ) */
 /*-----------------------------------------------------------*/
 
 
     #if ( INCLUDE_vTaskPrioritySet == 1 )
 
         void MPU_vTaskPrioritySet( TaskHandle_t pxTask,
-                                   UBaseType_t uxNewPriority ) /* PRIVILEGED_FUNCTION */
+                                   UBaseType_t uxNewPriority ) /* 特权函数 */
         {
             TaskHandle_t xInternalTaskHandle = NULL;
             int32_t lIndex;
@@ -1702,12 +1706,12 @@
             }
         }
 
-    #endif /* if ( INCLUDE_vTaskPrioritySet == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_vTaskPrioritySet == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( INCLUDE_xTaskGetHandle == 1 )
 
-        TaskHandle_t MPU_xTaskGetHandle( const char * pcNameToQuery ) /* PRIVILEGED_FUNCTION */
+        TaskHandle_t MPU_xTaskGetHandle( const char * pcNameToQuery ) /* 特权函数 */
         {
             TaskHandle_t xInternalTaskHandle = NULL;
             TaskHandle_t xExternalTaskHandle = NULL;
@@ -1728,14 +1732,14 @@
             return xExternalTaskHandle;
         }
 
-    #endif /* if ( INCLUDE_xTaskGetHandle == 1 ) */
+    #endif /* 条件块结束：if ( INCLUDE_xTaskGetHandle == 1 ) */
 /*-----------------------------------------------------------*/
 
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
 
         BaseType_t MPU_xTaskCallApplicationTaskHook( TaskHandle_t xTask,
-                                                     void * pvParameter ) /* PRIVILEGED_FUNCTION */
+                                                     void * pvParameter ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -1763,13 +1767,13 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
         BaseType_t MPU_xTaskCreateRestricted( const TaskParameters_t * const pxTaskDefinition,
-                                              TaskHandle_t * pxCreatedTask ) /* PRIVILEGED_FUNCTION */
+                                              TaskHandle_t * pxCreatedTask ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -1787,7 +1791,7 @@
 
                     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
                     {
-                        /* By default, an unprivileged task has access to itself. */
+                        /* 默认情况下，非特权任务可以访问自身。 */
                         if( ( pxTaskDefinition->uxPriority & portPRIVILEGE_BIT ) == 0 )
                         {
                             vPortGrantAccessToKernelObject( xInternalTaskHandle, lIndex );
@@ -1809,13 +1813,13 @@
             return xReturn;
         }
 
-    #endif /* configSUPPORT_DYNAMIC_ALLOCATION */
+    #endif /* 配置项 configSUPPORT_DYNAMIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
 
         BaseType_t MPU_xTaskCreateRestrictedStatic( const TaskParameters_t * const pxTaskDefinition,
-                                                    TaskHandle_t * pxCreatedTask ) /* PRIVILEGED_FUNCTION */
+                                                    TaskHandle_t * pxCreatedTask ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -1833,7 +1837,7 @@
 
                     #if ( configENABLE_ACCESS_CONTROL_LIST == 1 )
                     {
-                        /* By default, an unprivileged task has access to itself. */
+                        /* 默认情况下，非特权任务可以访问自身。 */
                         if( ( pxTaskDefinition->uxPriority & portPRIVILEGE_BIT ) == 0 )
                         {
                             vPortGrantAccessToKernelObject( xInternalTaskHandle, lIndex );
@@ -1855,11 +1859,11 @@
             return xReturn;
         }
 
-    #endif /* configSUPPORT_STATIC_ALLOCATION */
+    #endif /* 配置项 configSUPPORT_STATIC_ALLOCATION */
 /*-----------------------------------------------------------*/
 
     void MPU_vTaskAllocateMPURegions( TaskHandle_t xTaskToModify,
-                                      const MemoryRegion_t * const xRegions ) /* PRIVILEGED_FUNCTION */
+                                      const MemoryRegion_t * const xRegions ) /* 特权函数 */
     {
         TaskHandle_t xInternalTaskHandle = NULL;
         int32_t lIndex;
@@ -1889,7 +1893,7 @@
 
         BaseType_t MPU_xTaskGetStaticBuffers( TaskHandle_t xTask,
                                               StackType_t ** ppuxStackBuffer,
-                                              StaticTask_t ** ppxTaskBuffer ) /* PRIVILEGED_FUNCTION */
+                                              StaticTask_t ** ppxTaskBuffer ) /* 特权函数 */
         {
             TaskHandle_t xInternalTaskHandle = NULL;
             int32_t lIndex;
@@ -1918,10 +1922,10 @@
             return xReturn;
         }
 
-    #endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
 /*-----------------------------------------------------------*/
 
-    char * MPU_pcTaskGetName( TaskHandle_t xTaskToQuery ) /* PRIVILEGED_FUNCTION */
+    char * MPU_pcTaskGetName( TaskHandle_t xTaskToQuery ) /* 特权函数 */
     {
         char * pcReturn = NULL;
         int32_t lIndex;
@@ -1952,7 +1956,7 @@
 
     #if ( INCLUDE_uxTaskPriorityGet == 1 )
 
-        UBaseType_t MPU_uxTaskPriorityGetFromISR( const TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxTaskPriorityGetFromISR( const TaskHandle_t xTask ) /* 特权函数 */
         {
             UBaseType_t uxReturn = configMAX_PRIORITIES;
             int32_t lIndex;
@@ -1980,12 +1984,12 @@
             return uxReturn;
         }
 
-    #endif /* #if ( INCLUDE_uxTaskPriorityGet == 1 ) */
+    #endif /* 条件块结束：#if ( INCLUDE_uxTaskPriorityGet == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( INCLUDE_uxTaskPriorityGet == 1 ) && ( configUSE_MUTEXES == 1 ) )
 
-        UBaseType_t MPU_uxTaskBasePriorityGet( const TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxTaskBasePriorityGet( const TaskHandle_t xTask ) /* 特权函数 */
         {
             UBaseType_t uxReturn = configMAX_PRIORITIES;
             int32_t lIndex;
@@ -2013,12 +2017,12 @@
             return uxReturn;
         }
 
-    #endif /* #if ( ( INCLUDE_uxTaskPriorityGet == 1 ) && ( configUSE_MUTEXES == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( INCLUDE_uxTaskPriorityGet == 1 ) && ( configUSE_MUTEXES == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( INCLUDE_uxTaskPriorityGet == 1 ) && ( configUSE_MUTEXES == 1 ) )
 
-        UBaseType_t MPU_uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxTaskBasePriorityGetFromISR( const TaskHandle_t xTask ) /* 特权函数 */
         {
             UBaseType_t uxReturn = configMAX_PRIORITIES;
             int32_t lIndex;
@@ -2046,12 +2050,12 @@
             return uxReturn;
         }
 
-    #endif /* #if ( ( INCLUDE_uxTaskPriorityGet == 1 ) && ( configUSE_MUTEXES == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( INCLUDE_uxTaskPriorityGet == 1 ) && ( configUSE_MUTEXES == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( INCLUDE_xTaskResumeFromISR == 1 ) && ( INCLUDE_vTaskSuspend == 1 ) )
 
-        BaseType_t MPU_xTaskResumeFromISR( TaskHandle_t xTaskToResume ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTaskResumeFromISR( TaskHandle_t xTaskToResume ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -2072,12 +2076,12 @@
             return xReturn;
         }
 
-    #endif /* #if ( ( INCLUDE_xTaskResumeFromISR == 1 ) && ( INCLUDE_vTaskSuspend == 1 ) )*/
+    #endif /* 条件块结束：#if ( ( INCLUDE_xTaskResumeFromISR == 1 ) && ( INCLUDE_vTaskSuspend == 1 ) ) */
 /*---------------------------------------------------------------------------------------*/
 
     #if ( configUSE_APPLICATION_TASK_TAG == 1 )
 
-        TaskHookFunction_t MPU_xTaskGetApplicationTaskTagFromISR( TaskHandle_t xTask ) /* PRIVILEGED_FUNCTION */
+        TaskHookFunction_t MPU_xTaskGetApplicationTaskTagFromISR( TaskHandle_t xTask ) /* 特权函数 */
         {
             TaskHookFunction_t xReturn = NULL;
             int32_t lIndex;
@@ -2105,7 +2109,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_APPLICATION_TASK_TAG == 1 ) */
 /*---------------------------------------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
@@ -2115,7 +2119,7 @@
                                                   uint32_t ulValue,
                                                   eNotifyAction eAction,
                                                   uint32_t * pulPreviousNotificationValue,
-                                                  BaseType_t * pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                                  BaseType_t * pxHigherPriorityTaskWoken ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             int32_t lIndex;
@@ -2136,14 +2140,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*---------------------------------------------------------------------------------------*/
 
     #if ( configUSE_TASK_NOTIFICATIONS == 1 )
 
         void MPU_vTaskGenericNotifyGiveFromISR( TaskHandle_t xTaskToNotify,
                                                 UBaseType_t uxIndexToNotify,
-                                                BaseType_t * pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                                BaseType_t * pxHigherPriorityTaskWoken ) /* 特权函数 */
         {
             int32_t lIndex;
             TaskHandle_t xInternalTaskHandle = NULL;
@@ -2160,11 +2164,11 @@
                 }
             }
         }
-    #endif /*#if ( configUSE_TASK_NOTIFICATIONS == 1 )*/
+    #endif /* 条件块结束：#if ( configUSE_TASK_NOTIFICATIONS == 1 ) */
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
-/*            MPU wrappers for queue APIs.                   */
+/* 队列 API 的 MPU 包装器。 */
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueueGenericSendImpl( QueueHandle_t xQueue,
@@ -2175,7 +2179,7 @@
     BaseType_t MPU_xQueueGenericSendImpl( QueueHandle_t xQueue,
                                           const void * const pvItemToQueue,
                                           TickType_t xTicksToWait,
-                                          BaseType_t xCopyPosition ) /* PRIVILEGED_FUNCTION */
+                                          BaseType_t xCopyPosition ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2228,7 +2232,7 @@
 
     UBaseType_t MPU_uxQueueMessagesWaitingImpl( const QueueHandle_t pxQueue ) PRIVILEGED_FUNCTION;
 
-    UBaseType_t MPU_uxQueueMessagesWaitingImpl( const QueueHandle_t pxQueue ) /* PRIVILEGED_FUNCTION */
+    UBaseType_t MPU_uxQueueMessagesWaitingImpl( const QueueHandle_t pxQueue ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2258,7 +2262,7 @@
 
     UBaseType_t MPU_uxQueueSpacesAvailableImpl( const QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 
-    UBaseType_t MPU_uxQueueSpacesAvailableImpl( const QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+    UBaseType_t MPU_uxQueueSpacesAvailableImpl( const QueueHandle_t xQueue ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2292,7 +2296,7 @@
 
     BaseType_t MPU_xQueueReceiveImpl( QueueHandle_t pxQueue,
                                       void * const pvBuffer,
-                                      TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                      TickType_t xTicksToWait ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2344,7 +2348,7 @@
 
     BaseType_t MPU_xQueuePeekImpl( QueueHandle_t xQueue,
                                    void * const pvBuffer,
-                                   TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                   TickType_t xTicksToWait ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2394,7 +2398,7 @@
                                             TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
 
     BaseType_t MPU_xQueueSemaphoreTakeImpl( QueueHandle_t xQueue,
-                                            TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                            TickType_t xTicksToWait ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2436,7 +2440,7 @@
 
         TaskHandle_t MPU_xQueueGetMutexHolderImpl( QueueHandle_t xSemaphore ) PRIVILEGED_FUNCTION;
 
-        TaskHandle_t MPU_xQueueGetMutexHolderImpl( QueueHandle_t xSemaphore ) /* PRIVILEGED_FUNCTION */
+        TaskHandle_t MPU_xQueueGetMutexHolderImpl( QueueHandle_t xSemaphore ) /* 特权函数 */
         {
             TaskHandle_t xMutexHolderTaskInternalHandle = NULL;
             TaskHandle_t xMutexHolderTaskExternalHandle = NULL;
@@ -2475,7 +2479,7 @@
             return xMutexHolderTaskExternalHandle;
         }
 
-    #endif /* if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_RECURSIVE_MUTEXES == 1 )
@@ -2484,7 +2488,7 @@
                                                      TickType_t xBlockTime ) PRIVILEGED_FUNCTION;
 
         BaseType_t MPU_xQueueTakeMutexRecursiveImpl( QueueHandle_t xMutex,
-                                                     TickType_t xBlockTime ) /* PRIVILEGED_FUNCTION */
+                                                     TickType_t xBlockTime ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             BaseType_t xCallingTaskIsAuthorizedToAccessQueue = pdFALSE;
@@ -2517,14 +2521,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_RECURSIVE_MUTEXES == 1 )
 
         BaseType_t MPU_xQueueGiveMutexRecursiveImpl( QueueHandle_t xMutex ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xQueueGiveMutexRecursiveImpl( QueueHandle_t xMutex ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xQueueGiveMutexRecursiveImpl( QueueHandle_t xMutex ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             BaseType_t xCallingTaskIsAuthorizedToAccessQueue = pdFALSE;
@@ -2551,7 +2555,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_RECURSIVE_MUTEXES == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
@@ -2560,7 +2564,7 @@
                                                             TickType_t xBlockTimeTicks ) PRIVILEGED_FUNCTION;
 
         QueueSetMemberHandle_t MPU_xQueueSelectFromSetImpl( QueueSetHandle_t xQueueSet,
-                                                            TickType_t xBlockTimeTicks ) /* PRIVILEGED_FUNCTION */
+                                                            TickType_t xBlockTimeTicks ) /* 特权函数 */
         {
             QueueSetHandle_t xInternalQueueSetHandle = NULL;
             QueueSetMemberHandle_t xSelectedMemberInternal = NULL;
@@ -2598,7 +2602,7 @@
             return xSelectedMemberExternal;
         }
 
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
@@ -2607,7 +2611,7 @@
                                            QueueSetHandle_t xQueueSet ) PRIVILEGED_FUNCTION;
 
         BaseType_t MPU_xQueueAddToSetImpl( QueueSetMemberHandle_t xQueueOrSemaphore,
-                                           QueueSetHandle_t xQueueSet ) /* PRIVILEGED_FUNCTION */
+                                           QueueSetHandle_t xQueueSet ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             QueueSetMemberHandle_t xInternalQueueSetMemberHandle = NULL;
@@ -2640,7 +2644,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if configQUEUE_REGISTRY_SIZE > 0
@@ -2649,7 +2653,7 @@
                                           const char * pcName ) PRIVILEGED_FUNCTION;
 
         void MPU_vQueueAddToRegistryImpl( QueueHandle_t xQueue,
-                                          const char * pcName ) /* PRIVILEGED_FUNCTION */
+                                          const char * pcName ) /* 特权函数 */
         {
             int32_t lIndex;
             QueueHandle_t xInternalQueueHandle = NULL;
@@ -2673,14 +2677,14 @@
             }
         }
 
-    #endif /* if configQUEUE_REGISTRY_SIZE > 0 */
+    #endif /* 条件块结束：if configQUEUE_REGISTRY_SIZE > 0 */
 /*-----------------------------------------------------------*/
 
     #if configQUEUE_REGISTRY_SIZE > 0
 
         void MPU_vQueueUnregisterQueueImpl( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 
-        void MPU_vQueueUnregisterQueueImpl( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+        void MPU_vQueueUnregisterQueueImpl( QueueHandle_t xQueue ) /* 特权函数 */
         {
             int32_t lIndex;
             QueueHandle_t xInternalQueueHandle = NULL;
@@ -2704,14 +2708,14 @@
             }
         }
 
-    #endif /* if configQUEUE_REGISTRY_SIZE > 0 */
+    #endif /* 条件块结束：if configQUEUE_REGISTRY_SIZE > 0 */
 /*-----------------------------------------------------------*/
 
     #if configQUEUE_REGISTRY_SIZE > 0
 
         const char * MPU_pcQueueGetNameImpl( QueueHandle_t xQueue ) PRIVILEGED_FUNCTION;
 
-        const char * MPU_pcQueueGetNameImpl( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+        const char * MPU_pcQueueGetNameImpl( QueueHandle_t xQueue ) /* 特权函数 */
         {
             const char * pcReturn = NULL;
             QueueHandle_t xInternalQueueHandle = NULL;
@@ -2738,15 +2742,17 @@
             return pcReturn;
         }
 
-    #endif /* if configQUEUE_REGISTRY_SIZE > 0 */
+    #endif /* 条件块结束：if configQUEUE_REGISTRY_SIZE > 0 */
 /*-----------------------------------------------------------*/
 
-/* Privileged only wrappers for Queue APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 队列 API 的仅特权包装函数。需要这些包装函数，
+ * 以便应用程序在所有 API 中使用由 mpu_wrappers.c 维护的
+ * 不透明句柄。
+ */
 /*-----------------------------------------------------------*/
 
-    void MPU_vQueueDelete( QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+    void MPU_vQueueDelete( QueueHandle_t xQueue ) /* 特权函数 */
     {
         QueueHandle_t xInternalQueueHandle = NULL;
         int32_t lIndex;
@@ -2768,7 +2774,7 @@
 
     #if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
 
-        QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType ) /* PRIVILEGED_FUNCTION */
+        QueueHandle_t MPU_xQueueCreateMutex( const uint8_t ucQueueType ) /* 特权函数 */
         {
             QueueHandle_t xInternalQueueHandle = NULL;
             QueueHandle_t xExternalQueueHandle = NULL;
@@ -2794,13 +2800,13 @@
             return xExternalQueueHandle;
         }
 
-    #endif /* if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
 
         QueueHandle_t MPU_xQueueCreateMutexStatic( const uint8_t ucQueueType,
-                                                   StaticQueue_t * pxStaticQueue ) /* PRIVILEGED_FUNCTION */
+                                                   StaticQueue_t * pxStaticQueue ) /* 特权函数 */
         {
             QueueHandle_t xInternalQueueHandle = NULL;
             QueueHandle_t xExternalQueueHandle = NULL;
@@ -2826,13 +2832,13 @@
             return xExternalQueueHandle;
         }
 
-    #endif /* if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_MUTEXES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
 
         QueueHandle_t MPU_xQueueCreateCountingSemaphore( UBaseType_t uxCountValue,
-                                                         UBaseType_t uxInitialCount ) /* PRIVILEGED_FUNCTION */
+                                                         UBaseType_t uxInitialCount ) /* 特权函数 */
         {
             QueueHandle_t xInternalQueueHandle = NULL;
             QueueHandle_t xExternalQueueHandle = NULL;
@@ -2858,14 +2864,14 @@
             return xExternalQueueHandle;
         }
 
-    #endif /* if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
 
         QueueHandle_t MPU_xQueueCreateCountingSemaphoreStatic( const UBaseType_t uxMaxCount,
                                                                const UBaseType_t uxInitialCount,
-                                                               StaticQueue_t * pxStaticQueue ) /* PRIVILEGED_FUNCTION */
+                                                               StaticQueue_t * pxStaticQueue ) /* 特权函数 */
         {
             QueueHandle_t xInternalQueueHandle = NULL;
             QueueHandle_t xExternalQueueHandle = NULL;
@@ -2891,14 +2897,14 @@
             return xExternalQueueHandle;
         }
 
-    #endif /* if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_COUNTING_SEMAPHORES == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
 
         QueueHandle_t MPU_xQueueGenericCreate( UBaseType_t uxQueueLength,
                                                UBaseType_t uxItemSize,
-                                               uint8_t ucQueueType ) /* PRIVILEGED_FUNCTION */
+                                               uint8_t ucQueueType ) /* 特权函数 */
         {
             QueueHandle_t xInternalQueueHandle = NULL;
             QueueHandle_t xExternalQueueHandle = NULL;
@@ -2924,7 +2930,7 @@
             return xExternalQueueHandle;
         }
 
-    #endif /* if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
@@ -2933,7 +2939,7 @@
                                                      const UBaseType_t uxItemSize,
                                                      uint8_t * pucQueueStorage,
                                                      StaticQueue_t * pxStaticQueue,
-                                                     const uint8_t ucQueueType ) /* PRIVILEGED_FUNCTION */
+                                                     const uint8_t ucQueueType ) /* 特权函数 */
         {
             QueueHandle_t xInternalQueueHandle = NULL;
             QueueHandle_t xExternalQueueHandle = NULL;
@@ -2959,11 +2965,11 @@
             return xExternalQueueHandle;
         }
 
-    #endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueueGenericReset( QueueHandle_t xQueue,
-                                       BaseType_t xNewQueue ) /* PRIVILEGED_FUNCTION */
+                                       BaseType_t xNewQueue ) /* 特权函数 */
     {
         int32_t lIndex;
         QueueHandle_t xInternalQueueHandle = NULL;
@@ -2987,7 +2993,7 @@
 
     #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) )
 
-        QueueSetHandle_t MPU_xQueueCreateSet( UBaseType_t uxEventQueueLength ) /* PRIVILEGED_FUNCTION */
+        QueueSetHandle_t MPU_xQueueCreateSet( UBaseType_t uxEventQueueLength ) /* 特权函数 */
         {
             QueueSetHandle_t xInternalQueueSetHandle = NULL;
             QueueSetHandle_t xExternalQueueSetHandle = NULL;
@@ -3013,14 +3019,14 @@
             return xExternalQueueSetHandle;
         }
 
-    #endif /* if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) )
 
         QueueSetHandle_t MPU_xQueueCreateSetStatic( const UBaseType_t uxEventQueueLength,
                                                     uint8_t * pucQueueStorage,
-                                                    StaticQueue_t * pxStaticQueue ) /* PRIVILEGED_FUNCTION */
+                                                    StaticQueue_t * pxStaticQueue ) /* 特权函数 */
         {
             QueueSetHandle_t xInternalQueueSetHandle = NULL;
             QueueSetHandle_t xExternalQueueSetHandle = NULL;
@@ -3046,13 +3052,13 @@
             return xExternalQueueSetHandle;
         }
 
-    #endif /* if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
+    #endif /* 条件块结束：if ( ( configUSE_QUEUE_SETS == 1 ) && ( configSUPPORT_STATIC_ALLOCATION == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
 
         BaseType_t MPU_xQueueRemoveFromSet( QueueSetMemberHandle_t xQueueOrSemaphore,
-                                            QueueSetHandle_t xQueueSet ) /* PRIVILEGED_FUNCTION */
+                                            QueueSetHandle_t xQueueSet ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             QueueSetMemberHandle_t xInternalQueueSetMemberHandle = NULL;
@@ -3077,14 +3083,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
 
         BaseType_t MPU_xQueueGenericGetStaticBuffers( QueueHandle_t xQueue,
                                                       uint8_t ** ppucQueueStorage,
-                                                      StaticQueue_t ** ppxStaticQueue ) /* PRIVILEGED_FUNCTION */
+                                                      StaticQueue_t ** ppxStaticQueue ) /* 特权函数 */
         {
             int32_t lIndex;
             QueueHandle_t xInternalQueueHandle = NULL;
@@ -3105,13 +3111,13 @@
             return xReturn;
         }
 
-    #endif /*if ( configSUPPORT_STATIC_ALLOCATION == 1 )*/
+    #endif /* 条件块结束：if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueueGenericSendFromISR( QueueHandle_t xQueue,
                                              const void * const pvItemToQueue,
                                              BaseType_t * const pxHigherPriorityTaskWoken,
-                                             const BaseType_t xCopyPosition ) /* PRIVILEGED_FUNCTION */
+                                             const BaseType_t xCopyPosition ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFAIL;
         int32_t lIndex;
@@ -3135,7 +3141,7 @@
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueueGiveFromISR( QueueHandle_t xQueue,
-                                      BaseType_t * const pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                      BaseType_t * const pxHigherPriorityTaskWoken ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFAIL;
         int32_t lIndex;
@@ -3159,7 +3165,7 @@
 /*-----------------------------------------------------------*/
 
     BaseType_t MPU_xQueuePeekFromISR( QueueHandle_t xQueue,
-                                      void * const pvBuffer ) /* PRIVILEGED_FUNCTION */
+                                      void * const pvBuffer ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFAIL;
         int32_t lIndex;
@@ -3184,7 +3190,7 @@
 
     BaseType_t MPU_xQueueReceiveFromISR( QueueHandle_t xQueue,
                                          void * const pvBuffer,
-                                         BaseType_t * const pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                         BaseType_t * const pxHigherPriorityTaskWoken ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFAIL;
         int32_t lIndex;
@@ -3207,7 +3213,7 @@
 
 /*-----------------------------------------------------------*/
 
-    BaseType_t MPU_xQueueIsQueueEmptyFromISR( const QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+    BaseType_t MPU_xQueueIsQueueEmptyFromISR( const QueueHandle_t xQueue ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFAIL;
         int32_t lIndex;
@@ -3229,7 +3235,7 @@
     }
 /*-----------------------------------------------------------*/
 
-    BaseType_t MPU_xQueueIsQueueFullFromISR( const QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+    BaseType_t MPU_xQueueIsQueueFullFromISR( const QueueHandle_t xQueue ) /* 特权函数 */
     {
         BaseType_t xReturn = pdFAIL;
         int32_t lIndex;
@@ -3252,7 +3258,7 @@
 
 /*-----------------------------------------------------------*/
 
-    UBaseType_t MPU_uxQueueMessagesWaitingFromISR( const QueueHandle_t xQueue ) /* PRIVILEGED_FUNCTION */
+    UBaseType_t MPU_uxQueueMessagesWaitingFromISR( const QueueHandle_t xQueue ) /* 特权函数 */
     {
         UBaseType_t uxReturn = 0;
         int32_t lIndex;
@@ -3277,7 +3283,7 @@
 
     #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
 
-        TaskHandle_t MPU_xQueueGetMutexHolderFromISR( QueueHandle_t xSemaphore ) /* PRIVILEGED_FUNCTION */
+        TaskHandle_t MPU_xQueueGetMutexHolderFromISR( QueueHandle_t xSemaphore ) /* 特权函数 */
         {
             TaskHandle_t xMutexHolderTaskInternalHandle = NULL;
             TaskHandle_t xMutexHolderTaskExternalHandle = NULL;
@@ -3309,12 +3315,12 @@
             return xMutexHolderTaskExternalHandle;
         }
 
-    #endif /* #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_QUEUE_SETS == 1 )
 
-        QueueSetMemberHandle_t MPU_xQueueSelectFromSetFromISR( QueueSetHandle_t xQueueSet ) /* PRIVILEGED_FUNCTION */
+        QueueSetMemberHandle_t MPU_xQueueSelectFromSetFromISR( QueueSetHandle_t xQueueSet ) /* 特权函数 */
         {
             QueueSetHandle_t xInternalQueueSetHandle = NULL;
             QueueSetMemberHandle_t xSelectedMemberInternal = NULL;
@@ -3346,18 +3352,18 @@
             return xSelectedMemberExternal;
         }
 
-    #endif /* if ( configUSE_QUEUE_SETS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_QUEUE_SETS == 1 ) */
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
-/*            MPU wrappers for timers APIs.                  */
+/* 定时器 API 的 MPU 包装器。 */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         void * MPU_pvTimerGetTimerIDImpl( const TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        void * MPU_pvTimerGetTimerIDImpl( const TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        void * MPU_pvTimerGetTimerIDImpl( const TimerHandle_t xTimer ) /* 特权函数 */
         {
             void * pvReturn = NULL;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3384,7 +3390,7 @@
             return pvReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
@@ -3393,7 +3399,7 @@
                                        void * pvNewID ) PRIVILEGED_FUNCTION;
 
         void MPU_vTimerSetTimerIDImpl( TimerHandle_t xTimer,
-                                       void * pvNewID ) /* PRIVILEGED_FUNCTION */
+                                       void * pvNewID ) /* 特权函数 */
         {
             TimerHandle_t xInternalTimerHandle = NULL;
             int32_t lIndex;
@@ -3417,14 +3423,14 @@
             }
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         BaseType_t MPU_xTimerIsTimerActiveImpl( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTimerIsTimerActiveImpl( TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTimerIsTimerActiveImpl( TimerHandle_t xTimer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3451,14 +3457,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         TaskHandle_t MPU_xTimerGetTimerDaemonTaskHandleImpl( void ) PRIVILEGED_FUNCTION;
 
-        TaskHandle_t MPU_xTimerGetTimerDaemonTaskHandleImpl( void ) /* PRIVILEGED_FUNCTION */
+        TaskHandle_t MPU_xTimerGetTimerDaemonTaskHandleImpl( void ) /* 特权函数 */
         {
             TaskHandle_t xReturn;
 
@@ -3467,7 +3473,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
@@ -3476,7 +3482,7 @@
                                                      const BaseType_t xCommandID,
                                                      const TickType_t xOptionalValue,
                                                      BaseType_t * const pxHigherPriorityTaskWoken,
-                                                     const TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                                     const TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             BaseType_t xReturn = pdFALSE;
             xTimerGenericCommandFromTaskParams_t xParams;
@@ -3494,7 +3500,7 @@
 
         BaseType_t MPU_xTimerGenericCommandFromTaskImpl( const xTimerGenericCommandFromTaskParams_t * pxParams ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTimerGenericCommandFromTaskImpl( const xTimerGenericCommandFromTaskParams_t * pxParams ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTimerGenericCommandFromTaskImpl( const xTimerGenericCommandFromTaskParams_t * pxParams ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3551,14 +3557,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         const char * MPU_pcTimerGetNameImpl( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        const char * MPU_pcTimerGetNameImpl( TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        const char * MPU_pcTimerGetNameImpl( TimerHandle_t xTimer ) /* 特权函数 */
         {
             const char * pcReturn = NULL;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3585,7 +3591,7 @@
             return pcReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
@@ -3594,7 +3600,7 @@
                                           const BaseType_t xAutoReload ) PRIVILEGED_FUNCTION;
 
         void MPU_vTimerSetReloadModeImpl( TimerHandle_t xTimer,
-                                          const BaseType_t xAutoReload ) /* PRIVILEGED_FUNCTION */
+                                          const BaseType_t xAutoReload ) /* 特权函数 */
         {
             TimerHandle_t xInternalTimerHandle = NULL;
             int32_t lIndex;
@@ -3618,14 +3624,14 @@
             }
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         BaseType_t MPU_xTimerGetReloadModeImpl( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xTimerGetReloadModeImpl( TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTimerGetReloadModeImpl( TimerHandle_t xTimer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3652,14 +3658,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         UBaseType_t MPU_uxTimerGetReloadModeImpl( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        UBaseType_t MPU_uxTimerGetReloadModeImpl( TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxTimerGetReloadModeImpl( TimerHandle_t xTimer ) /* 特权函数 */
         {
             UBaseType_t uxReturn = 0;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3686,14 +3692,14 @@
             return uxReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         TickType_t MPU_xTimerGetPeriodImpl( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        TickType_t MPU_xTimerGetPeriodImpl( TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        TickType_t MPU_xTimerGetPeriodImpl( TimerHandle_t xTimer ) /* 特权函数 */
         {
             TickType_t xReturn = 0;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3720,14 +3726,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
         TickType_t MPU_xTimerGetExpiryTimeImpl( TimerHandle_t xTimer ) PRIVILEGED_FUNCTION;
 
-        TickType_t MPU_xTimerGetExpiryTimeImpl( TimerHandle_t xTimer ) /* PRIVILEGED_FUNCTION */
+        TickType_t MPU_xTimerGetExpiryTimeImpl( TimerHandle_t xTimer ) /* 特权函数 */
         {
             TickType_t xReturn = 0;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3754,12 +3760,14 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
-/* Privileged only wrappers for Timer APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 定时器 API 的仅特权包装函数。需要这些包装函数，
+ * 以便应用程序在所有 API 中使用由 mpu_wrappers.c 维护的
+ * 不透明句柄。
+ */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 )
@@ -3768,7 +3776,7 @@
                                         const TickType_t xTimerPeriodInTicks,
                                         const BaseType_t xAutoReload,
                                         void * const pvTimerID,
-                                        TimerCallbackFunction_t pxCallbackFunction ) /* PRIVILEGED_FUNCTION */
+                                        TimerCallbackFunction_t pxCallbackFunction ) /* 特权函数 */
         {
             TimerHandle_t xInternalTimerHandle = NULL;
             TimerHandle_t xExternalTimerHandle = NULL;
@@ -3794,7 +3802,7 @@
             return xExternalTimerHandle;
         }
 
-    #endif /* if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 )
@@ -3804,7 +3812,7 @@
                                               const BaseType_t xAutoReload,
                                               void * const pvTimerID,
                                               TimerCallbackFunction_t pxCallbackFunction,
-                                              StaticTimer_t * pxTimerBuffer ) /* PRIVILEGED_FUNCTION */
+                                              StaticTimer_t * pxTimerBuffer ) /* 特权函数 */
         {
             TimerHandle_t xInternalTimerHandle = NULL;
             TimerHandle_t xExternalTimerHandle = NULL;
@@ -3830,13 +3838,13 @@
             return xExternalTimerHandle;
         }
 
-    #endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 )
 
         BaseType_t MPU_xTimerGetStaticBuffer( TimerHandle_t xTimer,
-                                              StaticTimer_t ** ppxTimerBuffer ) /* PRIVILEGED_FUNCTION */
+                                              StaticTimer_t ** ppxTimerBuffer ) /* 特权函数 */
         {
             TimerHandle_t xInternalTimerHandle = NULL;
             int32_t lIndex;
@@ -3857,7 +3865,7 @@
             return xReturn;
         }
 
-    #endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
@@ -3866,7 +3874,7 @@
                                                     const BaseType_t xCommandID,
                                                     const TickType_t xOptionalValue,
                                                     BaseType_t * const pxHigherPriorityTaskWoken,
-                                                    const TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                                    const TickType_t xTicksToWait ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3887,12 +3895,12 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_TIMERS == 1 )
 
-        BaseType_t MPU_xTimerDelete( TimerHandle_t xTimer, TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xTimerDelete( TimerHandle_t xTimer, TickType_t xTicksToWait ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             TimerHandle_t xInternalTimerHandle = NULL;
@@ -3908,8 +3916,8 @@
                 {
                     xReturn = xTimerGenericCommandFromTask( xInternalTimerHandle,
                                                             tmrCOMMAND_DELETE,
-                                                            0U, /* xOptionalValue */
-                                                            NULL, /* pxHigherPriorityTaskWoken */
+                                                            0U, /* xOptionalValue 可选值 */
+                                                            NULL, /* pxHigherPriorityTaskWoken 更高优先级任务唤醒标志 */
                                                             xTicksToWait );
                     if( xReturn != pdFALSE )
                     {
@@ -3921,11 +3929,11 @@
             return xReturn;
         }
 
-    #endif /* if ( configUSE_TIMERS == 1 ) */
+    #endif /* 条件块结束：if ( configUSE_TIMERS == 1 ) */
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
-/*           MPU wrappers for event group APIs.              */
+/* 事件组 API 的 MPU 包装器。 */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
@@ -3934,7 +3942,7 @@
                                              const EventBits_t uxBitsToWaitFor,
                                              const BaseType_t xClearOnExit,
                                              const BaseType_t xWaitForAllBits,
-                                             TickType_t xTicksToWait ) /* FREERTOS_SYSTEM_CALL */
+                                             TickType_t xTicksToWait ) /* FREERTOS 系统调用 */
         {
             EventBits_t xReturn = 0;
             xEventGroupWaitBitsParams_t xParams;
@@ -3952,7 +3960,7 @@
 
         EventBits_t MPU_xEventGroupWaitBitsImpl( const xEventGroupWaitBitsParams_t * pxParams ) PRIVILEGED_FUNCTION;
 
-        EventBits_t MPU_xEventGroupWaitBitsImpl( const xEventGroupWaitBitsParams_t * pxParams ) /* PRIVILEGED_FUNCTION */
+        EventBits_t MPU_xEventGroupWaitBitsImpl( const xEventGroupWaitBitsParams_t * pxParams ) /* 特权函数 */
         {
             EventBits_t xReturn = 0;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4002,7 +4010,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
@@ -4011,7 +4019,7 @@
                                                   const EventBits_t uxBitsToClear ) PRIVILEGED_FUNCTION;
 
         EventBits_t MPU_xEventGroupClearBitsImpl( EventGroupHandle_t xEventGroup,
-                                                  const EventBits_t uxBitsToClear ) /* PRIVILEGED_FUNCTION */
+                                                  const EventBits_t uxBitsToClear ) /* 特权函数 */
         {
             EventBits_t xReturn = 0;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4041,7 +4049,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
@@ -4050,7 +4058,7 @@
                                                 const EventBits_t uxBitsToSet ) PRIVILEGED_FUNCTION;
 
         EventBits_t MPU_xEventGroupSetBitsImpl( EventGroupHandle_t xEventGroup,
-                                                const EventBits_t uxBitsToSet ) /* PRIVILEGED_FUNCTION */
+                                                const EventBits_t uxBitsToSet ) /* 特权函数 */
         {
             EventBits_t xReturn = 0;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4080,7 +4088,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
@@ -4093,7 +4101,7 @@
         EventBits_t MPU_xEventGroupSyncImpl( EventGroupHandle_t xEventGroup,
                                              const EventBits_t uxBitsToSet,
                                              const EventBits_t uxBitsToWaitFor,
-                                             TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                             TickType_t xTicksToWait ) /* 特权函数 */
         {
             EventBits_t xReturn = 0;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4128,14 +4136,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( configUSE_TRACE_FACILITY == 1 ) )
 
         UBaseType_t MPU_uxEventGroupGetNumberImpl( void * xEventGroup ) PRIVILEGED_FUNCTION;
 
-        UBaseType_t MPU_uxEventGroupGetNumberImpl( void * xEventGroup ) /* PRIVILEGED_FUNCTION */
+        UBaseType_t MPU_uxEventGroupGetNumberImpl( void * xEventGroup ) /* 特权函数 */
         {
             UBaseType_t xReturn = 0;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4162,7 +4170,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configUSE_EVENT_GROUPS == 1 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( configUSE_TRACE_FACILITY == 1 ) )
@@ -4171,7 +4179,7 @@
                                            UBaseType_t uxEventGroupNumber ) PRIVILEGED_FUNCTION;
 
         void MPU_vEventGroupSetNumberImpl( void * xEventGroup,
-                                           UBaseType_t uxEventGroupNumber ) /* PRIVILEGED_FUNCTION */
+                                           UBaseType_t uxEventGroupNumber ) /* 特权函数 */
         {
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
             int32_t lIndex;
@@ -4195,17 +4203,19 @@
             }
         }
 
-    #endif /* #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configUSE_EVENT_GROUPS == 1 ) && ( configUSE_TRACE_FACILITY == 1 ) ) */
 /*-----------------------------------------------------------*/
 
-/* Privileged only wrappers for Event Group APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 事件组 API 的仅特权包装函数。需要这些包装函数，
+ * 以便应用程序在所有 API 中使用由 mpu_wrappers.c 维护的
+ * 不透明句柄。
+ */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) )
 
-        EventGroupHandle_t MPU_xEventGroupCreate( void ) /* PRIVILEGED_FUNCTION */
+        EventGroupHandle_t MPU_xEventGroupCreate( void ) /* 特权函数 */
         {
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
             EventGroupHandle_t xExternalEventGroupHandle = NULL;
@@ -4231,12 +4241,12 @@
             return xExternalEventGroupHandle;
         }
 
-    #endif /* #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) )
 
-        EventGroupHandle_t MPU_xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer ) /* PRIVILEGED_FUNCTION */
+        EventGroupHandle_t MPU_xEventGroupCreateStatic( StaticEventGroup_t * pxEventGroupBuffer ) /* 特权函数 */
         {
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
             EventGroupHandle_t xExternalEventGroupHandle = NULL;
@@ -4262,12 +4272,12 @@
             return xExternalEventGroupHandle;
         }
 
-    #endif /* #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
 
-        void MPU_vEventGroupDelete( EventGroupHandle_t xEventGroup ) /* PRIVILEGED_FUNCTION */
+        void MPU_vEventGroupDelete( EventGroupHandle_t xEventGroup ) /* 特权函数 */
         {
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
             int32_t lIndex;
@@ -4286,13 +4296,13 @@
             }
         }
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) )
 
         BaseType_t MPU_xEventGroupGetStaticBuffer( EventGroupHandle_t xEventGroup,
-                                                   StaticEventGroup_t ** ppxEventGroupBuffer ) /* PRIVILEGED_FUNCTION */
+                                                   StaticEventGroup_t ** ppxEventGroupBuffer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4313,13 +4323,13 @@
             return xReturn;
         }
 
-    #endif /* #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_EVENT_GROUPS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) )
 
         BaseType_t MPU_xEventGroupClearBitsFromISR( EventGroupHandle_t xEventGroup,
-                                                    const EventBits_t uxBitsToClear ) /* PRIVILEGED_FUNCTION */
+                                                    const EventBits_t uxBitsToClear ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4340,14 +4350,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configUSE_EVENT_GROUPS == 1 ) && ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) )
 
         BaseType_t MPU_xEventGroupSetBitsFromISR( EventGroupHandle_t xEventGroup,
                                                   const EventBits_t uxBitsToSet,
-                                                  BaseType_t * pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                                  BaseType_t * pxHigherPriorityTaskWoken ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4368,12 +4378,12 @@
             return xReturn;
         }
 
-    #endif /* #if ( ( configUSE_EVENT_GROUPS == 1 ) && ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configUSE_EVENT_GROUPS == 1 ) && ( INCLUDE_xTimerPendFunctionCall == 1 ) && ( configUSE_TIMERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_EVENT_GROUPS == 1 )
 
-        EventBits_t MPU_xEventGroupGetBitsFromISR( EventGroupHandle_t xEventGroup ) /* PRIVILEGED_FUNCTION */
+        EventBits_t MPU_xEventGroupGetBitsFromISR( EventGroupHandle_t xEventGroup ) /* 特权函数 */
         {
             EventBits_t xReturn = 0;
             EventGroupHandle_t xInternalEventGroupHandle = NULL;
@@ -4394,11 +4404,11 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_EVENT_GROUPS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_EVENT_GROUPS == 1 ) */
 /*-----------------------------------------------------------*/
 
 /*-----------------------------------------------------------*/
-/*           MPU wrappers for stream buffer APIs.            */
+/* 流缓冲 API 的 MPU 包装器。 */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
@@ -4411,7 +4421,7 @@
         size_t MPU_xStreamBufferSendImpl( StreamBufferHandle_t xStreamBuffer,
                                           const void * pvTxData,
                                           size_t xDataLengthBytes,
-                                          TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                          TickType_t xTicksToWait ) /* 特权函数 */
         {
             size_t xReturn = 0;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4449,7 +4459,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
@@ -4462,7 +4472,7 @@
         size_t MPU_xStreamBufferReceiveImpl( StreamBufferHandle_t xStreamBuffer,
                                              void * pvRxData,
                                              size_t xBufferLengthBytes,
-                                             TickType_t xTicksToWait ) /* PRIVILEGED_FUNCTION */
+                                             TickType_t xTicksToWait ) /* 特权函数 */
         {
             size_t xReturn = 0;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4500,14 +4510,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         BaseType_t MPU_xStreamBufferIsFullImpl( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xStreamBufferIsFullImpl( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xStreamBufferIsFullImpl( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4534,14 +4544,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         BaseType_t MPU_xStreamBufferIsEmptyImpl( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-        BaseType_t MPU_xStreamBufferIsEmptyImpl( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xStreamBufferIsEmptyImpl( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4568,14 +4578,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         size_t MPU_xStreamBufferSpacesAvailableImpl( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-        size_t MPU_xStreamBufferSpacesAvailableImpl( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        size_t MPU_xStreamBufferSpacesAvailableImpl( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             size_t xReturn = 0;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4602,14 +4612,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         size_t MPU_xStreamBufferBytesAvailableImpl( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-        size_t MPU_xStreamBufferBytesAvailableImpl( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        size_t MPU_xStreamBufferBytesAvailableImpl( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             size_t xReturn = 0;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4636,7 +4646,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
@@ -4645,7 +4655,7 @@
                                                          size_t xTriggerLevel ) PRIVILEGED_FUNCTION;
 
         BaseType_t MPU_xStreamBufferSetTriggerLevelImpl( StreamBufferHandle_t xStreamBuffer,
-                                                         size_t xTriggerLevel ) /* PRIVILEGED_FUNCTION */
+                                                         size_t xTriggerLevel ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4672,14 +4682,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         size_t MPU_xStreamBufferNextMessageLengthBytesImpl( StreamBufferHandle_t xStreamBuffer ) PRIVILEGED_FUNCTION;
 
-        size_t MPU_xStreamBufferNextMessageLengthBytesImpl( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        size_t MPU_xStreamBufferNextMessageLengthBytesImpl( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             size_t xReturn = 0;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4706,12 +4716,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
-/* Privileged only wrappers for Stream Buffer APIs. These are needed so that
- * the application can use opaque handles maintained in mpu_wrappers.c
- * with all the APIs. */
+/*
+ * 流缓冲 API 的仅特权包装函数。需要这些包装函数，
+ * 以便应用程序在所有 API 中使用由 mpu_wrappers.c 维护的
+ * 不透明句柄。
+ */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) )
@@ -4720,15 +4732,14 @@
                                                              size_t xTriggerLevelBytes,
                                                              BaseType_t xStreamBufferType,
                                                              StreamBufferCallbackFunction_t pxSendCompletedCallback,
-                                                             StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* PRIVILEGED_FUNCTION */
+                                                             StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* 特权函数 */
         {
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
             StreamBufferHandle_t xExternalStreamBufferHandle = NULL;
             int32_t lIndex;
 
             /**
-             * Stream buffer application level callback functionality is disabled for MPU
-             * enabled ports.
+             * 流缓冲的应用程序级回调功能在启用 MPU 的移植层中被禁用。
              */
             configASSERT( ( pxSendCompletedCallback == NULL ) &&
                           ( pxReceiveCompletedCallback == NULL ) );
@@ -4766,7 +4777,7 @@
             return xExternalStreamBufferHandle;
         }
 
-    #endif /* #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) )
@@ -4777,15 +4788,14 @@
                                                                    uint8_t * const pucStreamBufferStorageArea,
                                                                    StaticStreamBuffer_t * const pxStaticStreamBuffer,
                                                                    StreamBufferCallbackFunction_t pxSendCompletedCallback,
-                                                                   StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* PRIVILEGED_FUNCTION */
+                                                                   StreamBufferCallbackFunction_t pxReceiveCompletedCallback ) /* 特权函数 */
         {
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
             StreamBufferHandle_t xExternalStreamBufferHandle = NULL;
             int32_t lIndex;
 
             /**
-             * Stream buffer application level callback functionality is disabled for MPU
-             * enabled ports.
+             * 流缓冲的应用程序级回调功能在启用 MPU 的移植层中被禁用。
              */
             configASSERT( ( pxSendCompletedCallback == NULL ) &&
                           ( pxReceiveCompletedCallback == NULL ) );
@@ -4825,12 +4835,12 @@
             return xExternalStreamBufferHandle;
         }
 
-    #endif /* #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
-        void MPU_vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        void MPU_vStreamBufferDelete( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
             int32_t lIndex;
@@ -4850,12 +4860,12 @@
             }
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
-        BaseType_t MPU_xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) /* PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xStreamBufferReset( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4876,14 +4886,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) )
 
         BaseType_t MPU_xStreamBufferGetStaticBuffers( StreamBufferHandle_t xStreamBuffers,
                                                       uint8_t * ppucStreamBufferStorageArea,
-                                                      StaticStreamBuffer_t * ppxStaticStreamBuffer ) /* PRIVILEGED_FUNCTION */
+                                                      StaticStreamBuffer_t * ppxStaticStreamBuffer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4904,7 +4914,7 @@
             return xReturn;
         }
 
-    #endif /* #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
+    #endif /* 条件块结束：#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configUSE_STREAM_BUFFERS == 1 ) ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
@@ -4912,7 +4922,7 @@
     size_t MPU_xStreamBufferSendFromISR( StreamBufferHandle_t xStreamBuffer,
                                          const void * pvTxData,
                                          size_t xDataLengthBytes,
-                                         BaseType_t * const pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                         BaseType_t * const pxHigherPriorityTaskWoken ) /* 特权函数 */
     {
         size_t xReturn = 0;
         StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4933,7 +4943,7 @@
         return xReturn;
     }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
@@ -4941,7 +4951,7 @@
     size_t MPU_xStreamBufferReceiveFromISR( StreamBufferHandle_t xStreamBuffer,
                                             void * pvRxData,
                                             size_t xBufferLengthBytes,
-                                            BaseType_t * const pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                            BaseType_t * const pxHigherPriorityTaskWoken ) /* 特权函数 */
     {
         size_t xReturn = 0;
         StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4962,13 +4972,13 @@
         return xReturn;
     }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         BaseType_t MPU_xStreamBufferSendCompletedFromISR( StreamBufferHandle_t xStreamBuffer,
-                                                          BaseType_t * pxHigherPriorityTaskWoken ) /* PRIVILEGED_FUNCTION */
+                                                          BaseType_t * pxHigherPriorityTaskWoken ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -4989,13 +4999,13 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
         BaseType_t MPU_xStreamBufferReceiveCompletedFromISR( StreamBufferHandle_t xStreamBuffer,
-                                                             BaseType_t * pxHigherPriorityTaskWoken ) /*PRIVILEGED_FUNCTION */
+                                                             BaseType_t * pxHigherPriorityTaskWoken ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFALSE;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -5016,13 +5026,13 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 
 /*-----------------------------------------------------------*/
 
     #if ( configUSE_STREAM_BUFFERS == 1 )
 
-        BaseType_t MPU_xStreamBufferResetFromISR( StreamBufferHandle_t xStreamBuffer ) /*PRIVILEGED_FUNCTION */
+        BaseType_t MPU_xStreamBufferResetFromISR( StreamBufferHandle_t xStreamBuffer ) /* 特权函数 */
         {
             BaseType_t xReturn = pdFAIL;
             StreamBufferHandle_t xInternalStreamBufferHandle = NULL;
@@ -5043,12 +5053,14 @@
             return xReturn;
         }
 
-    #endif /* #if ( configUSE_STREAM_BUFFERS == 1 ) */
+    #endif /* 条件块结束：#if ( configUSE_STREAM_BUFFERS == 1 ) */
 
 /*-----------------------------------------------------------*/
 
-/* Functions that the application writer wants to execute in privileged mode
- * can be defined in application_defined_privileged_functions.h. */
+/*
+ * 应用程序编写者希望在特权模式下执行的函数
+ * 可定义在 application_defined_privileged_functions.h 中。
+ */
 
     #if configINCLUDE_APPLICATION_DEFINED_PRIVILEGED_FUNCTIONS == 1
         #include "application_defined_privileged_functions.h"
@@ -5056,268 +5068,268 @@
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Array of system call implementation functions.
+ * @brief 系统调用实现函数数组。
  *
- * The index in the array MUST match the corresponding system call number
- * defined in mpu_wrappers.h.
+ * 数组中的索引必须与 mpu_wrappers.h 中
+ * 定义的相应系统调用编号匹配。
  */
     PRIVILEGED_DATA UBaseType_t uxSystemCallImplementations[ NUM_SYSTEM_CALLS ] =
     {
         #if ( configUSE_TASK_NOTIFICATIONS == 1 )
-            ( UBaseType_t ) MPU_xTaskGenericNotifyImpl,                     /* SYSTEM_CALL_xTaskGenericNotify. */
-            ( UBaseType_t ) MPU_xTaskGenericNotifyWaitImpl,                 /* SYSTEM_CALL_xTaskGenericNotifyWait. */
+            ( UBaseType_t ) MPU_xTaskGenericNotifyImpl,                     /* 系统调用 SYSTEM_CALL_xTaskGenericNotify. */
+            ( UBaseType_t ) MPU_xTaskGenericNotifyWaitImpl,                 /* 系统调用 SYSTEM_CALL_xTaskGenericNotifyWait. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGenericNotify. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGenericNotifyWait. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGenericNotify. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGenericNotifyWait. */
         #endif
 
         #if ( configUSE_TIMERS == 1 )
-            ( UBaseType_t ) MPU_xTimerGenericCommandFromTaskImpl,           /* SYSTEM_CALL_xTimerGenericCommandFromTask. */
+            ( UBaseType_t ) MPU_xTimerGenericCommandFromTaskImpl,           /* 系统调用 SYSTEM_CALL_xTimerGenericCommandFromTask. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTimerGenericCommandFromTask. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTimerGenericCommandFromTask. */
         #endif
 
         #if ( configUSE_EVENT_GROUPS == 1 )
-            ( UBaseType_t ) MPU_xEventGroupWaitBitsImpl,                    /* SYSTEM_CALL_xEventGroupWaitBits. */
+            ( UBaseType_t ) MPU_xEventGroupWaitBitsImpl,                    /* 系统调用 SYSTEM_CALL_xEventGroupWaitBits. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xEventGroupWaitBits. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xEventGroupWaitBits. */
         #endif
 
-        /* The system calls above this line take 5 parameters. */
+        /* 此行以上的系统调用均接受 5 个参数。 */
 
         #if ( INCLUDE_xTaskDelayUntil == 1 )
-            ( UBaseType_t ) MPU_xTaskDelayUntilImpl,                        /* SYSTEM_CALL_xTaskDelayUntil. */
+            ( UBaseType_t ) MPU_xTaskDelayUntilImpl,                        /* 系统调用 SYSTEM_CALL_xTaskDelayUntil. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskDelayUntil. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskDelayUntil. */
         #endif
 
         #if ( INCLUDE_xTaskAbortDelay == 1 )
-            ( UBaseType_t ) MPU_xTaskAbortDelayImpl,                        /* SYSTEM_CALL_xTaskAbortDelay. */
+            ( UBaseType_t ) MPU_xTaskAbortDelayImpl,                        /* 系统调用 SYSTEM_CALL_xTaskAbortDelay. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskAbortDelay. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskAbortDelay. */
         #endif
 
         #if ( INCLUDE_vTaskDelay == 1 )
-            ( UBaseType_t ) MPU_vTaskDelayImpl,                             /* SYSTEM_CALL_vTaskDelay. */
+            ( UBaseType_t ) MPU_vTaskDelayImpl,                             /* 系统调用 SYSTEM_CALL_vTaskDelay. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTaskDelay. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTaskDelay. */
         #endif
 
         #if ( INCLUDE_uxTaskPriorityGet == 1 )
-            ( UBaseType_t ) MPU_uxTaskPriorityGetImpl,                      /* SYSTEM_CALL_uxTaskPriorityGet. */
+            ( UBaseType_t ) MPU_uxTaskPriorityGetImpl,                      /* 系统调用 SYSTEM_CALL_uxTaskPriorityGet. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_uxTaskPriorityGet. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_uxTaskPriorityGet. */
         #endif
 
         #if ( INCLUDE_eTaskGetState == 1 )
-            ( UBaseType_t ) MPU_eTaskGetStateImpl,                          /* SYSTEM_CALL_eTaskGetState. */
+            ( UBaseType_t ) MPU_eTaskGetStateImpl,                          /* 系统调用 SYSTEM_CALL_eTaskGetState. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_eTaskGetState. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_eTaskGetState. */
         #endif
 
         #if ( configUSE_TRACE_FACILITY == 1 )
-            ( UBaseType_t ) MPU_vTaskGetInfoImpl,                           /* SYSTEM_CALL_vTaskGetInfo. */
+            ( UBaseType_t ) MPU_vTaskGetInfoImpl,                           /* 系统调用 SYSTEM_CALL_vTaskGetInfo. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTaskGetInfo. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTaskGetInfo. */
         #endif
 
         #if ( INCLUDE_xTaskGetIdleTaskHandle == 1 )
-            ( UBaseType_t ) MPU_xTaskGetIdleTaskHandleImpl,                 /* SYSTEM_CALL_xTaskGetIdleTaskHandle. */
+            ( UBaseType_t ) MPU_xTaskGetIdleTaskHandleImpl,                 /* 系统调用 SYSTEM_CALL_xTaskGetIdleTaskHandle. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGetIdleTaskHandle. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGetIdleTaskHandle. */
         #endif
 
         #if ( INCLUDE_vTaskSuspend == 1 )
-            ( UBaseType_t ) MPU_vTaskSuspendImpl,                           /* SYSTEM_CALL_vTaskSuspend. */
-            ( UBaseType_t ) MPU_vTaskResumeImpl,                            /* SYSTEM_CALL_vTaskResume. */
+            ( UBaseType_t ) MPU_vTaskSuspendImpl,                           /* 系统调用 SYSTEM_CALL_vTaskSuspend. */
+            ( UBaseType_t ) MPU_vTaskResumeImpl,                            /* 系统调用 SYSTEM_CALL_vTaskResume. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTaskSuspend. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTaskResume. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTaskSuspend. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTaskResume. */
         #endif
 
-        ( UBaseType_t ) MPU_xTaskGetTickCountImpl,                          /* SYSTEM_CALL_xTaskGetTickCount. */
-        ( UBaseType_t ) MPU_uxTaskGetNumberOfTasksImpl,                     /* SYSTEM_CALL_uxTaskGetNumberOfTasks. */
+        ( UBaseType_t ) MPU_xTaskGetTickCountImpl,                          /* 系统调用 SYSTEM_CALL_xTaskGetTickCount. */
+        ( UBaseType_t ) MPU_uxTaskGetNumberOfTasksImpl,                     /* 系统调用 SYSTEM_CALL_uxTaskGetNumberOfTasks. */
 
         #if ( configGENERATE_RUN_TIME_STATS == 1 )
-            ( UBaseType_t ) MPU_ulTaskGetRunTimeCounterImpl,                /* SYSTEM_CALL_ulTaskGetRunTimeCounter. */
-            ( UBaseType_t ) MPU_ulTaskGetRunTimePercentImpl,                /* SYSTEM_CALL_ulTaskGetRunTimePercent. */
+            ( UBaseType_t ) MPU_ulTaskGetRunTimeCounterImpl,                /* 系统调用 SYSTEM_CALL_ulTaskGetRunTimeCounter. */
+            ( UBaseType_t ) MPU_ulTaskGetRunTimePercentImpl,                /* 系统调用 SYSTEM_CALL_ulTaskGetRunTimePercent. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_ulTaskGetRunTimeCounter. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_ulTaskGetRunTimePercent. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_ulTaskGetRunTimeCounter. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_ulTaskGetRunTimePercent. */
         #endif
 
         #if ( ( configGENERATE_RUN_TIME_STATS == 1 ) && ( INCLUDE_xTaskGetIdleTaskHandle == 1 ) )
-            ( UBaseType_t ) MPU_ulTaskGetIdleRunTimePercentImpl,            /* SYSTEM_CALL_ulTaskGetIdleRunTimePercent. */
-            ( UBaseType_t ) MPU_ulTaskGetIdleRunTimeCounterImpl,            /* SYSTEM_CALL_ulTaskGetIdleRunTimeCounter. */
+            ( UBaseType_t ) MPU_ulTaskGetIdleRunTimePercentImpl,            /* 系统调用 SYSTEM_CALL_ulTaskGetIdleRunTimePercent. */
+            ( UBaseType_t ) MPU_ulTaskGetIdleRunTimeCounterImpl,            /* 系统调用 SYSTEM_CALL_ulTaskGetIdleRunTimeCounter. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_ulTaskGetIdleRunTimePercent. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_ulTaskGetIdleRunTimeCounter. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_ulTaskGetIdleRunTimePercent. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_ulTaskGetIdleRunTimeCounter. */
         #endif
 
         #if ( configUSE_APPLICATION_TASK_TAG == 1 )
-            ( UBaseType_t ) MPU_vTaskSetApplicationTaskTagImpl,             /* SYSTEM_CALL_vTaskSetApplicationTaskTag. */
-            ( UBaseType_t ) MPU_xTaskGetApplicationTaskTagImpl,             /* SYSTEM_CALL_xTaskGetApplicationTaskTag. */
+            ( UBaseType_t ) MPU_vTaskSetApplicationTaskTagImpl,             /* 系统调用 SYSTEM_CALL_vTaskSetApplicationTaskTag. */
+            ( UBaseType_t ) MPU_xTaskGetApplicationTaskTagImpl,             /* 系统调用 SYSTEM_CALL_xTaskGetApplicationTaskTag. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTaskSetApplicationTaskTag. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGetApplicationTaskTag. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTaskSetApplicationTaskTag. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGetApplicationTaskTag. */
         #endif
 
         #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS != 0 )
-            ( UBaseType_t ) MPU_vTaskSetThreadLocalStoragePointerImpl,      /* SYSTEM_CALL_vTaskSetThreadLocalStoragePointer. */
-            ( UBaseType_t ) MPU_pvTaskGetThreadLocalStoragePointerImpl,     /* SYSTEM_CALL_pvTaskGetThreadLocalStoragePointer. */
+            ( UBaseType_t ) MPU_vTaskSetThreadLocalStoragePointerImpl,      /* 系统调用 SYSTEM_CALL_vTaskSetThreadLocalStoragePointer. */
+            ( UBaseType_t ) MPU_pvTaskGetThreadLocalStoragePointerImpl,     /* 系统调用 SYSTEM_CALL_pvTaskGetThreadLocalStoragePointer. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTaskSetThreadLocalStoragePointer. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_pvTaskGetThreadLocalStoragePointer. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTaskSetThreadLocalStoragePointer. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_pvTaskGetThreadLocalStoragePointer. */
         #endif
 
         #if ( configUSE_TRACE_FACILITY == 1 )
-            ( UBaseType_t ) MPU_uxTaskGetSystemStateImpl,                   /* SYSTEM_CALL_uxTaskGetSystemState. */
+            ( UBaseType_t ) MPU_uxTaskGetSystemStateImpl,                   /* 系统调用 SYSTEM_CALL_uxTaskGetSystemState. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_uxTaskGetSystemState. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_uxTaskGetSystemState. */
         #endif
 
         #if ( INCLUDE_uxTaskGetStackHighWaterMark == 1 )
-            ( UBaseType_t ) MPU_uxTaskGetStackHighWaterMarkImpl,            /* SYSTEM_CALL_uxTaskGetStackHighWaterMark. */
+            ( UBaseType_t ) MPU_uxTaskGetStackHighWaterMarkImpl,            /* 系统调用 SYSTEM_CALL_uxTaskGetStackHighWaterMark. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_uxTaskGetStackHighWaterMark. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_uxTaskGetStackHighWaterMark. */
         #endif
 
         #if ( INCLUDE_uxTaskGetStackHighWaterMark2 == 1 )
-            ( UBaseType_t ) MPU_uxTaskGetStackHighWaterMark2Impl,           /* SYSTEM_CALL_uxTaskGetStackHighWaterMark2. */
+            ( UBaseType_t ) MPU_uxTaskGetStackHighWaterMark2Impl,           /* 系统调用 SYSTEM_CALL_uxTaskGetStackHighWaterMark2. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_uxTaskGetStackHighWaterMark2. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_uxTaskGetStackHighWaterMark2. */
         #endif
 
         #if ( ( INCLUDE_xTaskGetCurrentTaskHandle == 1 ) || ( configUSE_MUTEXES == 1 ) )
-            ( UBaseType_t ) MPU_xTaskGetCurrentTaskHandleImpl,              /* SYSTEM_CALL_xTaskGetCurrentTaskHandle. */
+            ( UBaseType_t ) MPU_xTaskGetCurrentTaskHandleImpl,              /* 系统调用 SYSTEM_CALL_xTaskGetCurrentTaskHandle. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGetCurrentTaskHandle. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGetCurrentTaskHandle. */
         #endif
 
         #if ( INCLUDE_xTaskGetSchedulerState == 1 )
-            ( UBaseType_t ) MPU_xTaskGetSchedulerStateImpl,                 /* SYSTEM_CALL_xTaskGetSchedulerState. */
+            ( UBaseType_t ) MPU_xTaskGetSchedulerStateImpl,                 /* 系统调用 SYSTEM_CALL_xTaskGetSchedulerState. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGetSchedulerState. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGetSchedulerState. */
         #endif
 
-        ( UBaseType_t ) MPU_vTaskSetTimeOutStateImpl,                       /* SYSTEM_CALL_vTaskSetTimeOutState. */
-        ( UBaseType_t ) MPU_xTaskCheckForTimeOutImpl,                       /* SYSTEM_CALL_xTaskCheckForTimeOut. */
+        ( UBaseType_t ) MPU_vTaskSetTimeOutStateImpl,                       /* 系统调用 SYSTEM_CALL_vTaskSetTimeOutState. */
+        ( UBaseType_t ) MPU_xTaskCheckForTimeOutImpl,                       /* 系统调用 SYSTEM_CALL_xTaskCheckForTimeOut. */
 
         #if ( configUSE_TASK_NOTIFICATIONS == 1 )
-            ( UBaseType_t ) MPU_ulTaskGenericNotifyTakeImpl,                /* SYSTEM_CALL_ulTaskGenericNotifyTake. */
-            ( UBaseType_t ) MPU_xTaskGenericNotifyStateClearImpl,           /* SYSTEM_CALL_xTaskGenericNotifyStateClear. */
-            ( UBaseType_t ) MPU_ulTaskGenericNotifyValueClearImpl,          /* SYSTEM_CALL_ulTaskGenericNotifyValueClear. */
+            ( UBaseType_t ) MPU_ulTaskGenericNotifyTakeImpl,                /* 系统调用 SYSTEM_CALL_ulTaskGenericNotifyTake. */
+            ( UBaseType_t ) MPU_xTaskGenericNotifyStateClearImpl,           /* 系统调用 SYSTEM_CALL_xTaskGenericNotifyStateClear. */
+            ( UBaseType_t ) MPU_ulTaskGenericNotifyValueClearImpl,          /* 系统调用 SYSTEM_CALL_ulTaskGenericNotifyValueClear. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_ulTaskGenericNotifyTake. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTaskGenericNotifyStateClear. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_ulTaskGenericNotifyValueClear. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_ulTaskGenericNotifyTake. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTaskGenericNotifyStateClear. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_ulTaskGenericNotifyValueClear. */
         #endif
 
-        ( UBaseType_t ) MPU_xQueueGenericSendImpl,                          /* SYSTEM_CALL_xQueueGenericSend. */
-        ( UBaseType_t ) MPU_uxQueueMessagesWaitingImpl,                     /* SYSTEM_CALL_uxQueueMessagesWaiting. */
-        ( UBaseType_t ) MPU_uxQueueSpacesAvailableImpl,                     /* SYSTEM_CALL_uxQueueSpacesAvailable. */
-        ( UBaseType_t ) MPU_xQueueReceiveImpl,                              /* SYSTEM_CALL_xQueueReceive. */
-        ( UBaseType_t ) MPU_xQueuePeekImpl,                                 /* SYSTEM_CALL_xQueuePeek. */
-        ( UBaseType_t ) MPU_xQueueSemaphoreTakeImpl,                        /* SYSTEM_CALL_xQueueSemaphoreTake. */
+        ( UBaseType_t ) MPU_xQueueGenericSendImpl,                          /* 系统调用 SYSTEM_CALL_xQueueGenericSend. */
+        ( UBaseType_t ) MPU_uxQueueMessagesWaitingImpl,                     /* 系统调用 SYSTEM_CALL_uxQueueMessagesWaiting. */
+        ( UBaseType_t ) MPU_uxQueueSpacesAvailableImpl,                     /* 系统调用 SYSTEM_CALL_uxQueueSpacesAvailable. */
+        ( UBaseType_t ) MPU_xQueueReceiveImpl,                              /* 系统调用 SYSTEM_CALL_xQueueReceive. */
+        ( UBaseType_t ) MPU_xQueuePeekImpl,                                 /* 系统调用 SYSTEM_CALL_xQueuePeek. */
+        ( UBaseType_t ) MPU_xQueueSemaphoreTakeImpl,                        /* 系统调用 SYSTEM_CALL_xQueueSemaphoreTake. */
 
         #if ( ( configUSE_MUTEXES == 1 ) && ( INCLUDE_xSemaphoreGetMutexHolder == 1 ) )
-            ( UBaseType_t ) MPU_xQueueGetMutexHolderImpl,                   /* SYSTEM_CALL_xQueueGetMutexHolder. */
+            ( UBaseType_t ) MPU_xQueueGetMutexHolderImpl,                   /* 系统调用 SYSTEM_CALL_xQueueGetMutexHolder. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xQueueGetMutexHolder. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xQueueGetMutexHolder. */
         #endif
 
         #if ( configUSE_RECURSIVE_MUTEXES == 1 )
-            ( UBaseType_t ) MPU_xQueueTakeMutexRecursiveImpl,               /* SYSTEM_CALL_xQueueTakeMutexRecursive. */
-            ( UBaseType_t ) MPU_xQueueGiveMutexRecursiveImpl,               /* SYSTEM_CALL_xQueueGiveMutexRecursive. */
+            ( UBaseType_t ) MPU_xQueueTakeMutexRecursiveImpl,               /* 系统调用 SYSTEM_CALL_xQueueTakeMutexRecursive. */
+            ( UBaseType_t ) MPU_xQueueGiveMutexRecursiveImpl,               /* 系统调用 SYSTEM_CALL_xQueueGiveMutexRecursive. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xQueueTakeMutexRecursive. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xQueueGiveMutexRecursive. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xQueueTakeMutexRecursive. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xQueueGiveMutexRecursive. */
         #endif
 
         #if ( configUSE_QUEUE_SETS == 1 )
-            ( UBaseType_t ) MPU_xQueueSelectFromSetImpl,                    /* SYSTEM_CALL_xQueueSelectFromSet. */
-            ( UBaseType_t ) MPU_xQueueAddToSetImpl,                         /* SYSTEM_CALL_xQueueAddToSet. */
+            ( UBaseType_t ) MPU_xQueueSelectFromSetImpl,                    /* 系统调用 SYSTEM_CALL_xQueueSelectFromSet. */
+            ( UBaseType_t ) MPU_xQueueAddToSetImpl,                         /* 系统调用 SYSTEM_CALL_xQueueAddToSet. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xQueueSelectFromSet. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xQueueAddToSet. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xQueueSelectFromSet. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xQueueAddToSet. */
         #endif
 
         #if configQUEUE_REGISTRY_SIZE > 0
-            ( UBaseType_t ) MPU_vQueueAddToRegistryImpl,                    /* SYSTEM_CALL_vQueueAddToRegistry. */
-            ( UBaseType_t ) MPU_vQueueUnregisterQueueImpl,                  /* SYSTEM_CALL_vQueueUnregisterQueue. */
-            ( UBaseType_t ) MPU_pcQueueGetNameImpl,                         /* SYSTEM_CALL_pcQueueGetName. */
+            ( UBaseType_t ) MPU_vQueueAddToRegistryImpl,                    /* 系统调用 SYSTEM_CALL_vQueueAddToRegistry. */
+            ( UBaseType_t ) MPU_vQueueUnregisterQueueImpl,                  /* 系统调用 SYSTEM_CALL_vQueueUnregisterQueue. */
+            ( UBaseType_t ) MPU_pcQueueGetNameImpl,                         /* 系统调用 SYSTEM_CALL_pcQueueGetName. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vQueueAddToRegistry. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vQueueUnregisterQueue. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_pcQueueGetName. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vQueueAddToRegistry. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vQueueUnregisterQueue. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_pcQueueGetName. */
         #endif
 
         #if ( configUSE_TIMERS == 1 )
-            ( UBaseType_t ) MPU_pvTimerGetTimerIDImpl,                      /* SYSTEM_CALL_pvTimerGetTimerID. */
-            ( UBaseType_t ) MPU_vTimerSetTimerIDImpl,                       /* SYSTEM_CALL_vTimerSetTimerID. */
-            ( UBaseType_t ) MPU_xTimerIsTimerActiveImpl,                    /* SYSTEM_CALL_xTimerIsTimerActive. */
-            ( UBaseType_t ) MPU_xTimerGetTimerDaemonTaskHandleImpl,         /* SYSTEM_CALL_xTimerGetTimerDaemonTaskHandle. */
-            ( UBaseType_t ) MPU_pcTimerGetNameImpl,                         /* SYSTEM_CALL_pcTimerGetName. */
-            ( UBaseType_t ) MPU_vTimerSetReloadModeImpl,                    /* SYSTEM_CALL_vTimerSetReloadMode. */
-            ( UBaseType_t ) MPU_xTimerGetReloadModeImpl,                    /* SYSTEM_CALL_xTimerGetReloadMode. */
-            ( UBaseType_t ) MPU_uxTimerGetReloadModeImpl,                   /* SYSTEM_CALL_uxTimerGetReloadMode. */
-            ( UBaseType_t ) MPU_xTimerGetPeriodImpl,                        /* SYSTEM_CALL_xTimerGetPeriod. */
-            ( UBaseType_t ) MPU_xTimerGetExpiryTimeImpl,                    /* SYSTEM_CALL_xTimerGetExpiryTime. */
+            ( UBaseType_t ) MPU_pvTimerGetTimerIDImpl,                      /* 系统调用 SYSTEM_CALL_pvTimerGetTimerID. */
+            ( UBaseType_t ) MPU_vTimerSetTimerIDImpl,                       /* 系统调用 SYSTEM_CALL_vTimerSetTimerID. */
+            ( UBaseType_t ) MPU_xTimerIsTimerActiveImpl,                    /* 系统调用 SYSTEM_CALL_xTimerIsTimerActive. */
+            ( UBaseType_t ) MPU_xTimerGetTimerDaemonTaskHandleImpl,         /* 系统调用 SYSTEM_CALL_xTimerGetTimerDaemonTaskHandle. */
+            ( UBaseType_t ) MPU_pcTimerGetNameImpl,                         /* 系统调用 SYSTEM_CALL_pcTimerGetName. */
+            ( UBaseType_t ) MPU_vTimerSetReloadModeImpl,                    /* 系统调用 SYSTEM_CALL_vTimerSetReloadMode. */
+            ( UBaseType_t ) MPU_xTimerGetReloadModeImpl,                    /* 系统调用 SYSTEM_CALL_xTimerGetReloadMode. */
+            ( UBaseType_t ) MPU_uxTimerGetReloadModeImpl,                   /* 系统调用 SYSTEM_CALL_uxTimerGetReloadMode. */
+            ( UBaseType_t ) MPU_xTimerGetPeriodImpl,                        /* 系统调用 SYSTEM_CALL_xTimerGetPeriod. */
+            ( UBaseType_t ) MPU_xTimerGetExpiryTimeImpl,                    /* 系统调用 SYSTEM_CALL_xTimerGetExpiryTime. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_pvTimerGetTimerID. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTimerSetTimerID. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTimerIsTimerActive. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTimerGetTimerDaemonTaskHandle. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_pcTimerGetName. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vTimerSetReloadMode. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTimerGetReloadMode. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_uxTimerGetReloadMode. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTimerGetPeriod. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xTimerGetExpiryTime. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_pvTimerGetTimerID. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTimerSetTimerID. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTimerIsTimerActive. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTimerGetTimerDaemonTaskHandle. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_pcTimerGetName. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vTimerSetReloadMode. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTimerGetReloadMode. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_uxTimerGetReloadMode. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTimerGetPeriod. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xTimerGetExpiryTime. */
         #endif
 
         #if ( configUSE_EVENT_GROUPS == 1 )
-            ( UBaseType_t ) MPU_xEventGroupClearBitsImpl,                   /* SYSTEM_CALL_xEventGroupClearBits. */
-            ( UBaseType_t ) MPU_xEventGroupSetBitsImpl,                     /* SYSTEM_CALL_xEventGroupSetBits. */
-            ( UBaseType_t ) MPU_xEventGroupSyncImpl,                        /* SYSTEM_CALL_xEventGroupSync. */
+            ( UBaseType_t ) MPU_xEventGroupClearBitsImpl,                   /* 系统调用 SYSTEM_CALL_xEventGroupClearBits. */
+            ( UBaseType_t ) MPU_xEventGroupSetBitsImpl,                     /* 系统调用 SYSTEM_CALL_xEventGroupSetBits. */
+            ( UBaseType_t ) MPU_xEventGroupSyncImpl,                        /* 系统调用 SYSTEM_CALL_xEventGroupSync. */
 
             #if ( configUSE_TRACE_FACILITY == 1 )
-                ( UBaseType_t ) MPU_uxEventGroupGetNumberImpl,              /* SYSTEM_CALL_uxEventGroupGetNumber. */
-                ( UBaseType_t ) MPU_vEventGroupSetNumberImpl,               /* SYSTEM_CALL_vEventGroupSetNumber. */
+                ( UBaseType_t ) MPU_uxEventGroupGetNumberImpl,              /* 系统调用 SYSTEM_CALL_uxEventGroupGetNumber. */
+                ( UBaseType_t ) MPU_vEventGroupSetNumberImpl,               /* 系统调用 SYSTEM_CALL_vEventGroupSetNumber. */
             #else
-                ( UBaseType_t ) 0,                                          /* SYSTEM_CALL_uxEventGroupGetNumber. */
-                ( UBaseType_t ) 0,                                          /* SYSTEM_CALL_vEventGroupSetNumber. */
+                ( UBaseType_t ) 0,                                          /* 系统调用 SYSTEM_CALL_uxEventGroupGetNumber. */
+                ( UBaseType_t ) 0,                                          /* 系统调用 SYSTEM_CALL_vEventGroupSetNumber. */
             #endif
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xEventGroupClearBits. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xEventGroupSetBits. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xEventGroupSync. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_uxEventGroupGetNumber. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_vEventGroupSetNumber. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xEventGroupClearBits. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xEventGroupSetBits. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xEventGroupSync. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_uxEventGroupGetNumber. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_vEventGroupSetNumber. */
         #endif
 
         #if ( configUSE_STREAM_BUFFERS == 1 )
-            ( UBaseType_t ) MPU_xStreamBufferSendImpl,                      /* SYSTEM_CALL_xStreamBufferSend. */
-            ( UBaseType_t ) MPU_xStreamBufferReceiveImpl,                   /* SYSTEM_CALL_xStreamBufferReceive. */
-            ( UBaseType_t ) MPU_xStreamBufferIsFullImpl,                    /* SYSTEM_CALL_xStreamBufferIsFull. */
-            ( UBaseType_t ) MPU_xStreamBufferIsEmptyImpl,                   /* SYSTEM_CALL_xStreamBufferIsEmpty. */
-            ( UBaseType_t ) MPU_xStreamBufferSpacesAvailableImpl,           /* SYSTEM_CALL_xStreamBufferSpacesAvailable. */
-            ( UBaseType_t ) MPU_xStreamBufferBytesAvailableImpl,            /* SYSTEM_CALL_xStreamBufferBytesAvailable. */
-            ( UBaseType_t ) MPU_xStreamBufferSetTriggerLevelImpl,           /* SYSTEM_CALL_xStreamBufferSetTriggerLevel. */
-            ( UBaseType_t ) MPU_xStreamBufferNextMessageLengthBytesImpl     /* SYSTEM_CALL_xStreamBufferNextMessageLengthBytes. */
+            ( UBaseType_t ) MPU_xStreamBufferSendImpl,                      /* 系统调用 SYSTEM_CALL_xStreamBufferSend. */
+            ( UBaseType_t ) MPU_xStreamBufferReceiveImpl,                   /* 系统调用 SYSTEM_CALL_xStreamBufferReceive. */
+            ( UBaseType_t ) MPU_xStreamBufferIsFullImpl,                    /* 系统调用 SYSTEM_CALL_xStreamBufferIsFull. */
+            ( UBaseType_t ) MPU_xStreamBufferIsEmptyImpl,                   /* 系统调用 SYSTEM_CALL_xStreamBufferIsEmpty. */
+            ( UBaseType_t ) MPU_xStreamBufferSpacesAvailableImpl,           /* 系统调用 SYSTEM_CALL_xStreamBufferSpacesAvailable. */
+            ( UBaseType_t ) MPU_xStreamBufferBytesAvailableImpl,            /* 系统调用 SYSTEM_CALL_xStreamBufferBytesAvailable. */
+            ( UBaseType_t ) MPU_xStreamBufferSetTriggerLevelImpl,           /* 系统调用 SYSTEM_CALL_xStreamBufferSetTriggerLevel. */
+            ( UBaseType_t ) MPU_xStreamBufferNextMessageLengthBytesImpl     /* 系统调用 SYSTEM_CALL_xStreamBufferNextMessageLengthBytes. */
         #else
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferSend. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferReceive. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferIsFull. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferIsEmpty. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferSpacesAvailable. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferBytesAvailable. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferSetTriggerLevel. */
-            ( UBaseType_t ) 0,                                              /* SYSTEM_CALL_xStreamBufferNextMessageLengthBytes. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferSend. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferReceive. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferIsFull. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferIsEmpty. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferSpacesAvailable. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferBytesAvailable. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferSetTriggerLevel. */
+            ( UBaseType_t ) 0,                                              /* 系统调用 SYSTEM_CALL_xStreamBufferNextMessageLengthBytes. */
         #endif
 
     };
 /*-----------------------------------------------------------*/
 
-#endif /* #if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) ) */
+#endif /* 条件块结束：#if ( ( portUSING_MPU_WRAPPERS == 1 ) && ( configUSE_MPU_WRAPPERS_V1 == 0 ) ) */
 /*-----------------------------------------------------------*/

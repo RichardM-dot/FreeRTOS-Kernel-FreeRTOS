@@ -29,30 +29,30 @@
 #ifndef PORTMACRO_H
 #define PORTMACRO_H
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     extern "C" {
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-/*------------------------------------------------------------------------------
- * Port specific definitions.
+/*
+ * ------------------------------------------------------------------------------
+ * 移植层专用定义。
  *
- * The settings in this file configure FreeRTOS correctly for the given hardware
- * and compiler.
+ * 本文件中的设置针对给定硬件和编译器正确配置 FreeRTOS。
  *
- * These settings should not be altered.
- *------------------------------------------------------------------------------
+ * 不应修改这些设置。
+ * ------------------------------------------------------------------------------
  */
 
 #ifndef configENABLE_MPU
     #error configENABLE_MPU must be defined in FreeRTOSConfig.h.  Set configENABLE_MPU to 1 to enable the MPU or 0 to disable the MPU.
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU（使能 MPU） */
 
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Type definitions.
+ * @brief 类型定义。
  */
 #define portCHAR          char
 #define portFLOAT         float
@@ -73,8 +73,10 @@ typedef unsigned long    UBaseType_t;
     typedef uint32_t        TickType_t;
     #define portMAX_DELAY   ( TickType_t ) 0xffffffffUL
 
-    /* 32-bit tick type on a 32-bit architecture, so reads of the tick count do
-     * not need to be guarded with a critical section. */
+    /*
+     * 32 位架构上使用 32 位 tick 类型，因此读取 tick 计数值
+     * 无需用临界区保护。
+     */
     #define portTICK_TYPE_IS_ATOMIC    1
 #else
     #error configTICK_TYPE_WIDTH_IN_BITS set to unsupported tick type width.
@@ -82,7 +84,7 @@ typedef unsigned long    UBaseType_t;
 /*-----------------------------------------------------------*/
 
 /**
- * Architecture specifics.
+ * 架构相关定义。
  */
 #define portARCH_NAME                      "Cortex-M0+"
 #define portSTACK_GROWTH                   ( -1 )
@@ -97,45 +99,45 @@ typedef unsigned long    UBaseType_t;
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Extern declarations.
+ * @brief 外部声明。
  */
 extern BaseType_t xPortIsInsideInterrupt( void );
 
-extern void vPortYield( void ) /* PRIVILEGED_FUNCTION */;
+extern void vPortYield( void ) /* PRIVILEGED_FUNCTION（特权函数） */;
 
-extern void vPortEnterCritical( void ) /* PRIVILEGED_FUNCTION */;
-extern void vPortExitCritical( void ) /* PRIVILEGED_FUNCTION */;
+extern void vPortEnterCritical( void ) /* PRIVILEGED_FUNCTION（特权函数） */;
+extern void vPortExitCritical( void ) /* PRIVILEGED_FUNCTION（特权函数） */;
 
-extern uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */;
-extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION */;
+extern uint32_t ulSetInterruptMask( void ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION（裸函数，特权函数） */;
+extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) PRIVILEGED_FUNCTION（裸函数，特权函数） */;
 
 #if ( configENABLE_MPU == 1 )
-    extern BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked )) */;
-    extern void vResetPrivilege( void ) /* __attribute__ (( naked )) */;
-#endif /* configENABLE_MPU */
+    extern BaseType_t xIsPrivileged( void ) /* __attribute__ (( naked ))（裸函数） */;
+    extern void vResetPrivilege( void ) /* __attribute__ (( naked ))（裸函数） */;
+#endif /* configENABLE_MPU（使能 MPU） */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief MPU specific constants.
+ * @brief MPU 专用常量。
  */
 #if ( configENABLE_MPU == 1 )
     #define portUSING_MPU_WRAPPERS          1
     #define portPRIVILEGE_BIT               ( 0x80000000UL )
 #else
     #define portPRIVILEGE_BIT               ( 0x0UL )
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU（使能 MPU） */
 
-/* Shareable (S), Cacheable (C) and Bufferable (B) bits for flash region. */
+/* Flash 区域的 Shareable（S）、Cacheable（C）和 Bufferable（B）位。 */
 #ifndef configS_C_B_FLASH
     #define configS_C_B_FLASH               ( 0x07UL )
 #endif
 
-/* Shareable (S), Cacheable (C) and Bufferable (B) bits for RAM region. */
+/* RAM 区域的 Shareable（S）、Cacheable（C）和 Bufferable（B）位。 */
 #ifndef configS_C_B_SRAM
     #define configS_C_B_SRAM                ( 0x07UL )
 #endif
 
-/* MPU regions. */
+/* MPU 区域。 */
 #define portPRIVILEGED_RAM_REGION           ( 7UL )
 #define portPRIVILEGED_FLASH_REGION         ( 6UL )
 #define portUNPRIVILEGED_FLASH_REGION       ( 5UL )
@@ -143,10 +145,12 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #define portFIRST_CONFIGURABLE_REGION       ( 0UL )
 #define portLAST_CONFIGURABLE_REGION        ( 3UL )
 #define portNUM_CONFIGURABLE_REGIONS        ( 4UL )
-#define portTOTAL_NUM_REGIONS               ( portNUM_CONFIGURABLE_REGIONS + 1UL ) /* Plus one to make space for the stack region. */
+#define portTOTAL_NUM_REGIONS               ( portNUM_CONFIGURABLE_REGIONS + 1UL ) /* 加一，为栈区域留出空间。 */
 
-/* MPU region sizes. This information is encoded in the SIZE bits of the MPU
- * Region Attribute and Size Register (RASR). */
+/*
+ * MPU 区域大小。该信息编码在 MPU 区域属性与大小寄存器（RASR）
+ * 的 SIZE 位中。
+ */
 #define portMPU_REGION_SIZE_256B            ( 0x07UL << 1UL )
 #define portMPU_REGION_SIZE_512B            ( 0x08UL << 1UL )
 #define portMPU_REGION_SIZE_1KB             ( 0x09UL << 1UL )
@@ -173,18 +177,21 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #define portMPU_REGION_SIZE_2GB             ( 0x1EUL << 1UL )
 #define portMPU_REGION_SIZE_4GB             ( 0x1FUL << 1UL )
 
-/* MPU memory types. This information is encoded in the S ( Shareable), C
- * (Cacheable) and B (Bufferable) bits of the MPU Region Attribute and Size
- * Register (RASR). */
-#define portMPU_REGION_STRONGLY_ORDERED_SHAREABLE   ( 0x0UL << 16UL ) /* S=NA, C=0, B=0. */
-#define portMPU_REGION_DEVICE_SHAREABLE             ( 0x1UL << 16UL ) /* S=NA, C=0, B=1. */
-#define portMPU_REGION_NORMAL_OIWTNOWA_NONSHARED    ( 0x2UL << 16UL ) /* S=0, C=1, B=0. */
-#define portMPU_REGION_NORMAL_OIWTNOWA_SHARED       ( 0x6UL << 16UL ) /* S=1, C=1, B=0. */
-#define portMPU_REGION_NORMAL_OIWBNOWA_NONSHARED    ( 0x3UL << 16UL ) /* S=0, C=1, B=1.*/
-#define portMPU_REGION_NORMAL_OIWBNOWA_SHARED       ( 0x7UL << 16UL ) /* S=1, C=1, B=1.*/
+/*
+ * MPU 内存类型。该信息编码在 MPU 区域属性与大小寄存器（RASR）
+ * 的 S（Shareable）、C（Cacheable）和 B（Bufferable）位中。
+ */
+#define portMPU_REGION_STRONGLY_ORDERED_SHAREABLE   ( 0x0UL << 16UL ) /* S=NA，C=0，B=0（不共享、不缓存、不缓冲）。 */
+#define portMPU_REGION_DEVICE_SHAREABLE             ( 0x1UL << 16UL ) /* S=NA，C=0，B=1（不共享、不缓存、可缓冲）。 */
+#define portMPU_REGION_NORMAL_OIWTNOWA_NONSHARED    ( 0x2UL << 16UL ) /* S=0，C=1，B=0（不共享、可缓存、不缓冲）。 */
+#define portMPU_REGION_NORMAL_OIWTNOWA_SHARED       ( 0x6UL << 16UL ) /* S=1，C=1，B=0（共享、可缓存、不缓冲）。 */
+#define portMPU_REGION_NORMAL_OIWBNOWA_NONSHARED    ( 0x3UL << 16UL ) /* S=0，C=1，B=1（不共享、可缓存、可缓冲）。 */
+#define portMPU_REGION_NORMAL_OIWBNOWA_SHARED       ( 0x7UL << 16UL ) /* S=1，C=1，B=1（共享、可缓存、可缓冲）。 */
 
-/* MPU access permissions. This information is encoded in the AP and XN bits of
- * the MPU Region Attribute and Size Register (RASR). */
+/*
+ * MPU 访问权限。该信息编码在 MPU 区域属性与大小寄存器（RASR）
+ * 的 AP 和 XN 位中。
+ */
 #define portMPU_REGION_PRIV_NA_UNPRIV_NA            ( 0x0UL << 24UL )
 #define portMPU_REGION_PRIV_RW_UNPRIV_NA            ( 0x1UL << 24UL )
 #define portMPU_REGION_PRIV_RW_UNPRIV_RO            ( 0x2UL << 24UL )
@@ -196,12 +203,12 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #if ( configENABLE_MPU == 1 )
 
     /**
-     * @brief Settings to define an MPU region.
+     * @brief 用于定义 MPU 区域的设置。
      */
     typedef struct MPURegionSettings
     {
-        uint32_t ulRBAR; /**< MPU Region Base Address Register (RBAR) for the region. */
-        uint32_t ulRASR; /**< MPU Region Attribute and Size Register (RASR) for the region. */
+        uint32_t ulRBAR; /**< MPU 区域的区域基地址寄存器（RBAR）。 */
+        uint32_t ulRASR; /**< MPU 区域的区域属性与大小寄存器（RASR）。 */
     } MPURegionSettings_t;
 
     #if ( configUSE_MPU_WRAPPERS_V1 == 0 )
@@ -211,7 +218,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #endif
 
         /**
-         * @brief System call stack.
+         * @brief 系统调用栈。
          */
         typedef struct SYSTEM_CALL_STACK_INFO
         {
@@ -221,13 +228,14 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
             uint32_t ulLinkRegisterAtSystemCallEntry;
         } xSYSTEM_CALL_STACK_INFO;
 
-    #endif /* configUSE_MPU_WRAPPERS_V1 == 0 */
+    #endif /* configUSE_MPU_WRAPPERS_V1 == 0（使用 V2 MPU 包装器） */
 
     /**
-     * @brief MPU settings as stored in the TCB.
+     * @brief 存储在 TCB 中的 MPU 设置。
      */
 
     /*
+     * TCB 中的上下文布局如下：
      * +----------+-----------------+---------------+-----+
      * |  r4-r11  | r0-r3, r12, LR, | PSP, CONTROL  |     |
      * |          | PC, xPSR        | EXC_RETURN    |     |
@@ -238,16 +246,16 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
      */
     #define CONTEXT_SIZE    20
 
-    /* Flags used for xMPU_SETTINGS.ulTaskFlags member. */
+    /* xMPU_SETTINGS.ulTaskFlags 成员使用的标志位。 */
     #define portSTACK_FRAME_HAS_PADDING_FLAG    ( 1UL << 0UL )
     #define portTASK_IS_PRIVILEGED_FLAG         ( 1UL << 1UL )
 
-    /* Size of an Access Control List (ACL) entry in bits. */
+    /* 访问控制列表（ACL）表项的位宽。 */
     #define portACL_ENTRY_SIZE_BITS             ( 32U )
 
     typedef struct MPU_SETTINGS
     {
-        MPURegionSettings_t xRegionsSettings[ portTOTAL_NUM_REGIONS ]; /**< Settings for 4 per task regions. */
+        MPURegionSettings_t xRegionsSettings[ portTOTAL_NUM_REGIONS ]; /**< 每个任务的 4 个区域设置。 */
         uint32_t ulContext[ CONTEXT_SIZE ];
         uint32_t ulTaskFlags;
 
@@ -259,11 +267,11 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
         #endif
     } xMPU_SETTINGS;
 
-#endif /* configENABLE_MPU == 1 */
+#endif /* configENABLE_MPU == 1（已启用 MPU） */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief SVC numbers.
+ * @brief SVC 编号。
  */
 #define portSVC_START_SCHEDULER            100
 #define portSVC_RAISE_PRIVILEGE            101
@@ -272,7 +280,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Scheduler utilities.
+ * @brief 调度器工具。
  */
 #if ( configENABLE_MPU == 1 )
     #define portYIELD()               __asm volatile ( "svc %0" ::"i" ( portSVC_YIELD ) : "memory" )
@@ -301,7 +309,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Critical section management.
+ * @brief 临界区管理。
  */
 #define portSET_INTERRUPT_MASK_FROM_ISR()       ulSetInterruptMask()
 #define portCLEAR_INTERRUPT_MASK_FROM_ISR( x )  vClearInterruptMask( x )
@@ -312,7 +320,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Tickless idle/low power functionality.
+ * @brief Tickless 空闲/低功耗功能。
  */
 #ifndef portSUPPRESS_TICKS_AND_SLEEP
     extern void vPortSuppressTicksAndSleep( TickType_t xExpectedIdleTime );
@@ -321,7 +329,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Task function macros as described on the FreeRTOS.org website.
+ * @brief 如 FreeRTOS.org 网站所述的任务函数宏。
  */
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters )    void vFunction( void * pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters )          void vFunction( void * pvParameters )
@@ -330,24 +338,22 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
 #if ( configENABLE_MPU == 1 )
 
     /**
-     * @brief Checks whether or not the processor is privileged.
+     * @brief 检查处理器当前是否处于特权状态。
      *
-     * @return 1 if the processor is already privileged, 0 otherwise.
+     * @return 若处理器已处于特权状态则返回 1，否则返回 0。
      */
     #define portIS_PRIVILEGED()      xIsPrivileged()
 
     /**
-     * @brief Raise an SVC request to raise privilege.
+     * @brief 触发 SVC 请求以提升特权。
      *
-     * The SVC handler checks that the SVC was raised from a system call and only
-     * then it raises the privilege. If this is called from any other place,
-     * the privilege is not raised.
+     * SVC 处理程序会检查 SVC 是否从系统调用触发，只有满足该条件
+     * 才会提升特权。若从其他任何位置调用，则不会提升特权。
      */
     #define portRAISE_PRIVILEGE()    __asm volatile ( "svc %0 \n" ::"i" ( portSVC_RAISE_PRIVILEGE ) : "memory" );
 
     /**
-     * @brief Lowers the privilege level by setting the bit 0 of the CONTROL
-     * register.
+     * @brief 通过设置 CONTROL 寄存器的 bit 0 降低特权级别。
      */
     #define portRESET_PRIVILEGE()    vResetPrivilege()
 
@@ -357,7 +363,7 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
     #define portRAISE_PRIVILEGE()
     #define portRESET_PRIVILEGE()
 
-#endif /* configENABLE_MPU */
+#endif /* configENABLE_MPU（使能 MPU） */
 /*-----------------------------------------------------------*/
 
 #if ( configENABLE_MPU == 1 )
@@ -365,25 +371,25 @@ extern void vClearInterruptMask( uint32_t ulMask ) /* __attribute__(( naked )) P
     extern BaseType_t xPortIsTaskPrivileged( void );
 
     /**
-     * @brief Checks whether or not the calling task is privileged.
+     * @brief 检查调用任务是否具有特权。
      *
-     * @return pdTRUE if the calling task is privileged, pdFALSE otherwise.
+     * @return 若调用任务具有特权则返回 pdTRUE，否则返回 pdFALSE。
      */
     #define portIS_TASK_PRIVILEGED()    xPortIsTaskPrivileged()
 
-#endif /* configENABLE_MPU == 1 */
+#endif /* configENABLE_MPU == 1（已启用 MPU） */
 /*-----------------------------------------------------------*/
 
 /**
- * @brief Barriers.
+ * @brief 屏障指令。
  */
 #define portMEMORY_BARRIER()    __asm volatile ( "" ::: "memory" )
 /*-----------------------------------------------------------*/
 
-/* *INDENT-OFF* */
+/* *INDENT-OFF*（关闭自动缩进，保持标记原样） */
 #ifdef __cplusplus
     }
 #endif
-/* *INDENT-ON* */
+/* *INDENT-ON*（恢复自动缩进，保持标记原样） */
 
-#endif /* PORTMACRO_H */
+#endif /* PORTMACRO_H（头文件保护宏） */

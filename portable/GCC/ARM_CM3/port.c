@@ -26,24 +26,26 @@
  *
  */
 
-/*-----------------------------------------------------------
-* Implementation of functions defined in portable.h for the ARM CM3 port.
-*----------------------------------------------------------*/
+/*
+ * -----------------------------------------------------------
+ * ARM CM3 移植层中 portable.h 所声明函数的实现。
+ * ----------------------------------------------------------
+ */
 
-/* Scheduler includes. */
+/* 调度器相关头文件。 */
 #include "FreeRTOS.h"
 #include "task.h"
 
-/* Prototype of all Interrupt Service Routines (ISRs). */
+/* 所有中断服务程序（ISR）的原型。 */
 typedef void ( * portISR_t )( void );
 
-/* Constants required to manipulate the core.  Registers first... */
+/* 操作内核所需的常量。先是寄存器…… */
 #define portNVIC_SYSTICK_CTRL_REG             ( *( ( volatile uint32_t * ) 0xe000e010 ) )
 #define portNVIC_SYSTICK_LOAD_REG             ( *( ( volatile uint32_t * ) 0xe000e014 ) )
 #define portNVIC_SYSTICK_CURRENT_VALUE_REG    ( *( ( volatile uint32_t * ) 0xe000e018 ) )
 #define portNVIC_SHPR2_REG                    ( *( ( volatile uint32_t * ) 0xe000ed1c ) )
 #define portNVIC_SHPR3_REG                    ( *( ( volatile uint32_t * ) 0xe000ed20 ) )
-/* ...then bits in the registers. */
+/* ……然后是寄存器中的位。 */
 #define portNVIC_SYSTICK_CLK_BIT              ( 1UL << 2UL )
 #define portNVIC_SYSTICK_INT_BIT              ( 1UL << 1UL )
 #define portNVIC_SYSTICK_ENABLE_BIT           ( 1UL << 0UL )
@@ -56,12 +58,12 @@ typedef void ( * portISR_t )( void );
 #define portNVIC_PENDSV_PRI                   ( ( ( uint32_t ) portMIN_INTERRUPT_PRIORITY ) << 16UL )
 #define portNVIC_SYSTICK_PRI                  ( ( ( uint32_t ) portMIN_INTERRUPT_PRIORITY ) << 24UL )
 
-/* Constants used to check the installation of the FreeRTOS interrupt handlers. */
+/* 用于检查 FreeRTOS 中断处理程序安装情况的常量。 */
 #define portSCB_VTOR_REG                      ( *( ( portISR_t ** ) 0xE000ED08 ) )
 #define portVECTOR_INDEX_SVC                  ( 11 )
 #define portVECTOR_INDEX_PENDSV               ( 14 )
 
-/* Constants required to check the validity of an interrupt priority. */
+/* 用于检查中断优先级有效性的常量。 */
 #define portFIRST_USER_INTERRUPT_NUMBER       ( 16 )
 #define portNVIC_IP_REGISTERS_OFFSET_16       ( 0xE000E3F0 )
 #define portAIRCR_REG                         ( *( ( volatile uint32_t * ) 0xE000ED0C ) )
@@ -71,39 +73,44 @@ typedef void ( * portISR_t )( void );
 #define portPRIORITY_GROUP_MASK               ( 0x07UL << 8UL )
 #define portPRIGROUP_SHIFT                    ( 8UL )
 
-/* Masks off all bits but the VECTACTIVE bits in the ICSR register. */
+/* 屏蔽 ICSR 寄存器中除 VECTACTIVE 位以外的所有位。 */
 #define portVECTACTIVE_MASK                   ( 0xFFUL )
 
-/* Constants required to set up the initial stack. */
+/* 建立初始栈所需的常量。 */
 #define portINITIAL_XPSR                      ( 0x01000000UL )
 
-/* The systick is a 24-bit counter. */
+/* SysTick 是 24 位计数器。 */
 #define portMAX_24_BIT_NUMBER                 ( 0xffffffUL )
 
-/* A fiddle factor to estimate the number of SysTick counts that would have
- * occurred while the SysTick counter is stopped during tickless idle
- * calculations. */
+/*
+ * 用于估算 tickless 空闲计算期间 SysTick 计数器停止时
+ * 可能错过的 SysTick 计数值的经验修正系数。
+ */
 #define portMISSED_COUNTS_FACTOR              ( 94UL )
 
-/* For strict compliance with the Cortex-M spec the task start address should
- * have bit-0 clear, as it is loaded into the PC on exit from an ISR. */
+/*
+ * 为严格符合 Cortex-M 规范，任务起始地址的 bit0 应清零，
+ * 因为该地址在退出 ISR 时被加载到 PC。
+ */
 #define portSTART_ADDRESS_MASK                ( ( StackType_t ) 0xfffffffeUL )
 
-/* Let the user override the default SysTick clock rate.  If defined by the
- * user, this symbol must equal the SysTick clock rate when the CLK bit is 0 in the
- * configuration register. */
+/*
+ * 允许用户覆盖默认的 SysTick 时钟频率。若由用户定义，
+ * 当配置寄存器中的 CLK 位为 0 时，该符号必须等于 SysTick 时钟频率。
+ */
 #ifndef configSYSTICK_CLOCK_HZ
     #define configSYSTICK_CLOCK_HZ             ( configCPU_CLOCK_HZ )
-    /* Ensure the SysTick is clocked at the same frequency as the core. */
+    /* 确保 SysTick 与内核使用相同频率的时钟。 */
     #define portNVIC_SYSTICK_CLK_BIT_CONFIG    ( portNVIC_SYSTICK_CLK_BIT )
 #else
-    /* Select the option to clock SysTick not at the same frequency as the core. */
+    /* 选择 SysTick 不使用内核时钟频率的配置选项。 */
     #define portNVIC_SYSTICK_CLK_BIT_CONFIG    ( 0 )
 #endif
 
-/* Let the user override the pre-loading of the initial LR with the address of
- * prvTaskExitError() in case it messes up unwinding of the stack in the
- * debugger. */
+/*
+ * 允许用户覆盖将初始 LR 预加载为 prvTaskExitError() 地址的行为，
+ * 以防该地址影响调试器中的栈回溯。
+ */
 #ifdef configTASK_RETURN_ADDRESS
     #define portTASK_RETURN_ADDRESS    configTASK_RETURN_ADDRESS
 #else
@@ -111,89 +118,89 @@ typedef void ( * portISR_t )( void );
 #endif
 
 /*
- * Setup the timer to generate the tick interrupts.  The implementation in this
- * file is weak to allow application writers to change the timer used to
- * generate the tick interrupt.
+ * 配置定时器以产生时钟节拍中断。本文件中的实现为弱符号，
+ * 便于应用开发者更换产生节拍中断的定时器。
  */
 void vPortSetupTimerInterrupt( void );
 
 /*
- * Exception handlers.
+ * 异常处理程序。
  */
 void xPortPendSVHandler( void ) __attribute__( ( naked ) );
 void xPortSysTickHandler( void );
 void vPortSVCHandler( void ) __attribute__( ( naked ) );
 
 /*
- * Start first task is a separate function so it can be tested in isolation.
+ * 启动首个任务的代码单独成函数，便于独立测试。
  */
 static void prvPortStartFirstTask( void ) __attribute__( ( naked ) );
 
 /*
- * Used to catch tasks that attempt to return from their implementing function.
+ * 用于捕获试图从任务入口函数返回的任务。
  */
 static void prvTaskExitError( void );
 
 /*-----------------------------------------------------------*/
 
-/* Each task maintains its own interrupt status in the critical nesting
- * variable. */
+/*
+ * 每个任务通过临界区嵌套计数变量维护自身的中断状态。
+ */
 static UBaseType_t uxCriticalNesting = 0xaaaaaaaa;
 
 /*
- * The number of SysTick increments that make up one tick period.
+ * 构成一个时钟节拍周期的 SysTick 计数值。
  */
 #if ( configUSE_TICKLESS_IDLE == 1 )
     static uint32_t ulTimerCountsForOneTick = 0;
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE 条件编译结束 */
 
 /*
- * The maximum number of tick periods that can be suppressed is limited by the
- * 24 bit resolution of the SysTick timer.
+ * 可抑制的最大时钟节拍周期数受 SysTick 定时器
+ * 24 位分辨率的限制。
  */
 #if ( configUSE_TICKLESS_IDLE == 1 )
     static uint32_t xMaximumPossibleSuppressedTicks = 0;
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE 条件编译结束 */
 
 /*
- * Compensate for the CPU cycles that pass while the SysTick is stopped (low
- * power functionality only.
+ * 补偿 SysTick 停止期间流逝的 CPU 周期（仅低功耗功能使用）。
  */
 #if ( configUSE_TICKLESS_IDLE == 1 )
     static uint32_t ulStoppedTimerCompensation = 0;
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE 条件编译结束 */
 
 /*
- * Used by the portASSERT_IF_INTERRUPT_PRIORITY_INVALID() macro to ensure
- * FreeRTOS API functions are not called from interrupts that have been assigned
- * a priority above configMAX_SYSCALL_INTERRUPT_PRIORITY.
+ * 供 portASSERT_IF_INTERRUPT_PRIORITY_INVALID() 宏使用，确保
+ * 不在优先级高于 configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断中
+ * 调用 FreeRTOS API 函数。
  */
 #if ( configASSERT_DEFINED == 1 )
     static uint8_t ucMaxSysCallPriority = 0;
     static uint32_t ulMaxPRIGROUPValue = 0;
     static const volatile uint8_t * const pcInterruptPriorityRegisters = ( const volatile uint8_t * const ) portNVIC_IP_REGISTERS_OFFSET_16;
-#endif /* configASSERT_DEFINED */
+#endif /* configASSERT_DEFINED 条件编译结束 */
 
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 详见头文件中的说明。
  */
 StackType_t * pxPortInitialiseStack( StackType_t * pxTopOfStack,
                                      TaskFunction_t pxCode,
                                      void * pvParameters )
 {
-    /* Simulate the stack frame as it would be created by a context switch
-     * interrupt. */
-    pxTopOfStack--;                                                      /* Offset added to account for the way the MCU uses the stack on entry/exit of interrupts. */
-    *pxTopOfStack = portINITIAL_XPSR;                                    /* xPSR */
+    /*
+     * 模拟上下文切换中断所创建的栈帧。
+     */
+    pxTopOfStack--;                                                      /* 补偿 MCU 进出中断时使用栈的方式所加的偏移量。 */
+    *pxTopOfStack = portINITIAL_XPSR;                                    /* xPSR 寄存器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( ( StackType_t ) pxCode ) & portSTART_ADDRESS_MASK; /* PC */
+    *pxTopOfStack = ( ( StackType_t ) pxCode ) & portSTART_ADDRESS_MASK; /* PC 程序计数器 */
     pxTopOfStack--;
-    *pxTopOfStack = ( StackType_t ) portTASK_RETURN_ADDRESS;             /* LR */
-    pxTopOfStack -= 5;                                                   /* R12, R3, R2 and R1. */
-    *pxTopOfStack = ( StackType_t ) pvParameters;                        /* R0 */
-    pxTopOfStack -= 8;                                                   /* R11, R10, R9, R8, R7, R6, R5 and R4. */
+    *pxTopOfStack = ( StackType_t ) portTASK_RETURN_ADDRESS;             /* LR 链接寄存器 */
+    pxTopOfStack -= 5;                                                   /* R12、R3、R2、R1 寄存器 */
+    *pxTopOfStack = ( StackType_t ) pvParameters;                        /* R0 寄存器 */
+    pxTopOfStack -= 8;                                                   /* R11、R10、R9、R8、R7、R6、R5、R4 寄存器 */
 
     return pxTopOfStack;
 }
@@ -203,24 +210,24 @@ static void prvTaskExitError( void )
 {
     volatile uint32_t ulDummy = 0UL;
 
-    /* A function that implements a task must not exit or attempt to return to
-     * its caller as there is nothing to return to.  If a task wants to exit it
-     * should instead call vTaskDelete( NULL ).
+    /*
+     * 实现任务的函数不得退出，也不得试图返回调用者，因为不存在可返回的位置。
+     * 若任务需要退出，应改为调用 vTaskDelete( NULL )。
      *
-     * Artificially force an assert() to be triggered if configASSERT() is
-     * defined, then stop here so application writers can catch the error. */
+     * 若定义了 configASSERT()，则人为触发 assert()，
+     * 然后在此处停止，以便应用开发者捕获该错误。
+     */
     configASSERT( uxCriticalNesting == ~0UL );
     portDISABLE_INTERRUPTS();
 
     while( ulDummy == 0 )
     {
-        /* This file calls prvTaskExitError() after the scheduler has been
-         * started to remove a compiler warning about the function being defined
-         * but never called.  ulDummy is used purely to quieten other warnings
-         * about code appearing after this function is called - making ulDummy
-         * volatile makes the compiler think the function could return and
-         * therefore not output an 'unreachable code' warning for code that appears
-         * after it. */
+        /*
+         * 调度器启动后，本文件会调用 prvTaskExitError()，以消除“函数已定义
+         * 但从未调用”的编译器警告。ulDummy 仅用于消除有关该函数调用之后
+         * 出现代码的其他警告——将 ulDummy 声明为 volatile 可使编译器认为
+         * 该函数可能返回，从而不会为之后的代码输出“不可达代码”警告。
+         */
     }
 }
 /*-----------------------------------------------------------*/
@@ -228,11 +235,11 @@ static void prvTaskExitError( void )
 void vPortSVCHandler( void )
 {
     __asm volatile (
-        "   ldr r3, =pxCurrentTCB           \n" /* Restore the context. */
-        "   ldr r1, [r3]                    \n" /* Get the pxCurrentTCB address. */
-        "   ldr r0, [r1]                    \n" /* The first item in pxCurrentTCB is the task top of stack. */
-        "   ldmia r0!, {r4-r11}             \n" /* Pop the registers that are not automatically saved on exception entry and the critical nesting count. */
-        "   msr psp, r0                     \n" /* Restore the task stack pointer. */
+        "   ldr r3, =pxCurrentTCB           \n" /* 恢复上下文。 */
+        "   ldr r1, [r3]                    \n" /* 获取 pxCurrentTCB 的地址。 */
+        "   ldr r0, [r1]                    \n" /* pxCurrentTCB 的第一项是任务栈顶指针。 */
+        "   ldmia r0!, {r4-r11}             \n" /* 弹出异常进入时未自动保存的寄存器以及临界区嵌套计数。 */
+        "   msr psp, r0                     \n" /* 恢复任务栈指针。 */
         "   isb                             \n"
         "   mov r0, #0                      \n"
         "   msr basepri, r0                 \n"
@@ -247,15 +254,15 @@ void vPortSVCHandler( void )
 static void prvPortStartFirstTask( void )
 {
     __asm volatile (
-        " ldr r0, =0xE000ED08   \n" /* Use the NVIC offset register to locate the stack. */
+        " ldr r0, =0xE000ED08   \n" /* 使用 NVIC 偏移寄存器定位栈。 */
         " ldr r0, [r0]          \n"
         " ldr r0, [r0]          \n"
-        " msr msp, r0           \n" /* Set the msp back to the start of the stack. */
-        " cpsie i               \n" /* Globally enable interrupts. */
+        " msr msp, r0           \n" /* 将 MSP 重新设置为栈起始地址。 */
+        " cpsie i               \n" /* 全局使能中断。 */
         " cpsie f               \n"
         " dsb                   \n"
         " isb                   \n"
-        " svc 0                 \n" /* System call to start first task. */
+        " svc 0                 \n" /* 通过系统调用启动首个任务。 */
         " nop                   \n"
         " .ltorg                \n"
         );
@@ -263,43 +270,44 @@ static void prvPortStartFirstTask( void )
 /*-----------------------------------------------------------*/
 
 /*
- * See header file for description.
+ * 详见头文件中的说明。
  */
 BaseType_t xPortStartScheduler( void )
 {
-    /* An application can install FreeRTOS interrupt handlers in one of the
-     * following ways:
-     * 1. Direct Routing - Install the functions vPortSVCHandler and
-     *    xPortPendSVHandler for SVCall and PendSV interrupts respectively.
-     * 2. Indirect Routing - Install separate handlers for SVCall and PendSV
-     *    interrupts and route program control from those handlers to
-     *    vPortSVCHandler and xPortPendSVHandler functions.
+    /*
+     * 应用可通过以下方式之一安装 FreeRTOS 中断处理程序：
+     * 1. 直接路由——分别为 SVCall 和 PendSV 中断安装 vPortSVCHandler
+     *    和 xPortPendSVHandler 函数。
+     * 2. 间接路由——为 SVCall 和 PendSV 中断安装独立的处理程序，
+     *    并将程序控制从这些处理程序转发到 vPortSVCHandler 和
+     *    xPortPendSVHandler 函数。
      *
-     * Applications that use Indirect Routing must set
-     * configCHECK_HANDLER_INSTALLATION to 0 in their FreeRTOSConfig.h. Direct
-     * routing, which is validated here when configCHECK_HANDLER_INSTALLATION
-     * is 1, should be preferred when possible. */
+     * 使用间接路由的应用必须在 FreeRTOSConfig.h 中将
+     * configCHECK_HANDLER_INSTALLATION 设为 0。当
+     * configCHECK_HANDLER_INSTALLATION 为 1 时，此处校验直接路由；
+     * 条件允许时应优先采用直接路由。
+     */
     #if ( configCHECK_HANDLER_INSTALLATION == 1 )
     {
         const portISR_t * const pxVectorTable = portSCB_VTOR_REG;
 
-        /* Validate that the application has correctly installed the FreeRTOS
-         * handlers for SVCall and PendSV interrupts. We do not check the
-         * installation of the SysTick handler because the application may
-         * choose to drive the RTOS tick using a timer other than the SysTick
-         * timer by overriding the weak function vPortSetupTimerInterrupt().
+        /*
+         * 校验应用已正确安装 SVCall 和 PendSV 中断的 FreeRTOS
+         * 处理程序。此处不检查 SysTick 处理程序的安装情况，因为应用可能
+         * 通过重写弱函数 vPortSetupTimerInterrupt()，改用 SysTick 之外的
+         * 定时器驱动 RTOS 时钟节拍。
          *
-         * Assertion failures here indicate incorrect installation of the
-         * FreeRTOS handlers. For help installing the FreeRTOS handlers, see
-         * https://www.freertos.org/Why-FreeRTOS/FAQs.
+         * 此处断言失败表明 FreeRTOS 处理程序安装不正确。有关安装
+         * FreeRTOS 处理程序的帮助，请参见
+         * https://www.freertos.org/Why-FreeRTOS/FAQs。
          *
-         * Systems with a configurable address for the interrupt vector table
-         * can also encounter assertion failures or even system faults here if
-         * VTOR is not set correctly to point to the application's vector table. */
+         * 对于中断向量表地址可配置的系统，若 VTOR 未正确指向
+         * 应用的向量表，此处也可能出现断言失败甚至系统故障。
+         */
         configASSERT( pxVectorTable[ portVECTOR_INDEX_SVC ] == vPortSVCHandler );
         configASSERT( pxVectorTable[ portVECTOR_INDEX_PENDSV ] == xPortPendSVHandler );
     }
-    #endif /* configCHECK_HANDLER_INSTALLATION */
+    #endif /* configCHECK_HANDLER_INSTALLATION 条件编译结束 */
 
     #if ( configASSERT_DEFINED == 1 )
     {
@@ -308,38 +316,43 @@ BaseType_t xPortStartScheduler( void )
         volatile uint8_t * const pucFirstUserPriorityRegister = ( volatile uint8_t * const ) ( portNVIC_IP_REGISTERS_OFFSET_16 + portFIRST_USER_INTERRUPT_NUMBER );
         volatile uint8_t ucMaxPriorityValue;
 
-        /* Determine the maximum priority from which ISR safe FreeRTOS API
-         * functions can be called.  ISR safe functions are those that end in
-         * "FromISR".  FreeRTOS maintains separate thread and ISR API functions to
-         * ensure interrupt entry is as fast and simple as possible.
+        /*
+         * 确定可从中调用 ISR 安全 FreeRTOS API 函数的最高优先级。
+         * ISR 安全函数是以“FromISR”结尾的函数。FreeRTOS 维护独立的线程和
+         * ISR API 函数，以确保中断进入尽可能快速、简单。
          *
-         * Save the interrupt priority value that is about to be clobbered. */
+         * 保存即将被改写的原中断优先级值。
+         */
         ucOriginalPriority = *pucFirstUserPriorityRegister;
 
-        /* Determine the number of priority bits available.  First write to all
-         * possible bits. */
+        /*
+         * 确定可用的优先级位数。先向所有可能的位写入 1。
+         */
         *pucFirstUserPriorityRegister = portMAX_8_BIT_VALUE;
 
-        /* Read the value back to see how many bits stuck. */
+        /* 回读该值，查看哪些位保持为 1。 */
         ucMaxPriorityValue = *pucFirstUserPriorityRegister;
 
-        /* Use the same mask on the maximum system call priority. */
+        /* 对最大系统调用优先级施加相同的掩码。 */
         ucMaxSysCallPriority = configMAX_SYSCALL_INTERRUPT_PRIORITY & ucMaxPriorityValue;
 
-        /* Check that the maximum system call priority is nonzero after
-         * accounting for the number of priority bits supported by the
-         * hardware. A priority of 0 is invalid because setting the BASEPRI
-         * register to 0 unmasks all interrupts, and interrupts with priority 0
-         * cannot be masked using BASEPRI.
-         * See https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html */
+        /*
+         * 检查在考虑硬件支持的优先级位数后，最大系统调用优先级非零。
+         * 优先级 0 无效，因为将 BASEPRI 寄存器设为 0 会使所有中断解除屏蔽，
+         * 且优先级为 0 的中断无法使用 BASEPRI 屏蔽。
+         * 参见 https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
+         */
         configASSERT( ucMaxSysCallPriority );
 
-        /* Check that the bits not implemented in hardware are zero in
-         * configMAX_SYSCALL_INTERRUPT_PRIORITY. */
+        /*
+         * 检查 configMAX_SYSCALL_INTERRUPT_PRIORITY 中
+         * 硬件未实现的位为 0。
+         */
         configASSERT( ( configMAX_SYSCALL_INTERRUPT_PRIORITY & ( ~ucMaxPriorityValue ) ) == 0U );
 
-        /* Calculate the maximum acceptable priority group value for the number
-         * of bits read back. */
+        /*
+         * 根据回读的位数计算可接受的最大优先级分组值。
+         */
 
         while( ( ucMaxPriorityValue & portTOP_BIT_OF_BYTE ) == portTOP_BIT_OF_BYTE )
         {
@@ -349,23 +362,22 @@ BaseType_t xPortStartScheduler( void )
 
         if( ulImplementedPrioBits == 8 )
         {
-            /* When the hardware implements 8 priority bits, there is no way for
-             * the software to configure PRIGROUP to not have sub-priorities. As
-             * a result, the least significant bit is always used for sub-priority
-             * and there are 128 preemption priorities and 2 sub-priorities.
+            /*
+             * 当硬件实现 8 个优先级位时，软件无法将 PRIGROUP 配置为
+             * 不存在子优先级。因此最低有效位始终用于子优先级，
+             * 共有 128 个抢占优先级和 2 个子优先级。
              *
-             * This may cause some confusion in some cases - for example, if
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY is set to 5, both 5 and 4
-             * priority interrupts will be masked in Critical Sections as those
-             * are at the same preemption priority. This may appear confusing as
-             * 4 is higher (numerically lower) priority than
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY and therefore, should not
-             * have been masked. Instead, if we set configMAX_SYSCALL_INTERRUPT_PRIORITY
-             * to 4, this confusion does not happen and the behaviour remains the same.
+             * 这在某些情况下可能引起困惑——例如，若
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY 设为 5，则优先级 5 和 4
+             * 的中断都会在临界区中被屏蔽，因为它们处于同一抢占优先级。
+             * 这可能显得费解，因为 4 的优先级高于（数值上小于）
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY，本不应被屏蔽。
+             * 反之，若将 configMAX_SYSCALL_INTERRUPT_PRIORITY 设为 4，
+             * 这种困惑便不会发生，而行为保持不变。
              *
-             * The following assert ensures that the sub-priority bit in the
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY is clear to avoid the above mentioned
-             * confusion. */
+             * 以下断言确保 configMAX_SYSCALL_INTERRUPT_PRIORITY 中的
+             * 子优先级位为 0，以避免上述困惑。
+             */
             configASSERT( ( configMAX_SYSCALL_INTERRUPT_PRIORITY & 0x1U ) == 0U );
             ulMaxPRIGROUPValue = 0;
         }
@@ -374,51 +386,58 @@ BaseType_t xPortStartScheduler( void )
             ulMaxPRIGROUPValue = portMAX_PRIGROUP_BITS - ulImplementedPrioBits;
         }
 
-        /* Shift the priority group value back to its position within the AIRCR
-         * register. */
+        /*
+         * 将优先级分组值移回其在 AIRCR 寄存器中的位置。
+         */
         ulMaxPRIGROUPValue <<= portPRIGROUP_SHIFT;
         ulMaxPRIGROUPValue &= portPRIORITY_GROUP_MASK;
 
-        /* Restore the clobbered interrupt priority register to its original
-         * value. */
+        /*
+         * 将先前被改写的中断优先级寄存器恢复为原值。
+         */
         *pucFirstUserPriorityRegister = ucOriginalPriority;
     }
-    #endif /* configASSERT_DEFINED */
+    #endif /* configASSERT_DEFINED 条件编译结束 */
 
-    /* Make PendSV and SysTick the lowest priority interrupts, and make SVCall
-     * the highest priority. */
+    /*
+     * 将 PendSV 和 SysTick 设为最低优先级中断，
+     * 并将 SVCall 设为最高优先级。
+     */
     portNVIC_SHPR3_REG |= portNVIC_PENDSV_PRI;
     portNVIC_SHPR3_REG |= portNVIC_SYSTICK_PRI;
     portNVIC_SHPR2_REG = 0;
 
-    /* Start the timer that generates the tick ISR.  Interrupts are disabled
-     * here already. */
+    /*
+     * 启动产生时钟节拍 ISR 的定时器。此处中断已处于禁用状态。
+     */
     vPortSetupTimerInterrupt();
 
-    /* Initialise the critical nesting count ready for the first task. */
+    /* 初始化临界区嵌套计数，为第一个任务做好准备。 */
     uxCriticalNesting = 0;
 
-    /* Start the first task. */
+    /* 启动第一个任务。 */
     prvPortStartFirstTask();
 
-    /* Should never get here as the tasks will now be executing!  Call the task
-     * exit error function to prevent compiler warnings about a static function
-     * not being called in the case that the application writer overrides this
-     * functionality by defining configTASK_RETURN_ADDRESS.  Call
-     * vTaskSwitchContext() so link time optimisation does not remove the
-     * symbol. */
+    /*
+     * 此时任务已在运行，绝不应到达这里！调用任务退出错误函数，
+     * 以避免在应用开发者通过定义 configTASK_RETURN_ADDRESS 覆盖
+     * 此功能时，出现“静态函数未被调用”的编译器警告。调用
+     * vTaskSwitchContext()，以免链接时优化移除该符号。
+     */
     vTaskSwitchContext();
     prvTaskExitError();
 
-    /* Should not get here! */
+    /* 不应到达此处！ */
     return 0;
 }
 /*-----------------------------------------------------------*/
 
 void vPortEndScheduler( void )
 {
-    /* Not implemented in ports where there is nothing to return to.
-     * Artificially force an assert. */
+    /*
+     * 在无返回目标的移植层中不实现该函数。
+     * 人为触发断言。
+     */
     configASSERT( uxCriticalNesting == 1000UL );
 }
 /*-----------------------------------------------------------*/
@@ -428,11 +447,12 @@ void vPortEnterCritical( void )
     portDISABLE_INTERRUPTS();
     uxCriticalNesting++;
 
-    /* This is not the interrupt safe version of the enter critical function so
-     * assert() if it is being called from an interrupt context.  Only API
-     * functions that end in "FromISR" can be used in an interrupt.  Only assert if
-     * the critical nesting count is 1 to protect against recursive calls if the
-     * assert function also uses a critical section. */
+    /*
+     * 本函数不是可中断安全版本的进入临界区函数，因此若在中断
+     * 上下文中调用则触发 assert()。只有以“FromISR”结尾的 API
+     * 函数才能在中断中使用。仅当临界区嵌套计数为 1 时才断言，
+     * 以避免 assert 函数本身使用临界区时发生递归调用。
+     */
     if( uxCriticalNesting == 1 )
     {
         configASSERT( ( portNVIC_INT_CTRL_REG & portVECTACTIVE_MASK ) == 0 );
@@ -454,18 +474,18 @@ void vPortExitCritical( void )
 
 void xPortPendSVHandler( void )
 {
-    /* This is a naked function. */
+    /* 这是一个裸函数。 */
 
     __asm volatile
     (
         "   mrs r0, psp                         \n"
         "   isb                                 \n"
         "                                       \n"
-        "   ldr r3, =pxCurrentTCB               \n" /* Get the location of the current TCB. */
+        "   ldr r3, =pxCurrentTCB               \n" /* 获取当前 TCB 的地址。 */
         "   ldr r2, [r3]                        \n"
         "                                       \n"
-        "   stmdb r0!, {r4-r11}                 \n" /* Save the remaining registers. */
-        "   str r0, [r2]                        \n" /* Save the new top of stack into the first member of the TCB. */
+        "   stmdb r0!, {r4-r11}                 \n" /* 保存其余寄存器。 */
+        "   str r0, [r2]                        \n" /* 将新的栈顶保存到 TCB 的第一个成员中。 */
         "                                       \n"
         "   stmdb sp!, {r3, r14}                \n"
         "   mov r0, %0                          \n"
@@ -474,10 +494,10 @@ void xPortPendSVHandler( void )
         "   mov r0, #0                          \n"
         "   msr basepri, r0                     \n"
         "   ldmia sp!, {r3, r14}                \n"
-        "                                       \n" /* Restore the context, including the critical nesting count. */
+        "                                       \n" /* 恢复上下文，包括临界区嵌套计数。 */
         "   ldr r1, [r3]                        \n"
-        "   ldr r0, [r1]                        \n" /* The first item in pxCurrentTCB is the task top of stack. */
-        "   ldmia r0!, {r4-r11}                 \n" /* Pop the registers. */
+        "   ldr r0, [r1]                        \n" /* pxCurrentTCB 的第一项是任务栈顶指针。 */
+        "   ldmia r0!, {r4-r11}                 \n" /* 弹出寄存器。 */
         "   msr psp, r0                         \n"
         "   isb                                 \n"
         "   bx r14                              \n"
@@ -490,20 +510,23 @@ void xPortPendSVHandler( void )
 
 void xPortSysTickHandler( void )
 {
-    /* The SysTick runs at the lowest interrupt priority, so when this interrupt
-     * executes all interrupts must be unmasked.  There is therefore no need to
-     * save and then restore the interrupt mask value as its value is already
-     * known. */
+    /*
+     * SysTick 以最低中断优先级运行，因此该中断执行时
+     * 所有中断必然处于未屏蔽状态。因此无需保存并恢复中断
+     * 屏蔽值，因为其值已知。
+     */
     portDISABLE_INTERRUPTS();
     traceISR_ENTER();
     {
-        /* Increment the RTOS tick. */
+        /* 递增 RTOS 时钟节拍。 */
         if( xTaskIncrementTick() != pdFALSE )
         {
             traceISR_EXIT_TO_SCHEDULER();
 
-            /* A context switch is required.  Context switching is performed in
-             * the PendSV interrupt.  Pend the PendSV interrupt. */
+            /*
+             * 需要进行上下文切换。上下文切换在 PendSV 中断中执行。
+             * 挂起 PendSV 中断。
+             */
             portNVIC_INT_CTRL_REG = portNVIC_PENDSVSET_BIT;
         }
         else
@@ -522,39 +545,46 @@ void xPortSysTickHandler( void )
         uint32_t ulReloadValue, ulCompleteTickPeriods, ulCompletedSysTickDecrements, ulSysTickDecrementsLeft;
         TickType_t xModifiableIdleTime;
 
-        /* Make sure the SysTick reload value does not overflow the counter. */
+        /* 确保 SysTick 重装载值不会使计数器溢出。 */
         if( xExpectedIdleTime > xMaximumPossibleSuppressedTicks )
         {
             xExpectedIdleTime = xMaximumPossibleSuppressedTicks;
         }
 
-        /* Enter a critical section but don't use the taskENTER_CRITICAL()
-         * method as that will mask interrupts that should exit sleep mode. */
+        /*
+         * 进入临界区，但不能使用 taskENTER_CRITICAL()
+         * 方法，因为该方法会屏蔽本应唤醒睡眠模式的中断。
+         */
         __asm volatile ( "cpsid i" ::: "memory" );
         __asm volatile ( "dsb" );
         __asm volatile ( "isb" );
 
-        /* If a context switch is pending or a task is waiting for the scheduler
-         * to be unsuspended then abandon the low power entry. */
+        /*
+         * 若有上下文切换挂起，或某任务正在等待调度器解除挂起，
+         * 则放弃进入低功耗模式。
+         */
         if( eTaskConfirmSleepModeStatus() == eAbortSleep )
         {
-            /* Re-enable interrupts - see comments above the cpsid instruction
-             * above. */
+            /*
+             * 重新使能中断——见上方 cpsid 指令之前的注释。
+             */
             __asm volatile ( "cpsie i" ::: "memory" );
         }
         else
         {
-            /* Stop the SysTick momentarily.  The time the SysTick is stopped for
-             * is accounted for as best it can be, but using the tickless mode will
-             * inevitably result in some tiny drift of the time maintained by the
-             * kernel with respect to calendar time. */
+            /*
+             * 暂时停止 SysTick。停止期间的时间已尽可能补偿，
+             * 但使用 tickless 模式仍不可避免地会使内核维护的时间
+             * 相对日历时间产生微小漂移。
+             */
             portNVIC_SYSTICK_CTRL_REG = ( portNVIC_SYSTICK_CLK_BIT_CONFIG | portNVIC_SYSTICK_INT_BIT );
 
-            /* Use the SysTick current-value register to determine the number of
-             * SysTick decrements remaining until the next tick interrupt.  If the
-             * current-value register is zero, then there are actually
-             * ulTimerCountsForOneTick decrements remaining, not zero, because the
-             * SysTick requests the interrupt when decrementing from 1 to 0. */
+            /*
+             * 使用 SysTick 当前值寄存器确定距离下一个时钟节拍中断
+             * 还剩多少次 SysTick 递减。若当前值寄存器为零，则实际
+             * 还剩 ulTimerCountsForOneTick 次递减而非零，因为 SysTick
+             * 在从 1 递减到 0 时请求中断。
+             */
             ulSysTickDecrementsLeft = portNVIC_SYSTICK_CURRENT_VALUE_REG;
 
             if( ulSysTickDecrementsLeft == 0 )
@@ -562,12 +592,13 @@ void xPortSysTickHandler( void )
                 ulSysTickDecrementsLeft = ulTimerCountsForOneTick;
             }
 
-            /* Calculate the reload value required to wait xExpectedIdleTime
-             * tick periods.  -1 is used because this code normally executes part
-             * way through the first tick period.  But if the SysTick IRQ is now
-             * pending, then clear the IRQ, suppressing the first tick, and correct
-             * the reload value to reflect that the second tick period is already
-             * underway.  The expected idle time is always at least two ticks. */
+            /*
+             * 计算等待 xExpectedIdleTime 个时钟节拍周期所需的重装载值。
+             * 使用 -1 是因为本代码通常在第一个节拍周期进行到一半时执行。
+             * 但若 SysTick IRQ 当前挂起，则清除该 IRQ（抑制第一个节拍），
+             * 并修正重装载值以反映第二个节拍周期已经开始。
+             * 预期空闲时间始终至少为两个节拍。
+             */
             ulReloadValue = ulSysTickDecrementsLeft + ( ulTimerCountsForOneTick * ( xExpectedIdleTime - 1UL ) );
 
             if( ( portNVIC_INT_CTRL_REG & portNVIC_PEND_SYSTICK_SET_BIT ) != 0 )
@@ -581,21 +612,23 @@ void xPortSysTickHandler( void )
                 ulReloadValue -= ulStoppedTimerCompensation;
             }
 
-            /* Set the new reload value. */
+            /* 设置新的重装载值。 */
             portNVIC_SYSTICK_LOAD_REG = ulReloadValue;
 
-            /* Clear the SysTick count flag and set the count value back to
-             * zero. */
+            /*
+             * 清除 SysTick 计数标志并将计数值重新设为零。
+             */
             portNVIC_SYSTICK_CURRENT_VALUE_REG = 0UL;
 
-            /* Restart SysTick. */
+            /* 重新启动 SysTick。 */
             portNVIC_SYSTICK_CTRL_REG |= portNVIC_SYSTICK_ENABLE_BIT;
 
-            /* Sleep until something happens.  configPRE_SLEEP_PROCESSING() can
-             * set its parameter to 0 to indicate that its implementation contains
-             * its own wait for interrupt or wait for event instruction, and so wfi
-             * should not be executed again.  However, the original expected idle
-             * time variable must remain unmodified, so a copy is taken. */
+            /*
+             * 休眠直到有事件发生。configPRE_SLEEP_PROCESSING() 可
+             * 将其参数设为 0，以表示其实现自身包含等待中断（WFI）或
+             * 等待事件（WFE）指令，因此不应再次执行 wfi。不过，
+             * 原始预期空闲时间变量必须保持不变，因此此处取用其副本。
+             */
             xModifiableIdleTime = xExpectedIdleTime;
             configPRE_SLEEP_PROCESSING( xModifiableIdleTime );
 
@@ -608,44 +641,48 @@ void xPortSysTickHandler( void )
 
             configPOST_SLEEP_PROCESSING( xExpectedIdleTime );
 
-            /* Re-enable interrupts to allow the interrupt that brought the MCU
-             * out of sleep mode to execute immediately.  See comments above
-             * the cpsid instruction above. */
+            /*
+             * 重新使能中断，使将 MCU 唤醒的中断能够立即执行。
+             * 见上方 cpsid 指令之前的注释。
+             */
             __asm volatile ( "cpsie i" ::: "memory" );
             __asm volatile ( "dsb" );
             __asm volatile ( "isb" );
 
-            /* Disable interrupts again because the clock is about to be stopped
-             * and interrupts that execute while the clock is stopped will increase
-             * any slippage between the time maintained by the RTOS and calendar
-             * time. */
+            /*
+             * 再次禁用中断，因为时钟即将停止，而在时钟停止期间
+             * 执行的中断会加剧 RTOS 维护时间与日历时间之间的偏差。
+             */
             __asm volatile ( "cpsid i" ::: "memory" );
             __asm volatile ( "dsb" );
             __asm volatile ( "isb" );
 
-            /* Disable the SysTick clock without reading the
-             * portNVIC_SYSTICK_CTRL_REG register to ensure the
-             * portNVIC_SYSTICK_COUNT_FLAG_BIT is not cleared if it is set.  Again,
-             * the time the SysTick is stopped for is accounted for as best it can
-             * be, but using the tickless mode will inevitably result in some tiny
-             * drift of the time maintained by the kernel with respect to calendar
-             * time*/
+            /*
+             * 禁用 SysTick 时钟，且不读取
+             * portNVIC_SYSTICK_CTRL_REG 寄存器，以确保
+             * portNVIC_SYSTICK_COUNT_FLAG_BIT 若已置位则不会被清除。
+             * 同样，停止 SysTick 期间的时间已尽可能补偿，但使用
+             * tickless 模式仍不可避免地会使内核维护的时间相对日历
+             * 时间产生微小漂移。
+             */
             portNVIC_SYSTICK_CTRL_REG = ( portNVIC_SYSTICK_CLK_BIT_CONFIG | portNVIC_SYSTICK_INT_BIT );
 
-            /* Determine whether the SysTick has already counted to zero. */
+            /* 判断 SysTick 是否已计数到零。 */
             if( ( portNVIC_SYSTICK_CTRL_REG & portNVIC_SYSTICK_COUNT_FLAG_BIT ) != 0 )
             {
                 uint32_t ulCalculatedLoadValue;
 
-                /* The tick interrupt ended the sleep (or is now pending), and
-                 * a new tick period has started.  Reset portNVIC_SYSTICK_LOAD_REG
-                 * with whatever remains of the new tick period. */
+                /*
+                 * 时钟节拍中断结束了休眠（或当前挂起），且
+                 * 新的节拍周期已经开始。用新节拍周期的剩余部分
+                 * 重置 portNVIC_SYSTICK_LOAD_REG。
+                 */
                 ulCalculatedLoadValue = ( ulTimerCountsForOneTick - 1UL ) - ( ulReloadValue - portNVIC_SYSTICK_CURRENT_VALUE_REG );
 
-                /* Don't allow a tiny value, or values that have somehow
-                 * underflowed because the post sleep hook did something
-                 * that took too long or because the SysTick current-value register
-                 * is zero. */
+                /*
+                 * 不允许使用过小的值，也不允许使用因休眠后钩子执行
+                 * 耗时过长或 SysTick 当前值寄存器为零而发生下溢的值。
+                 */
                 if( ( ulCalculatedLoadValue <= ulStoppedTimerCompensation ) || ( ulCalculatedLoadValue > ulTimerCountsForOneTick ) )
                 {
                     ulCalculatedLoadValue = ( ulTimerCountsForOneTick - 1UL );
@@ -653,54 +690,60 @@ void xPortSysTickHandler( void )
 
                 portNVIC_SYSTICK_LOAD_REG = ulCalculatedLoadValue;
 
-                /* As the pending tick will be processed as soon as this
-                 * function exits, the tick value maintained by the tick is stepped
-                 * forward by one less than the time spent waiting. */
+                /*
+                 * 由于挂起的节拍将在此函数退出后立即处理，
+                 * 节拍维护的计数值向前推进的量为等待时间减一。
+                 */
                 ulCompleteTickPeriods = xExpectedIdleTime - 1UL;
             }
             else
             {
-                /* Something other than the tick interrupt ended the sleep. */
+                /* 时钟节拍中断以外的其他事件结束了休眠。 */
 
-                /* Use the SysTick current-value register to determine the
-                 * number of SysTick decrements remaining until the expected idle
-                 * time would have ended. */
+                /*
+                 * 使用 SysTick 当前值寄存器确定距离预期空闲时间
+                 * 结束还剩多少次 SysTick 递减。
+                 */
                 ulSysTickDecrementsLeft = portNVIC_SYSTICK_CURRENT_VALUE_REG;
                 #if ( portNVIC_SYSTICK_CLK_BIT_CONFIG != portNVIC_SYSTICK_CLK_BIT )
                 {
-                    /* If the SysTick is not using the core clock, the current-
-                     * value register might still be zero here.  In that case, the
-                     * SysTick didn't load from the reload register, and there are
-                     * ulReloadValue decrements remaining in the expected idle
-                     * time, not zero. */
+                    /*
+                     * 若 SysTick 未使用内核时钟，则当前值寄存器此时可能仍为零。
+                     * 此时 SysTick 尚未从重装载寄存器装载，预期空闲时间内
+                     * 还剩 ulReloadValue 次递减，而非零。
+                     */
                     if( ulSysTickDecrementsLeft == 0 )
                     {
                         ulSysTickDecrementsLeft = ulReloadValue;
                     }
                 }
-                #endif /* portNVIC_SYSTICK_CLK_BIT_CONFIG */
+                #endif /* portNVIC_SYSTICK_CLK_BIT_CONFIG 条件编译结束 */
 
-                /* Work out how long the sleep lasted rounded to complete tick
-                 * periods (not the ulReload value which accounted for part
-                 * ticks). */
+                /*
+                 * 计算休眠持续时间并取整为完整时钟节拍周期
+                 * （而非包含部分节拍的 ulReloadValue 值）。
+                 */
                 ulCompletedSysTickDecrements = ( xExpectedIdleTime * ulTimerCountsForOneTick ) - ulSysTickDecrementsLeft;
 
-                /* How many complete tick periods passed while the processor
-                 * was waiting? */
+                /*
+                 * 处理器等待期间经过了多少个完整的时钟节拍周期？
+                 */
                 ulCompleteTickPeriods = ulCompletedSysTickDecrements / ulTimerCountsForOneTick;
 
-                /* The reload value is set to whatever fraction of a single tick
-                 * period remains. */
+                /*
+                 * 将重装载值设为单个节拍周期剩余的部分。
+                 */
                 portNVIC_SYSTICK_LOAD_REG = ( ( ulCompleteTickPeriods + 1UL ) * ulTimerCountsForOneTick ) - ulCompletedSysTickDecrements;
             }
 
-            /* Restart SysTick so it runs from portNVIC_SYSTICK_LOAD_REG again,
-             * then set portNVIC_SYSTICK_LOAD_REG back to its standard value.  If
-             * the SysTick is not using the core clock, temporarily configure it to
-             * use the core clock.  This configuration forces the SysTick to load
-             * from portNVIC_SYSTICK_LOAD_REG immediately instead of at the next
-             * cycle of the other clock.  Then portNVIC_SYSTICK_LOAD_REG is ready
-             * to receive the standard value immediately. */
+            /*
+             * 重新启动 SysTick，使其再次从 portNVIC_SYSTICK_LOAD_REG 开始
+             * 计数，然后将 portNVIC_SYSTICK_LOAD_REG 恢复为标准值。若
+             * SysTick 未使用内核时钟，则临时将其配置为使用内核时钟。
+             * 此配置强制 SysTick 立即从 portNVIC_SYSTICK_LOAD_REG 装载，
+             * 而不是在另一时钟的下一个周期才装载。这样
+             * portNVIC_SYSTICK_LOAD_REG 就能立即接收标准值。
+             */
             portNVIC_SYSTICK_CURRENT_VALUE_REG = 0UL;
             portNVIC_SYSTICK_CTRL_REG = portNVIC_SYSTICK_CLK_BIT | portNVIC_SYSTICK_INT_BIT | portNVIC_SYSTICK_ENABLE_BIT;
             #if ( portNVIC_SYSTICK_CLK_BIT_CONFIG == portNVIC_SYSTICK_CLK_BIT )
@@ -709,53 +752,56 @@ void xPortSysTickHandler( void )
             }
             #else
             {
-                /* The temporary usage of the core clock has served its purpose,
-                 * as described above.  Resume usage of the other clock. */
+                /*
+                 * 如上所述，临时使用内核时钟已完成其使命。
+                 * 恢复使用另一时钟。
+                 */
                 portNVIC_SYSTICK_CTRL_REG = portNVIC_SYSTICK_CLK_BIT | portNVIC_SYSTICK_INT_BIT;
 
                 if( ( portNVIC_SYSTICK_CTRL_REG & portNVIC_SYSTICK_COUNT_FLAG_BIT ) != 0 )
                 {
-                    /* The partial tick period already ended.  Be sure the SysTick
-                     * counts it only once. */
+                    /*
+                     * 部分节拍周期已经结束。确保 SysTick
+                     * 仅对其计数一次。
+                     */
                     portNVIC_SYSTICK_CURRENT_VALUE_REG = 0;
                 }
 
                 portNVIC_SYSTICK_LOAD_REG = ulTimerCountsForOneTick - 1UL;
                 portNVIC_SYSTICK_CTRL_REG = portNVIC_SYSTICK_CLK_BIT_CONFIG | portNVIC_SYSTICK_INT_BIT | portNVIC_SYSTICK_ENABLE_BIT;
             }
-            #endif /* portNVIC_SYSTICK_CLK_BIT_CONFIG */
+            #endif /* portNVIC_SYSTICK_CLK_BIT_CONFIG 条件编译结束 */
 
-            /* Step the tick to account for any tick periods that elapsed. */
+            /* 推进时钟节拍，以补偿已经流逝的节拍周期。 */
             vTaskStepTick( ulCompleteTickPeriods );
 
-            /* Exit with interrupts enabled. */
+            /* 在中断使能状态下退出。 */
             __asm volatile ( "cpsie i" ::: "memory" );
         }
     }
 
-#endif /* configUSE_TICKLESS_IDLE */
+#endif /* configUSE_TICKLESS_IDLE 条件编译结束 */
 /*-----------------------------------------------------------*/
 
 /*
- * Setup the systick timer to generate the tick interrupts at the required
- * frequency.
+ * 配置 SysTick 定时器，以所需频率产生时钟节拍中断。
  */
 __attribute__( ( weak ) ) void vPortSetupTimerInterrupt( void )
 {
-    /* Calculate the constants required to configure the tick interrupt. */
+    /* 计算配置时钟节拍中断所需的常量。 */
     #if ( configUSE_TICKLESS_IDLE == 1 )
     {
         ulTimerCountsForOneTick = ( configSYSTICK_CLOCK_HZ / configTICK_RATE_HZ );
         xMaximumPossibleSuppressedTicks = portMAX_24_BIT_NUMBER / ulTimerCountsForOneTick;
         ulStoppedTimerCompensation = portMISSED_COUNTS_FACTOR / ( configCPU_CLOCK_HZ / configSYSTICK_CLOCK_HZ );
     }
-    #endif /* configUSE_TICKLESS_IDLE */
+    #endif /* configUSE_TICKLESS_IDLE 条件编译结束 */
 
-    /* Stop and clear the SysTick. */
+    /* 停止并清除 SysTick。 */
     portNVIC_SYSTICK_CTRL_REG = 0UL;
     portNVIC_SYSTICK_CURRENT_VALUE_REG = 0UL;
 
-    /* Configure SysTick to interrupt at the requested rate. */
+    /* 配置 SysTick 以按请求的速率产生中断。 */
     portNVIC_SYSTICK_LOAD_REG = ( configSYSTICK_CLOCK_HZ / configTICK_RATE_HZ ) - 1UL;
     portNVIC_SYSTICK_CTRL_REG = ( portNVIC_SYSTICK_CLK_BIT_CONFIG | portNVIC_SYSTICK_INT_BIT | portNVIC_SYSTICK_ENABLE_BIT );
 }
@@ -768,55 +814,52 @@ __attribute__( ( weak ) ) void vPortSetupTimerInterrupt( void )
         uint32_t ulCurrentInterrupt;
         uint8_t ucCurrentPriority;
 
-        /* Obtain the number of the currently executing interrupt. */
+        /* 获取当前正在执行的中断编号。 */
         __asm volatile ( "mrs %0, ipsr" : "=r" ( ulCurrentInterrupt )::"memory" );
 
-        /* Is the interrupt number a user defined interrupt? */
+        /* 该中断编号是否为用户定义的中断？ */
         if( ulCurrentInterrupt >= portFIRST_USER_INTERRUPT_NUMBER )
         {
-            /* Look up the interrupt's priority. */
+            /* 查询该中断的优先级。 */
             ucCurrentPriority = pcInterruptPriorityRegisters[ ulCurrentInterrupt ];
 
-            /* The following assertion will fail if a service routine (ISR) for
-             * an interrupt that has been assigned a priority above
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY calls an ISR safe FreeRTOS API
-             * function.  ISR safe FreeRTOS API functions must *only* be called
-             * from interrupts that have been assigned a priority at or below
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY.
+            /*
+             * 若某中断已被分配的优先级高于
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY，而其中断服务程序（ISR）
+             * 调用了 ISR 安全的 FreeRTOS API 函数，则以下断言将失败。
+             * ISR 安全的 FreeRTOS API 函数*只能*在优先级等于或低于
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY 的中断中调用。
              *
-             * Numerically low interrupt priority numbers represent logically high
-             * interrupt priorities, therefore the priority of the interrupt must
-             * be set to a value equal to or numerically *higher* than
-             * configMAX_SYSCALL_INTERRUPT_PRIORITY.
+             * 数值较小的中断优先级编号表示逻辑上较高的中断优先级，
+             * 因此中断的优先级必须设置为等于或数值*大于*
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY 的值。
              *
-             * Interrupts that  use the FreeRTOS API must not be left at their
-             * default priority of  zero as that is the highest possible priority,
-             * which is guaranteed to be above configMAX_SYSCALL_INTERRUPT_PRIORITY,
-             * and  therefore also guaranteed to be invalid.
+             * 使用 FreeRTOS API 的中断不得保持默认优先级 0，
+             * 因为 0 是可能的最高优先级，必然高于
+             * configMAX_SYSCALL_INTERRUPT_PRIORITY，因此也必然是无效的。
              *
-             * FreeRTOS maintains separate thread and ISR API functions to ensure
-             * interrupt entry is as fast and simple as possible.
+             * FreeRTOS 维护独立的线程和 ISR API 函数，以确保
+             * 中断进入尽可能快速、简单。
              *
-             * The following links provide detailed information:
+             * 以下链接提供详细信息：
              * https://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html
-             * https://www.freertos.org/Why-FreeRTOS/FAQs */
+             * https://www.freertos.org/Why-FreeRTOS/FAQs
+             */
             configASSERT( ucCurrentPriority >= ucMaxSysCallPriority );
         }
 
-        /* Priority grouping:  The interrupt controller (NVIC) allows the bits
-         * that define each interrupt's priority to be split between bits that
-         * define the interrupt's pre-emption priority bits and bits that define
-         * the interrupt's sub-priority.  For simplicity all bits must be defined
-         * to be pre-emption priority bits.  The following assertion will fail if
-         * this is not the case (if some bits represent a sub-priority).
+        /*
+         * 优先级分组：中断控制器（NVIC）允许将定义每个中断优先级的位
+         * 划分为定义中断抢占优先级的位和定义子优先级的位。为简化起见，
+         * 所有位都必须定义为抢占优先级位。若情况并非如此
+         * （某些位表示子优先级），则以下断言将失败。
          *
-         * If the application only uses CMSIS libraries for interrupt
-         * configuration then the correct setting can be achieved on all Cortex-M
-         * devices by calling NVIC_SetPriorityGrouping( 0 ); before starting the
-         * scheduler.  Note however that some vendor specific peripheral libraries
-         * assume a non-zero priority group setting, in which cases using a value
-         * of zero will result in unpredictable behaviour. */
+         * 若应用仅使用 CMSIS 库配置中断，则可在启动调度器前调用
+         * NVIC_SetPriorityGrouping( 0 );，从而在所有 Cortex-M 器件上
+         * 获得正确设置。但请注意，某些厂商特定的外设库假定优先级
+         * 分组设置为非零值，此时使用 0 会导致不可预测的行为。
+         */
         configASSERT( ( portAIRCR_REG & portPRIORITY_GROUP_MASK ) <= ulMaxPRIGROUPValue );
     }
 
-#endif /* configASSERT_DEFINED */
+#endif /* configASSERT_DEFINED 条件编译结束 */

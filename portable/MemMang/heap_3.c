@@ -28,21 +28,20 @@
 
 
 /*
- * Implementation of pvPortMalloc() and vPortFree() that relies on the
- * compilers own malloc() and free() implementations.
+ * pvPortMalloc() 与 vPortFree() 的实现，依赖编译器自带的 malloc() 和 free() 实现。
  *
- * This file can only be used if the linker is configured to to generate
- * a heap memory area.
+ * 仅当链接器配置为生成堆内存区域时，才能使用本文件。
  *
- * See heap_1.c, heap_2.c and heap_4.c for alternative implementations, and the
- * memory management pages of https://www.FreeRTOS.org for more information.
+ * 替代实现参见 heap_1.c、heap_2.c 和 heap_4.c，
+ * 更多信息参见 https://www.FreeRTOS.org 的内存管理页面。
  */
 
 #include <stdlib.h>
 
-/* Defining MPU_WRAPPERS_INCLUDED_FROM_API_FILE prevents task.h from redefining
- * all the API functions to use the MPU wrappers.  That should only be done when
- * task.h is included from an application file. */
+/*
+ * 定义 MPU_WRAPPERS_INCLUDED_FROM_API_FILE 可防止 task.h 将所有 API 函数
+ * 重定义为使用 MPU 包装器。只有在应用程序文件中包含 task.h 时才应这样做。
+ */
 #define MPU_WRAPPERS_INCLUDED_FROM_API_FILE
 
 #include "FreeRTOS.h"
@@ -95,12 +94,11 @@ void vPortFree( void * pv )
 /*-----------------------------------------------------------*/
 
 /*
- * Reset the state in this file. This state is normally initialized at start up.
- * This function must be called by the application before restarting the
- * scheduler.
+ * 重置本文件中的状态。该状态通常在启动时初始化。
+ * 应用程序必须在重启调度器之前调用此函数。
  */
 void vPortHeapResetState( void )
 {
-    /* No state needs to be re-initialised in heap_3. */
+    /* heap_3 无需重新初始化任何状态。 */
 }
 /*-----------------------------------------------------------*/
