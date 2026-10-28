@@ -10,7 +10,7 @@
 | 内核核心 | 7 | `tasks.c`、`queue.c`、`timers.c`、`stream_buffer.c`、`event_groups.c`、`croutine.c`、`list.c` |
 | 公共头文件 | 21 | `include/` 全部 `.h`（FreeRTOS.h、task.h、queue.h、semphr.h、timers.h、event_groups.h、stream_buffer.h、message_buffer.h、list.h、atomic.h、portable.h、projdefs.h、mpu_*.h 等） |
 | GCC 工具链全部端口 | 248 | `portable/GCC/` 下全部 `.c/.h`：Cortex-M0/3/4F/7/23/33/35P/52/55/85、STAR-MC3、Cortex-R5/R82/CRx、RISC-V、ARM7、AArch64、Cortex-A9、AVR、MSP430、PPC、MicroBlaze、NiosII、RL78、RX、TriCore、ColdFire、H8S/HCS12、IA32、STR75x 等全部架构 |
-| 内存管理与公共层 | 含在上项 | `portable/MemMang/`（heap_1~5）、`portable/Common/`（MPU 包装器）、`portable/template/` |
+| 内存管理与公共层 | 9 | `portable/MemMang/`（heap_1~5）、`portable/Common/`（MPU 包装器）、`portable/template/` |
 
 统计：**约 2.96 万条注释块已中文化**（以注释块计），覆盖内核、API 文档、移植层汇编说明、堆算法说明。
 
@@ -21,7 +21,7 @@
 | `portable/IAR/` | 187 | IAR 编译器的端口副本，与 GCC 端口内容重复，不影响 GCC/STM32 学习路径 |
 | `portable/ARMv8M/` | 38 | Armv8-M 架构端口副本（GCC/ARM_CM23/33/35P 已覆盖同架构实现） |
 | `portable/ThirdParty/` | 41 | 第三方厂商代码，保留原作者版权与英文注释 |
-| `portable/RVDS、MPLAB、CCS、Renesas、BCC、WizC、SDCC 等` | 约 100 | 其他编译器/厂商的端口副本 |
+| `portable/RVDS、MPLAB、CCS、Renesas、BCC、WizC、SDCC 等` | 91 | 其他编译器/厂商的端口副本 |
 | `portable/*.S` 汇编文件 | — | 汇编注释语法因编译器而异，且与 C 端口的说明重复，未处理 |
 
 剩余合计：**372 个文件 / 约 3.43 万条英文注释**（`portable` 369 个 + `examples` 3 个；GCC 目录中剩余 6 个文件均为 Atmel 免责声明，按规范保留）。
@@ -31,7 +31,7 @@
 ## 三、"代码零改动"如何保证
 
 1. **git 基线**：初始未修改代码打标签 `orig`；每批翻译独立提交，`git log` 可逐批审计。
-2. **机械校验**：`scripts/comment_tool.py verify <仓库> <文件>` 用状态机剥离注释，与 `refs/tags/orig` 逐行比对非空代码行；**276 个文件全部 PASS**。
+2. **机械校验**：`scripts/comment_tool.py verify <仓库> <文件>` 用状态机剥离注释，与 `refs/tags/orig` 逐行比对非空代码行；**285 个文件全部 PASS**。
 3. **只改注释 token**：翻译经由 `extract → apply` 流程回填，工具只替换注释字符区间，不触碰代码、缩进、空行、宏续行。
 4. **Doxygen 标记**：`scripts/restore_doxygen.py` 按基线恢复 `/**`、`/**<` 标记（工具重建注释时的已知降级已修正）。
 5. **刻意保留**：
