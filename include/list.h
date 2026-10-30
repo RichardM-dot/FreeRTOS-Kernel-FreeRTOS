@@ -158,6 +158,18 @@ typedef struct xLIST_ITEM ListItem_t;
 /*
  * 调度器使用的队列类型的定义。
  */
+/*
+ * List_t：FreeRTOS 双向循环链表控制块，是所有调度/同步机制的骨架。
+ * 数据流向：ListItem_t 嵌入 TCB_t、xQUEUE、xTIMER 等宿主结构，通过 pvOwner 指回宿主、
+ * pvContainer 指回所属 List_t；List_t 只持元信息，不搬业务数据。
+ * uxNumberOfItems 供 listCURRENT_LIST_LENGTH() 等 O(1) 判空/计数；
+ * pxIndex 供 listGET_OWNER_OF_NEXT_ENTRY() 轮转遍历，直接驱动同优先级任务时间片轮转；
+ * xListEnd 是 MiniListItem_t 哨兵，xItemValue 设为最大，保证 vListInsert() 按值排序时永远排最后，
+ * 并让空链表也有合法节点可指；首尾两个完整性检查字段在 configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES=1 时
+ * 用于 vListInsert/vListInsertEnd/uxListRemove 前后比对，捕获越界写。
+ * 主要被 vListInitialise、vListInsert、vListInsertEnd、uxListRemove、listGET_OWNER_OF_NEXT_ENTRY 操作，
+ * 服务于就绪列表、阻塞/挂起列表、事件列表、定时器列表和队列的 xTasksWaitingToSend/Receive。
+ */
 typedef struct xLIST
 {
     listFIRST_LIST_INTEGRITY_CHECK_VALUE      /* 当 configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES 为 1 时设置为已知值。 */
