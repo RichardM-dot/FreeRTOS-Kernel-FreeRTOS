@@ -86,7 +86,7 @@
  * ----------------------------------------------------------
  */
 
-void vListInitialise( List_t * const pxList ) 
+void vListInitialise( List_t * const pxList ) // 把一个 List_t 链表控制块初始化成“合法空链表”
 // List_t 见 list.h（教学版对应 List 结构体）。const 只修饰指针本身：
 //   List_t * const pxList 是“常量指针”——pxList 在函数内不能再指向别处，
 //   但 pxList->xxx 的内容可以改；
@@ -140,6 +140,7 @@ void vListInitialise( List_t * const pxList )
      * 若 configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES 设为 1，
      * 则向链表结构体首尾写入已知校验值（金丝雀）。
      * 关闭检查时，下面两个宏展开为空，不产生任何代码。
+     * 魔数的定义位置与完整作用，见 vListInitialiseItem 中写入处的注释。
      */
     listSET_LIST_INTEGRITY_CHECK_1_VALUE( pxList );
     listSET_LIST_INTEGRITY_CHECK_2_VALUE( pxList );
@@ -150,8 +151,9 @@ void vListInitialise( List_t * const pxList )
 
 void vListInitialiseItem( ListItem_t * const pxItem )
 // 把传入的链表项初始化成“未挂到任何链表上”的状态。
-// 上面提到的“调试标记”指下面的完整性校验魔数：仅当
+// 下面写入的“完整性校验魔数”是本函数的第二件事：仅当
 // configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES=1 时才真正写值，否则宏展开为空。
+// 魔数的定义位置、取值与作用，见下方两行写入调用之后的大段注释。
 // 教学版没有对应函数——教学版的 Node 没有 pxContainer 字段，
 // pxContainer 是 FreeRTOS 比教学版多出的“我现在挂在哪条链上”反向指针。
 {
@@ -174,6 +176,43 @@ void vListInitialiseItem( ListItem_t * const pxItem )
      */
     listSET_FIRST_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );
     listSET_SECOND_LIST_ITEM_INTEGRITY_CHECK_VALUE( pxItem );
+
+    /*———————————————— 魔数（金丝雀值）的定义位置与作用 ————————————————
+     *
+     * “魔数到底在哪定义”不容易找到，因为它分散在三处，
+     * 且默认配置下三处都处于“隐形”状态：
+     *
+     * ① 值本身：pdINTEGRITY_CHECK_VALUE，定义在 include/projdefs.h:76-84。
+     *    取值随 configTICK_TYPE_WIDTH_IN_BITS 切换：
+     *      16 位 → 0x5a5a
+     *      32 位 → 0x5a5a5a5aUL   （当前模板即 32 位，取这个）
+     *      64 位 → 0x5a5a5a5a5a5a5a5aULL
+     *    0x5a = 二进制 0101 1010，0/1 交替，几乎不可能被合法数据
+     *    “碰巧”写成，在内存窗口里肉眼也一眼可辨。
+     *
+     * ② 承载它的字段：链表项的 xListItemIntegrityValue1/2 与链表根的
+     *    xListIntegrityValue1/2。它们不直接写在结构体定义里，而是由
+     *    list.h:110-113 的四个“成员注入宏”展开出来——ListItem_t/List_t
+     *    的定义内部引用了这些宏，开了检查字段才存在（见 list.h:135/141/175/179）。
+     *
+     * ③ 生效开关：configUSE_LIST_DATA_INTEGRITY_CHECK_BYTES，默认 0
+     *    （projdefs.h:72-74 兜底），当前模板也未开启。=0 时 list.h:96-107
+     *    把本函数调用的这两个 SET 宏展开为空：字段不存在、值不写入，
+     *    所以默认编译出的结构和代码里完全看不到魔数。
+     *
+     * 作用（金丝雀/哨兵值，专抓内存越界写）：
+     *   初始化时把已知值写进结构体“首尾”；此后凡是要改动链表结构的
+     *   入口——vListInsertEnd（本文件 236-237 行）、vListInsert
+     *   （293-294 行）、内联宏 listINSERT_END（list.h:365-366，
+     *   即 prvAddTaskToReadyList 把任务挂上就绪表的路径）——都会先跑
+     *   listTEST_LIST_INTEGRITY / listTEST_LIST_ITEM_INTEGRITY，
+     *   展开为 configASSERT（首尾字段仍等于 pdINTEGRITY_CHECK_VALUE）。
+     *   断言失败 ⇒ 有代码越界写坏了链表结构 ⇒ 当场停在案发现场。
+     *   两个边界要知道：
+     *     - 删除路径（uxListRemove / 内联宏 listREMOVE_ITEM）没有这两条断言；
+     *     - 它只能发现“内存被踩”，查不出“用法错误”——
+     *       比如把同一个节点挂进两条链这类逻辑错误，它无能为力。
+     *————————————————————————————————————————————————————————————*/
 
     traceRETURN_vListInitialiseItem(); /* 函数返回追踪钩子；默认空操作。 */
 }

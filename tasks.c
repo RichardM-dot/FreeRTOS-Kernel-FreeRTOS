@@ -75,9 +75,10 @@
 /*
  * 默认定义仅适用于非 MPU 移植层。原因是不同体系结构的
  * 栈对齐要求各不相同。
+ * MPU（内存保护单元）：核心作用是让任务可以运行在“非特权模式”下，从而限制一个任务只能访问自己的栈和允许的内存区域，防止它意外或恶意地破坏其他任务或内核的数据。
  */
-#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configKERNEL_PROVIDED_STATIC_MEMORY == 1 ) && ( portUSING_MPU_WRAPPERS != 0 ) )
-    #error configKERNEL_PROVIDED_STATIC_MEMORY cannot be set to 1 when using an MPU port. The vApplicationGet*TaskMemory() functions must be provided manually.
+#if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configKERNEL_PROVIDED_STATIC_MEMORY == 1 ) && ( portUSING_MPU_WRAPPERS != 0 ) ) // 启用了静态分配 + 让内核自动提供静态内存 + 又用了 MPU 移植层
+    #error 使用 MPU 移植层时，不能让内核自动提供静态内存；必须由用户手动实现 vApplicationGet*TaskMemory() 系列回调函数。
 #endif
 
 /*
@@ -193,7 +194,7 @@
 #endif
 
 /*
- * 分配给空闲任务的名称。可在 FreeRTOSConfig.h 中定义
+* 分配给空闲任务的名称。可在 FreeRTOSConfig.h 中定义
  * configIDLE_TASK_NAME 来覆盖此名称。
  */
 #ifndef configIDLE_TASK_NAME
@@ -424,12 +425,12 @@
 typedef struct tskTaskControlBlock       /* 沿用旧命名约定，以免破坏内核感知调试器。 */
 {
     volatile StackType_t * pxTopOfStack; /**< 指向任务栈中最后压入项的位置。此成员必须是 TCB 结构体的第一个成员。 */
-
+                                         // volatile 关键字用于告诉编译器该变量可能会被意外地改变（例如在中断服务程序中），因此每次访问该变量时都必须从内存中读取，而不是使用寄存器缓存的值。
     #if ( portUSING_MPU_WRAPPERS == 1 )
-        xMPU_SETTINGS xMPUSettings; /**< MPU 设置由移植层定义。此成员必须是 TCB 结构体的第二个成员。 */
+        xMPU_SETTINGS xMPUSettings; /**< MPU 设置由移植层定义。此成员必须是 TCB 结构体的第二个成员。为了适配当前硬件平台是否存在/使用了MPU */
     #endif
 
-    #if ( configUSE_CORE_AFFINITY == 1 ) && ( configNUMBER_OF_CORES > 1 )
+    #if ( configUSE_CORE_AFFINITY == 1 ) && ( configNUMBER_OF_CORES > 1 ) // 让用户决定是否开启核心亲和性（在多核的前提下）
         UBaseType_t uxCoreAffinityMask; /**< 用于将任务绑定到特定核心。UBaseType_t 的位数必须大于或等于 configNUMBER_OF_CORES。 */
     #endif
 
@@ -439,67 +440,67 @@ typedef struct tskTaskControlBlock       /* 沿用旧命名约定，以免破坏
     StackType_t * pxStack;                      /**< 指向栈的起始位置。 */
     #if ( configNUMBER_OF_CORES > 1 )
         volatile BaseType_t xTaskRunState;      /**< 若任务正在运行，用于标识其运行所在的核心；否则标识任务状态——未运行或让出中。 */
-        UBaseType_t uxTaskAttributes;           /**< 任务属性——目前用于标识空闲任务。 */
+        UBaseType_t uxTaskAttributes;           /**< 任务属性——目前用于标识空闲任务。在SMP（对称多处理）模式下使用（一个核心严格对应一个空闲任务，用户无法干预）。 */
     #endif
-    char pcTaskName[ configMAX_TASK_NAME_LEN ]; /**< 创建任务时指定的描述性名称。仅用于方便调试。 */
+    char pcTaskName[ configMAX_TASK_NAME_LEN ]; /**< 创建任务时指定的描述性名称。仅用于方便调试。 configMAX_TASK_NAME_LEN这个宏用于用户定义任务名称的最大长度 */
 
-    #if ( configUSE_TASK_PREEMPTION_DISABLE == 1 )
+    #if ( configUSE_TASK_PREEMPTION_DISABLE == 1 ) // 一个仅限 SMP 多核系统使用的编译开关，启用后单个任务可以通过 vTaskPreemptionDisable() / vTaskPreemptionEnable() 临时禁止自己被抢占
         BaseType_t xPreemptionDisable; /**< 用于阻止该任务被抢占。 */
     #endif
 
-    #if ( ( portSTACK_GROWTH > 0 ) || ( configRECORD_STACK_HIGH_ADDRESS == 1 ) )
+    #if ( ( portSTACK_GROWTH > 0 ) || ( configRECORD_STACK_HIGH_ADDRESS == 1 ) ) // portSTACK_GROWTH 是移植层宏，表示栈的增长方向（大于 0 为向上增长），configRECORD_STACK_HIGH_ADDRESS 是编译开关
         StackType_t * pxEndOfStack; /**< 指向栈的最高有效地址。 */
     #endif
 
-    #if ( portCRITICAL_NESTING_IN_TCB == 1 )
+    #if ( portCRITICAL_NESTING_IN_TCB == 1 ) // portCRITICAL_NESTING_IN_TCB 是移植层宏，决定临界区嵌套计数是由内核存在 TCB 里还是由移植层自己维护
         UBaseType_t uxCriticalNesting; /**< 对于不在移植层维护自身计数的移植层，保存临界区嵌套深度。 */
     #endif
 
-    #if ( configUSE_TRACE_FACILITY == 1 )
+    #if ( configUSE_TRACE_FACILITY == 1 ) // onfigUSE_TRACE_FACILITY 是编译开关，决定是否启用 vTaskList()、uxTaskGetSystemState() 等跟踪调试接口；当它等于 1 时条件成立
         UBaseType_t uxTCBNumber;  /**< 保存每创建一个 TCB 就递增的数值。调试器可据此判断任务何时被删除后又重新创建。 */
         UBaseType_t uxTaskNumber; /**< 保存供第三方跟踪代码使用的数值。 */
     #endif
 
-    #if ( configUSE_MUTEXES == 1 )
+    #if ( configUSE_MUTEXES == 1 ) // configUSE_MUTEXES 是编译开关，决定是否启用互斥量功能
         UBaseType_t uxBasePriority; /**< 最近一次分配给该任务的优先级——供优先级继承机制使用。 */
-        UBaseType_t uxMutexesHeld;
+        UBaseType_t uxMutexesHeld; /**< 该任务当前持有的互斥量数量。 */
     #endif
 
-    #if ( configUSE_APPLICATION_TASK_TAG == 1 )
-        TaskHookFunction_t pxTaskTag;
+    #if ( configUSE_APPLICATION_TASK_TAG == 1 ) // configUSE_APPLICATION_TASK_TAG 是编译开关，决定是否启用任务钩子功能
+        TaskHookFunction_t pxTaskTag; /**< 任务钩子函数指针。 */
     #endif
 
-    #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS > 0 )
-        void * pvThreadLocalStoragePointers[ configNUM_THREAD_LOCAL_STORAGE_POINTERS ];
+    #if ( configNUM_THREAD_LOCAL_STORAGE_POINTERS > 0 ) // configNUM_THREAD_LOCAL_STORAGE_POINTERS 是编译开关，决定是否启用线程局部存储（TLS）功能
+        void * pvThreadLocalStoragePointers[ configNUM_THREAD_LOCAL_STORAGE_POINTERS ]; /**< 线程局部存储（TLS）指针数组。 */
     #endif
 
-    #if ( configGENERATE_RUN_TIME_STATS == 1 )
+    #if ( configGENERATE_RUN_TIME_STATS == 1 ) // configGENERATE_RUN_TIME_STATS 是编译开关，决定是否启用运行时间统计功能
         configRUN_TIME_COUNTER_TYPE ulRunTimeCounter; /**< 保存任务处于运行态所累计的时间。 */
     #endif
 
-    #if ( configUSE_C_RUNTIME_TLS_SUPPORT == 1 )
+    #if ( configUSE_C_RUNTIME_TLS_SUPPORT == 1 ) // configUSE_C_RUNTIME_TLS_SUPPORT 是编译开关，决定是否启用 C 运行时线程局部存储（TLS）功能
         configTLS_BLOCK_TYPE xTLSBlock; /**< 用作该任务线程局部存储（TLS）块的内存块。 */
     #endif
 
-    #if ( configUSE_TASK_NOTIFICATIONS == 1 )
-        volatile uint32_t ulNotifiedValue[ configTASK_NOTIFICATION_ARRAY_ENTRIES ];
-        volatile uint8_t ucNotifyState[ configTASK_NOTIFICATION_ARRAY_ENTRIES ];
+    #if ( configUSE_TASK_NOTIFICATIONS == 1 ) // configUSE_TASK_NOTIFICATIONS 是编译开关，决定是否启用任务通知功能
+        volatile uint32_t ulNotifiedValue[ configTASK_NOTIFICATION_ARRAY_ENTRIES ]; /**< 保存任务通知值。 */
+        volatile uint8_t ucNotifyState[ configTASK_NOTIFICATION_ARRAY_ENTRIES ]; /**< 保存任务通知状态。 */
     #endif
 
     /*
      * 参见 FreeRTOS.h 中 tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE
      * 定义处的注释。
      */
-    #if ( tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE != 0 )
+    #if ( tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE != 0 ) // tskSTATIC_AND_DYNAMIC_ALLOCATION_POSSIBLE 是编译开关，决定是否启用静态和动态分配功能
         uint8_t ucStaticallyAllocated; /**< 若任务为静态分配则置为 pdTRUE，以确保不会尝试释放该内存。 */
     #endif
 
-    #if ( INCLUDE_xTaskAbortDelay == 1 )
-        uint8_t ucDelayAborted;
+    #if ( INCLUDE_xTaskAbortDelay == 1 ) // INCLUDE_xTaskAbortDelay 是编译开关，决定是否启用任务延时中止功能
+        uint8_t ucDelayAborted; /**< 任务延时是否被中止的标志。 */
     #endif
 
-    #if ( configUSE_POSIX_ERRNO == 1 )
-        int iTaskErrno;
+    #if ( configUSE_POSIX_ERRNO == 1 ) // configUSE_POSIX_ERRNO 是编译开关，决定是否启用 POSIX errno 功能
+        int iTaskErrno; /**< 保存任务的 POSIX errno 值。 */
     #endif
 } tskTCB;
 
@@ -519,7 +520,7 @@ typedef tskTCB TCB_t;
     /* 更多详情参见：https://github.com/FreeRTOS/FreeRTOS-Kernel/blob/main/MISRA.md#rule-84 */
     /* coverity[misra_c_2012_rule_8_4_violation] 抑制 Coverity 的 MISRA C-2012 规则 8.4 告警 */
     portDONT_DISCARD PRIVILEGED_DATA TCB_t * volatile pxCurrentTCBs[ configNUMBER_OF_CORES ];
-    #define pxCurrentTCB    xTaskGetCurrentTaskHandle()
+    #define pxCurrentTCB    xTaskGetCurrentTaskHandle() // 获取当前正在运行的任务的句柄（TCB 指针）。在多核系统中，pxCurrentTCBs 数组保存每个核心上当前运行的任务的 TCB 指针。xTaskGetCurrentTaskHandle() 函数返回当前核心上正在运行的任务的 TCB 指针。
 #endif
 
 /*
@@ -527,21 +528,21 @@ typedef tskTCB TCB_t;
  * xDelayedTaskList1 和 xDelayedTaskList2 可以移到函数作用域内，
  * 但这样做会破坏某些内核感知调试器以及依赖移除 static 限定符的调试器。
  */
-PRIVILEGED_DATA STATIC List_t pxReadyTasksLists[ configMAX_PRIORITIES ]; /**< 按优先级组织的就绪任务。 */
+PRIVILEGED_DATA STATIC List_t pxReadyTasksLists[ configMAX_PRIORITIES ]; /**< 按优先级组织的就绪任务。configMAX_PRIORITIES 有多大，它里面就有多少条独立的链表，一种优先级对应一条链表。 */
 PRIVILEGED_DATA STATIC List_t xDelayedTaskList1;                         /**< 延时任务。 */
 PRIVILEGED_DATA STATIC List_t xDelayedTaskList2;                         /**< 延时任务（使用两个链表——一个用于延时已超过当前节拍计数的任务。 */
 PRIVILEGED_DATA STATIC List_t * volatile pxDelayedTaskList;              /**< 指向当前使用的延时任务链表。 */
 PRIVILEGED_DATA STATIC List_t * volatile pxOverflowDelayedTaskList;      /**< 指向当前用于保存延时超过当前节拍计数任务的延时任务链表。 */
 PRIVILEGED_DATA STATIC List_t xPendingReadyList;                         /**< 在调度器挂起期间被置为就绪的任务。调度器恢复时它们会被移入就绪链表。 */
 
-#if ( INCLUDE_vTaskDelete == 1 )
+#if ( INCLUDE_vTaskDelete == 1 ) // INCLUDE_vTaskDelete 是编译开关，决定是否启用任务删除功能
 
     PRIVILEGED_DATA STATIC List_t xTasksWaitingTermination; /**< 已删除但内存尚未释放的任务。 */
-    PRIVILEGED_DATA STATIC volatile UBaseType_t uxDeletedTasksWaitingCleanUp = ( UBaseType_t ) 0U;
+    PRIVILEGED_DATA STATIC volatile UBaseType_t uxDeletedTasksWaitingCleanUp = ( UBaseType_t ) 0U; // 记录有多少个已删除的任务，需要 Idle Task 去回收它们的 TCB 和栈内存。
 
 #endif
 
-#if ( INCLUDE_vTaskSuspend == 1 )
+#if ( INCLUDE_vTaskSuspend == 1 ) // INCLUDE_vTaskSuspend 是编译开关，决定是否启用任务挂起功能
 
     PRIVILEGED_DATA STATIC List_t xSuspendedTaskList; /**< 当前处于挂起态的任务。 */
 
@@ -551,19 +552,19 @@ PRIVILEGED_DATA STATIC List_t xPendingReadyList;                         /**< �
  * 全局 POSIX errno。上下文切换时会修改其值，使其与当前运行任务的
  * errno 一致。
  */
-#if ( configUSE_POSIX_ERRNO == 1 )
+#if ( configUSE_POSIX_ERRNO == 1 ) // configUSE_POSIX_ERRNO 是编译开关，决定是否启用 POSIX errno 功能
     int FreeRTOS_errno = 0;
 #endif
 
 /* 其他文件私有变量。 -------------------------------- */
-PRIVILEGED_DATA STATIC volatile UBaseType_t uxCurrentNumberOfTasks = ( UBaseType_t ) 0U;
-PRIVILEGED_DATA STATIC volatile TickType_t xTickCount = ( TickType_t ) configINITIAL_TICK_COUNT;
-PRIVILEGED_DATA STATIC volatile UBaseType_t uxTopReadyPriority = tskIDLE_PRIORITY;
-PRIVILEGED_DATA STATIC volatile BaseType_t xSchedulerRunning = pdFALSE;
-PRIVILEGED_DATA STATIC volatile TickType_t xPendedTicks = ( TickType_t ) 0U;
-PRIVILEGED_DATA STATIC volatile BaseType_t xYieldPendings[ configNUMBER_OF_CORES ] = { pdFALSE };
-PRIVILEGED_DATA STATIC volatile BaseType_t xNumOfOverflows = ( BaseType_t ) 0;
-PRIVILEGED_DATA STATIC UBaseType_t uxTaskNumber = ( UBaseType_t ) 0U;
+PRIVILEGED_DATA STATIC volatile UBaseType_t uxCurrentNumberOfTasks = ( UBaseType_t ) 0U; // 记录当前系统中任务的数量。每创建一个任务就递增，每删除一个任务就递减。若该值为 0，则表示没有任务在运行，调度器应当停止运行。
+PRIVILEGED_DATA STATIC volatile TickType_t xTickCount = ( TickType_t ) configINITIAL_TICK_COUNT; // 记录系统节拍计数。每次节拍中断时递增。configINITIAL_TICK_COUNT 是编译开关，决定系统节拍计数的初始值。
+PRIVILEGED_DATA STATIC volatile UBaseType_t uxTopReadyPriority = tskIDLE_PRIORITY; // 记录当前就绪任务中优先级最高的任务的优先级。每次有任务进入就绪态时更新。tskIDLE_PRIORITY 是编译开关，表示空闲任务的优先级。
+PRIVILEGED_DATA STATIC volatile BaseType_t xSchedulerRunning = pdFALSE; // 记录调度器是否正在运行。pdFALSE 表示调度器未运行，pdTRUE 表示调度器正在运行。
+PRIVILEGED_DATA STATIC volatile TickType_t xPendedTicks = ( TickType_t ) 0U; // 记录待处理的节拍数。
+PRIVILEGED_DATA STATIC volatile BaseType_t xYieldPendings[ configNUMBER_OF_CORES ] = { pdFALSE }; // 记录每个核心上是否有待处理的让出请求。
+PRIVILEGED_DATA STATIC volatile BaseType_t xNumOfOverflows = ( BaseType_t ) 0; // 记录节拍计数器溢出的次数。
+PRIVILEGED_DATA STATIC UBaseType_t uxTaskNumber = ( UBaseType_t ) 0U; // 记录任务编号。
 PRIVILEGED_DATA STATIC volatile TickType_t xNextTaskUnblockTime = ( TickType_t ) 0U; /* 在调度器启动前初始化为 portMAX_DELAY。 */
 PRIVILEGED_DATA STATIC TaskHandle_t xIdleTaskHandles[ configNUMBER_OF_CORES ];       /**< 保存空闲任务的句柄。空闲任务在调度器启动时自动创建。 */
 
@@ -584,6 +585,12 @@ STATIC const volatile UBaseType_t uxTopUsedPriority = configMAX_PRIORITIES - 1U;
  * 对 uxSchedulerSuspended 的更新必须同时受任务锁和 ISR 锁保护，
  * 且不得在 ISR 中执行。读取操作只需其中任一锁保护，且可在 ISR 或任务中执行。
  */
+//PRIVILEGED_DATA              // 放到特权数据段（MPU 下仅内核可访问）
+//static                       // 仅本文件可见
+//volatile                     // 每次从内存读，防止编译器优化（可能被 ISR/内核修改）
+//UBaseType_t                  // FreeRTOS 无符号基础类型
+//uxSchedulerSuspended         // 调度器挂起嵌套计数器
+//= ( UBaseType_t ) 0U;        // 初始化为 0
 PRIVILEGED_DATA STATIC volatile UBaseType_t uxSchedulerSuspended = ( UBaseType_t ) 0U;
 
 #if ( configGENERATE_RUN_TIME_STATS == 1 )
@@ -749,6 +756,53 @@ STATIC void prvResetNextTaskUnblockTime( void ) PRIVILEGED_FUNCTION;
 /*
  * 在静态或动态分配 TCB 结构体之后调用，
  * 用于填充该结构体的成员。
+ *
+ * 参数说明：
+ *   TaskFunction_t pxTaskCode
+ *       类型：TaskFunction_t，本质是函数指针类型，通常为
+ *             void (*)( void * )。
+ *       功能：任务入口函数。新任务第一次被调度时从这里开始执行；
+ *             该函数必须返回 void，并接收一个 void * 参数。
+ *
+ *   const char * const pcName
+ *       类型：指向 const char 的 const 指针，即指针本身和字符串内容
+ *             都不能通过该指针修改。
+ *       功能：任务名称，主要用于调试、跟踪和可视化工具显示。
+ *
+ *   configSTACK_DEPTH_TYPE uxStackDepth
+ *       类型：configSTACK_DEPTH_TYPE，平台相关的无符号整数类型，
+ *             常见为 uint16_t、uint32_t 或 size_t 等。
+ *       功能：任务栈深度，通常表示栈中 StackType_t 元素的个数，
+ *             不一定是字节数。
+ *
+ *   void * const pvParameters
+ *       类型：指向 void 的 const 指针，指针本身不能改指向，
+ *             但可通过它传递任意类型数据的地址。
+ *       功能：传给任务函数的参数。任务函数收到后可按实际类型强制转换；
+ *             不需要参数时可传 NULL。
+ *
+ *   UBaseType_t uxPriority
+ *       类型：UBaseType_t，FreeRTOS 的无符号基础类型，通常为
+ *             unsigned long 或 uint32_t 等。
+ *       功能：新任务的优先级。FreeRTOS 默认数值越大优先级越高；
+ *             取值范围通常为 0 到 configMAX_PRIORITIES - 1。
+ *
+ *   TaskHandle_t * const pxCreatedTask
+ *       类型：指向 TaskHandle_t 的 const 指针；TaskHandle_t 本身通常是
+ *             指向 TCB_t 的指针，因此它概念上类似 TCB_t **。
+ *       功能：输出参数。函数初始化任务后，将新任务的句柄写入该指针
+ *             指向的变量；调用者可用该句柄删除任务、修改优先级、
+ *             发送通知等。不需要句柄时可传 NULL。
+ *
+ *   TCB_t * pxNewTCB
+ *       类型：指向 TCB_t 的指针。
+ *       功能：待初始化的新任务控制块。该 TCB 已由静态或动态方式分配，
+ *             本函数负责填充其中的任务函数、名称、栈、优先级、状态等成员。
+ *
+ *   const MemoryRegion_t * const xRegions
+ *       类型：指向 const MemoryRegion_t 的 const 指针。
+ *       功能：内存区域描述数组，通常用于 MPU 相关配置，描述任务可访问
+ *             的内存区域；未启用 MPU 或不需要时通常传 NULL。
  */
 STATIC void prvInitialiseNewTask( TaskFunction_t pxTaskCode,
                                   const char * const pcName,
@@ -1693,12 +1747,12 @@ STATIC void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
 /*-----------------------------------------------------------*/
 
 #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
-    STATIC TCB_t * prvCreateTask( TaskFunction_t pxTaskCode,
-                                  const char * const pcName,
-                                  const configSTACK_DEPTH_TYPE uxStackDepth,
-                                  void * const pvParameters,
-                                  UBaseType_t uxPriority,
-                                  TaskHandle_t * const pxCreatedTask )
+    STATIC TCB_t * prvCreateTask( TaskFunction_t pxTaskCode, // 任务函数指针
+                                  const char * const pcName, // 任务名称
+                                  const configSTACK_DEPTH_TYPE uxStackDepth, // 任务栈深度
+                                  void * const pvParameters, // 任务参数
+                                  UBaseType_t uxPriority, // 任务优先级
+                                  TaskHandle_t * const pxCreatedTask ) // 任务句柄
     {
         TCB_t * pxNewTCB;
 
@@ -1798,40 +1852,45 @@ STATIC void prvAddNewTaskToReadyList( TCB_t * pxNewTCB ) PRIVILEGED_FUNCTION;
     }
 /*-----------------------------------------------------------*/
 
-    BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
-                            const char * const pcName,
-                            const configSTACK_DEPTH_TYPE uxStackDepth,
-                            void * const pvParameters,
-                            UBaseType_t uxPriority,
-                            TaskHandle_t * const pxCreatedTask )
+    BaseType_t xTaskCreate( TaskFunction_t pxTaskCode, //  定义的是一个函数指针变量 pxTaskCode，它的类型已经被 typedef 固定死了：只能指向“返回 void、参数为 void *”的函数。
+                            const char * const pcName, // 定义的是一个指向常量字符的指针变量 pcName，它指向的字符串是任务的名称。这个名称通常用于调试和监控任务的状态。
+                            const configSTACK_DEPTH_TYPE uxStackDepth, // 与平台相关的无符号整数类型（32/64 位），用于表示任务的堆栈深度。
+                            void * const pvParameters, // 指向传递给任务函数的参数的指针。任务函数可以通过这个指针接收外部传入的数据。
+                            UBaseType_t uxPriority, // 与平台相关的无符号整数类型（32/64 位），用于表示任务的优先级。FreeRTOS 中的任务优先级通常是一个整数值，数值越大表示优先级越高。
+                            TaskHandle_t * const pxCreatedTask ) // 指向任务句柄的指针，用于返回新创建任务的句柄。任务句柄是一个用于标识和操作任务的引用。
     {
-        TCB_t * pxNewTCB;
-        BaseType_t xReturn;
+        TCB_t * pxNewTCB; // 指向新创建任务的任务控制块（Task Control Block，TCB）的指针。TCB 是 FreeRTOS 中用于管理任务的核心数据结构，包含了任务的状态、堆栈指针、优先级等信息。
+        BaseType_t xReturn; // 用于存储函数的返回值，表示任务创建的结果。pdPASS 表示成功，errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY 表示内存分配失败。
 
+        // 在任务创建函数开始时，调用 traceENTER_xTaskCreate 宏进行跟踪记录。这个宏通常用于调试和性能分析，记录任务创建的相关信息，包括任务函数指针、任务名称、堆栈深度、参数、优先级和任务句柄指针。
         traceENTER_xTaskCreate( pxTaskCode, pcName, uxStackDepth, pvParameters, uxPriority, pxCreatedTask );
 
+        // 调用 prvCreateTask 函数创建一个新的任务控制块（TCB）。这个函数负责分配内存、初始化任务的堆栈和其他相关信息。它返回一个指向新创建的 TCB 的指针，如果创建失败则返回 NULL。
         pxNewTCB = prvCreateTask( pxTaskCode, pcName, uxStackDepth, pvParameters, uxPriority, pxCreatedTask );
 
         if( pxNewTCB != NULL )
         {
-            #if ( ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) )
+            #if ( ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) ) // 条件编译指令，检查系统是否支持多核以及是否启用了核心亲和性功能。如果条件成立，则执行以下代码块。
             {
                 /* 在调度该任务之前设置其核心亲和性。 */
                 pxNewTCB->uxCoreAffinityMask = configTASK_DEFAULT_CORE_AFFINITY;
             }
             #endif
 
-            prvAddNewTaskToReadyList( pxNewTCB );
-            xReturn = pdPASS;
+            prvAddNewTaskToReadyList( pxNewTCB ); // 将新创建的任务添加到就绪任务列表中，使其可以被调度器调度执行。
+            xReturn = pdPASS; // 设置返回值为 pdPASS，表示任务创建成功。
         }
         else
         {
-            xReturn = errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
+            xReturn = errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY; // 设置返回值为 errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY，表示任务创建失败，可能是由于内存分配失败。
         }
 
-        traceRETURN_xTaskCreate( xReturn );
+        // 在任务创建函数结束时，调用 traceRETURN_xTaskCreate 宏进行跟踪记录。这个宏通常用于调试和性能分析，记录任务创建的结果。
+        // 如果用户没有定义说明符号 configUSE_TRACE_FACILITY，则 traceRETURN_xTaskCreate 宏不会执行任何操作。
+        // 如果用户定义了，这个宏会留给用户在任务创建函数返回之前执行一些自定义的跟踪操作，例如记录任务创建的结果、更新统计信息等。
+        traceRETURN_xTaskCreate( xReturn ); 
 
-        return xReturn;
+        return xReturn; // 返回任务创建的结果给调用者，指示任务是否成功创建。
     }
 /*-----------------------------------------------------------*/
 
@@ -3899,21 +3958,66 @@ void vTaskStartScheduler( void )
 {
     BaseType_t xReturn;
 
-    traceENTER_vTaskStartScheduler();
+    traceENTER_vTaskStartScheduler(); // 在调度器启动函数开始时，调用 traceENTER_vTaskStartScheduler 宏进行跟踪记录。这个宏通常用于调试和性能分析，记录调度器启动的开始。
 
-    #if ( configUSE_CORE_AFFINITY == 1 ) && ( configNUMBER_OF_CORES > 1 )
-    {
+    #if ( configUSE_CORE_AFFINITY == 1 ) && ( configNUMBER_OF_CORES > 1 ) // 检查是否启用了核心亲和性，并且系统中有多个核心。
+{                                                                         // 核心亲和性指的是任务可以被绑定到特定的处理器核心上运行，以提高性能和资源利用率。
         /*
          * 完整性检查：UBaseType_t 的位数必须大于或等于
          * confNUMBER_OF_CORES。
+         * 
+         */
+        /*
+         * 结构说明：
+         *   这是一个独立的代码块 { ... }，通常用于把相关声明或检查
+         *   限制在局部作用域内，避免影响外部。
+         *
+         *   configASSERT( 条件表达式 );
+         *     - configASSERT 是 FreeRTOS 的断言宏，调试配置下条件为假时
+         *       会触发断言处理（打印、断点或死循环等）；条件为真时不做任何事。
+         *     - 发布版本中它可能被定义为空宏，不产生运行时开销。
+         *
+         * 条件表达式：
+         *   ( sizeof( UBaseType_t ) * taskBITS_PER_BYTE ) >= configNUMBER_OF_CORES
+         *
+         *   左边：
+         *     sizeof( UBaseType_t )  ：UBaseType_t 占用的字节数
+         *     taskBITS_PER_BYTE      ：每字节的位数，通常为 8
+         *     两者相乘               ：UBaseType_t 的总位宽（bit 数）
+         *
+         *   右边：
+         *     configNUMBER_OF_CORES  ：系统配置的处理器核心数量
+         *
+         * 功能说明：
+         *   核心亲和性通常用一个位掩码 uxCoreAffinityMask 表示，
+         *   掩码类型为 UBaseType_t，每个 bit 对应一个 CPU 核心：
+         *     bit0 -> 核心 0
+         *     bit1 -> 核心 1
+         *     bit2 -> 核心 2
+         *     ...
+         *
+         *   若系统有 configNUMBER_OF_CORES 个核心，则至少需要
+         *   configNUMBER_OF_CORES 个 bit 才能为每个核心单独置位。
+         *
+         *   因此该断言检查：
+         *     UBaseType_t 的位宽 >= 核心数
+         *
+         *   确保亲和性掩码有足够位数表示所有核心，不会因为类型太窄
+         *   而无法表示某些核心的亲和性。
+         *
+         *   反例：
+         *     若 UBaseType_t 只有 8 位，而 configNUMBER_OF_CORES 为 16，
+         *     则掩码无法为 16 个核心分别置位，断言失败，提示配置错误。
+         *
+         *   该断言属于配置合法性检查，不是运行时业务逻辑。
          */
         configASSERT( ( sizeof( UBaseType_t ) * taskBITS_PER_BYTE ) >= configNUMBER_OF_CORES );
     }
     #endif /* 条件：#if ( configUSE_CORE_AFFINITY == 1 ) && ( configNUMBER_OF_CORES > 1 ) */
 
-    xReturn = prvCreateIdleTasks();
+    xReturn = prvCreateIdleTasks(); // 调用 prvCreateIdleTasks() 函数创建空闲任务，并将返回值存储在 xReturn 中。该函数负责为每个核心创建一个空闲任务，并返回 pdPASS（成功）或 pdFAIL（失败）。
 
-    #if ( configUSE_TIMERS == 1 )
+    #if ( configUSE_TIMERS == 1 ) // 检查是否启用了软件定时器功能。
     {
         if( xReturn == pdPASS )
         {
@@ -3926,13 +4030,14 @@ void vTaskStartScheduler( void )
     }
     #endif /* 条件：configUSE_TIMERS */
 
-    if( xReturn == pdPASS )
+    if( xReturn == pdPASS ) // 如果空闲任务和定时器任务（如果启用）都创建成功，则继续启动调度器。
     {
         /*
          * 仅当定义了用户可定义的宏 FREERTOS_TASKS_C_ADDITIONS_INIT() 时
          * 才应调用 freertos_tasks_c_additions_init()，因为该函数只调用这个宏。
+         * 这是留给用户/移植层自定义的开关。
          */
-        #ifdef FREERTOS_TASKS_C_ADDITIONS_INIT
+        #ifdef FREERTOS_TASKS_C_ADDITIONS_INIT // 检查是否定义了 FREERTOS_TASKS_C_ADDITIONS_INIT 宏。
         {
             freertos_tasks_c_additions_init();
         }
@@ -3945,7 +4050,7 @@ void vTaskStartScheduler( void )
          */
         portDISABLE_INTERRUPTS();
 
-        #if ( configUSE_C_RUNTIME_TLS_SUPPORT == 1 )
+        #if ( configUSE_C_RUNTIME_TLS_SUPPORT == 1 ) // 检查是否启用了 C 运行库的线程局部存储（TLS）支持。
         {
             /*
              * 将 C 运行库的 TLS 块切换为指向将首先运行的任务的 TLS 块。
@@ -3954,9 +4059,9 @@ void vTaskStartScheduler( void )
         }
         #endif
 
-        xNextTaskUnblockTime = portMAX_DELAY;
-        xSchedulerRunning = pdTRUE;
-        xTickCount = ( TickType_t ) configINITIAL_TICK_COUNT;
+        xNextTaskUnblockTime = portMAX_DELAY; // 将下一个任务解除阻塞时间初始化为最大延迟值，表示当前没有任务需要解除阻塞。
+        xSchedulerRunning = pdTRUE; // 将调度器运行标志设置为 pdTRUE，表示调度器已启动。
+        xTickCount = ( TickType_t ) configINITIAL_TICK_COUNT; // 将系统时钟节拍计数器初始化为配置的初始值。
 
         /*
          * 若定义了 configGENERATE_RUN_TIME_STATS，则必须定义以下宏，以配置
@@ -3967,17 +4072,16 @@ void vTaskStartScheduler( void )
          */
         portCONFIGURE_TIMER_FOR_RUN_TIME_STATS();
 
-        traceTASK_SWITCHED_IN();
+        traceTASK_SWITCHED_IN(); // 调用 traceTASK_SWITCHED_IN() 宏进行跟踪记录，表示调度器即将切换到第一个任务。这个宏通常用于调试和性能分析，记录任务切换的事件。
 
-        traceSTARTING_SCHEDULER( xIdleTaskHandles );
+        traceSTARTING_SCHEDULER( xIdleTaskHandles ); // 调用 traceSTARTING_SCHEDULER() 宏进行跟踪记录，表示调度器即将启动。传入空闲任务句柄数组 xIdleTaskHandles 作为参数，以便跟踪器知道哪些任务是空闲任务。
 
-        /*
-         * 时钟节拍的设置与硬件相关，因此位于移植接口中。
-         */
-
-        /*
-         * xPortStartScheduler 的返回值不需要使用，因此采用 void 数据类型。
-         */
+       /*
+        * 时钟节拍的设置与硬件相关，因此由移植层的 xPortStartScheduler() 负责配置。
+        * 该函数会启动第一个任务，并开始系统时钟节拍中断。
+        * 通常情况下，该函数不会返回，因为调度器一旦启动，控制权就交给了任务调度。
+        * xPortStartScheduler() 的返回值不需要使用，因此调用处用 ( void ) 强制转换忽略返回值。
+        */
         ( void ) xPortStartScheduler();
 
         /*
@@ -4000,15 +4104,15 @@ void vTaskStartScheduler( void )
      * 当 INCLUDE_xTaskGetIdleTaskHandle 设为 0（即 xIdleTaskHandles 不再在
      * 其他地方使用）时，防止编译器告警。
      */
-    ( void ) xIdleTaskHandles;
+    ( void ) xIdleTaskHandles; // 将 xIdleTaskHandles 强制转换为 void，以防止编译器在未使用该变量时发出警告。即使在某些配置下，xIdleTaskHandles 可能不会被使用，但仍然需要保留它以便调试或其他用途。
 
     /*
      * OpenOCD 使用 uxTopUsedPriority 进行线程调试。防止 uxTopUsedPriority
      * 因内核不再使用而被优化掉。
      */
-    ( void ) uxTopUsedPriority;
+    ( void ) uxTopUsedPriority; // 将 uxTopUsedPriority 强制转换为 void，以防止编译器在未使用该变量时发出警告。uxTopUsedPriority 是一个全局变量，用于跟踪系统中使用的最高优先级任务，OpenOCD 调试器可能会使用它进行线程调试。
 
-    traceRETURN_vTaskStartScheduler();
+    traceRETURN_vTaskStartScheduler(); // 调用 traceRETURN_vTaskStartScheduler() 宏进行跟踪记录，表示调度器启动函数即将返回。这个宏通常用于调试和性能分析，记录调度器启动的结束。
 }
 /*-----------------------------------------------------------*/
 
@@ -5034,9 +5138,9 @@ BaseType_t xTaskCatchUpTicks( TickType_t xTicksToCatchUp )
 
 BaseType_t xTaskIncrementTick( void )
 {
-    TCB_t * pxTCB;
-    TickType_t xItemValue;
-    BaseType_t xSwitchRequired = pdFALSE;
+    TCB_t * pxTCB; // 指向延时链表头任务的指针
+    TickType_t xItemValue; // 延时链表头任务的 item 值
+    BaseType_t xSwitchRequired = pdFALSE; // 若为 pdTRUE，则在函数返回时应执行上下文切换
 
     traceENTER_xTaskIncrementTick();
 

@@ -84,7 +84,7 @@
 #define portSTACK_TYPE    uint32_t
 #define portBASE_TYPE     long
 
-typedef portSTACK_TYPE   StackType_t;
+typedef portSTACK_TYPE   StackType_t; // 给具体类型起一个稳定、语义化的名字，把变化隔离在移植层
 typedef long             BaseType_t;
 typedef unsigned long    UBaseType_t;
 

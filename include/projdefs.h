@@ -34,6 +34,8 @@
  * 以确保在包含 portable.h 之前该类型已知。
  */
 typedef void (* TaskFunction_t)( void * arg );
+/* 结构：typedef + 返回类型 void + (*类型名) 表示函数指针 + 参数列表 (void * arg)，整体定义“指向 void f(void *) 的指针”类型别名。 */
+/* 作用：把一长串函数指针声明包装成简洁类型名 TaskFunction_t，供 API 参数/结构体成员/变量声明使用，并让编译器校验传入函数的签名是否匹配。 */
 
 /*
  * 将毫秒时间转换为时钟节拍（tick）时间。如果此处的定义不适合
@@ -64,7 +66,7 @@ typedef void (* TaskFunction_t)( void * arg );
 #define errQUEUE_FULL                            ( ( BaseType_t ) 0 )
 
 /* FreeRTOS 错误定义。 */
-#define errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY    ( -1 )
+#define errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY    ( -1 ) // 定义错误码，表示无法分配所需的内存。通常在任务、队列或其他内核对象创建失败时返回。写宏时养成加括号的习惯
 #define errQUEUE_BLOCKED                         ( -4 )
 #define errQUEUE_YIELD                           ( -5 )
 
